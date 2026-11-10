@@ -21,14 +21,18 @@ export function AlberoGruppo(props: AlberoProps & { titolo?: string }) {
   return <AlberoVivo {...props} />;
 }
 
-/** L'albero da solo, in un suo SVG. Con `titolo=""` è decorativo: si anima e si tocca, ma non prende il fuoco. */
+/**
+ * L'albero da solo, in un suo SVG. Con `titolo=""` è un'illustrazione: si anima
+ * ma non reagisce a clic e trascinamento e non prende il fuoco (salvo `interattivo` esplicito).
+ */
 export function Albero({
   className,
   titolo,
-  interattivo = true,
+  interattivo,
   ...props
 }: AlberoProps & { className?: string; titolo?: string }) {
   const decorativo = titolo === "";
+  interattivo ??= !decorativo;
   const nome = titolo || "Un albero di Linfa";
   return (
     <svg

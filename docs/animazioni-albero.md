@@ -113,32 +113,32 @@ guarda intorno e sospira o fa un saltello.
 
 ### Notte (`dormire`, berretto da notte)
 
-1. Due **respiri lenti** (3,8 s l'uno): il corpo si gonfia e sgonfia, la bocca
+1. Uno o due **respiri lenti** (3 s l'uno): il corpo si gonfia e sgonfia, la bocca
    si apre all'espiro, esce una «z».
-2. **Russa** 1-3 volte: grande inspiro (corpo e chioma si gonfiano), poi una Z
+2. **Russa** 1-2 volte: grande inspiro (corpo e chioma si gonfiano), poi una Z
    grande, la chioma vibra, la bocca trema.
 3. *20%:* parla nel sonno («…ancora una ghianda… zzz…»).
 4. **Si gira**: inclina il corpo da un lato, faccia di tre quarti, una mano
    sulla pancia, bocca che si storce; un respiro così.
-5. *65%:* **il berretto scivola** di lato; si mezzo sveglia (palpebre a metà),
+5. *55%:* **il berretto scivola** di lato; si mezzo sveglia (palpebre a metà),
    allunga un braccio come un elastico fino in cima alla chioma, rimette dritto
    il berretto, una pacca, e si riaddormenta.
-6. Torna dritto, un respiro, e ricomincia. Totale 14-20 s (più lunga: dorme).
+6. Torna dritto e ricomincia. Totale 10-16 s.
 
 ### Leggere (`leggere`, libro)
 
-1. **Legge** 2-4 righe: le pupille scorrono da sinistra a destra e tornano a
+1. **Legge** 2-3 righe: le pupille scorrono da sinistra a destra e tornano a
    capo, la testa segue appena.
 2. **Gira pagina**: la mano destra alza l'angolo e lo porta a sinistra, la
    pagina si piega e si gira (0,5 s).
-3. Altre 2-3 righe.
+3. Altre 1-2 righe.
 4. *60%:* **ride**: occhi ad arco, bocca aperta, guance rosse, scosse di
    risata, il libro balla, segni di risata nell'aria, a volte «Ah ah! Questa è
    bellissima.» *Altrimenti* sorpresa: occhi sbarrati e bocca a «o».
-5. *40%:* gira un'altra pagina. 1-2 righe.
+5. *30%:* gira un'altra pagina, altrimenti legge un'altra riga.
 6. **Chiude il libro** (piccolo tonfo, sbuffo di polvere), **alza lo sguardo**
    pensieroso (a volte con la stellina del sognatore, a volte guarda te e
-   sorride), poi **riapre il libro**. Totale 12-16 s.
+   sorride), poi **riapre il libro**. Totale 10-14 s.
 
 ### Correre (`corsa`)
 
@@ -207,8 +207,11 @@ Dettagli:
   gli alberi nei paesaggi (dove c'è spazio per muoversi) e nella `Scena`.
 - Sul telefono una strisciata normale fa scorrere la pagina: il trascinamento
   parte solo dopo la pressione lunga senza muovere il dito.
-- Gli alberi decorativi (`titolo=""`, come nelle bustine dei prezzi) si
-  animano e reagiscono al tocco ma non prendono il fuoco della tastiera.
+- Gli alberi che sono solo un'illustrazione si animano ma non reagiscono e
+  non prendono il fuoco: tutti quelli con `titolo=""` (bustine dei prezzi,
+  tessera del fan club) e quelli con `interattivo={false}` (biglietto regalo
+  della pagina iniziale, ritratto della strada nel giardino, strade e stadi del
+  catalogo). L'anello del fuoco esiste solo sugli alberi interattivi.
 
 ### Accessibilità
 

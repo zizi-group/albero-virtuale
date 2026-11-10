@@ -203,7 +203,10 @@ export function AlberoVivo({
       </defs>
 
       <ellipse data-n="ombra" cx={0} cy={0} rx={52} ry={7} fill="#000" {...at("ombra")} />
-      <ellipse data-n="anello" className="lv-anello" cx={120} cy={146} rx={88} ry={128} fill="none" stroke={INCHIOSTRO} strokeWidth={2.5} strokeDasharray="6 7" {...at("anello")} />
+      {/* Anello del fuoco: invisibile di serie (anche senza CSS), compare solo con la tastiera */}
+      {interattivo && focusabile && (
+        <ellipse data-n="anello" className="lv-anello" opacity={0} cx={120} cy={146} rx={88} ry={128} fill="none" stroke={INCHIOSTRO} strokeWidth={2.5} strokeDasharray="6 7" {...at("anello")} />
+      )}
 
       {oggetti("terra").map((o) => presenza(`ogg-${o}`, PERNI_OGGETTI[o], pres, disegnaOggetto(o), zonaOggetto(o)))}
 

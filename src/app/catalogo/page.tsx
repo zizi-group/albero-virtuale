@@ -113,6 +113,7 @@ export default function Catalogo() {
                     stagione="primavera"
                     className="h-full w-full"
                     titolo={INFO_STRADE[s].nome}
+                    interattivo={false}
                   />
                 </div>
                 <p className="font-titolo mt-2 text-lg leading-tight">{INFO_STRADE[s].nome}</p>
@@ -129,7 +130,7 @@ export default function Catalogo() {
           <div className="crescita">
             {STADI.map((st, i) => (
               <figure key={st} className="text-center">
-                <Albero posa={AZIONI[0].posa} stadio={st} stagione="estate" className="mx-auto h-44 w-40 sm:h-56 sm:w-48" titolo={st} />
+                <Albero posa={AZIONI[0].posa} stadio={st} stagione="estate" className="mx-auto h-44 w-40 sm:h-56 sm:w-48" titolo={st} interattivo={false} />
                 <figcaption className="mt-2">
                   <span className="font-mano text-xl capitalize">{st}</span>
                   <span className="block text-sm text-matita">dal giorno {[0, 7, 30][i]}</span>

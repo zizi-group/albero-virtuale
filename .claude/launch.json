@@ -6,12 +6,6 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
-    },
-    {
-      "name": "linfa-albero-vivo",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["next", "dev", "-p", "3007"],
-      "port": 3007
     }
   ]
 }

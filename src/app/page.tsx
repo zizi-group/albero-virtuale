@@ -250,6 +250,7 @@ export default function Home() {
                   stagione="inverno"
                   className="absolute -right-6 -bottom-8 w-28"
                   titolo="Un alberello che saluta"
+                  interattivo={false}
                 />
               </div>
             </div>

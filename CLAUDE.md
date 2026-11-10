@@ -53,9 +53,12 @@ Tutto in italiano: codice (nomi), testi, commit, report.
 - `src/lib/albero/`: vocabolario visivo (`tipi.ts`), libreria delle 23 azioni
   con la compatibilità col meteo (`azioni.ts`), tratti e strade (`strade.ts`),
   regole delle abitudini col meteo (`scena.ts`).
-- `src/components/albero/`: il personaggio in SVG parametrico (`Albero.tsx`),
-  la scena col cielo (`Scena.tsx`). Animazioni solo CSS, classi `l-*` in
-  `src/app/globals.css`.
+- `src/components/albero/`: `Albero.tsx` (l'albero nel suo SVG) e `Scena.tsx`
+  (con il cielo) usano il pupazzo animato e interattivo di `vivo/`: scenette,
+  strato di vita, clic, trascinamento, fumetti. Motore a fotogrammi senza
+  librerie, CSS con prefisso `lv-` in `vivo/vivo.css`. Come si muove, scenetta
+  per scenetta: `docs/animazioni-albero.md`. Le classi `l-*` di `globals.css`
+  servono solo al cielo della `Scena`.
 - `src/lib/motore/`: `personaggio.ts` (prompt di sistema fisso, eventi),
   `vita.ts` (giornate: parte pura, gira anche in memoria), `scritture.ts`
   (lettere e risposte), `servizio.ts` (collegato a database ed email),
@@ -74,9 +77,13 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   innocuo, nessuna strada delude, niente persone o marchi reali, politica,
   religione o contenuti inadatti. Si cambiano lì, non nei singoli prompt.
 - L'AI sceglie solo azioni della libreria: una nuova azione si aggiunge in
-  `azioni.ts` (posa) e, se serve, con oggetti o indumenti nuovi in `Albero.tsx`.
+  `azioni.ts` (posa) e, se serve, con oggetti o indumenti nuovi in
+  `vivo/disegni.tsx` e `vivo/AlberoVivo.tsx`; la sua scenetta in
+  `vivo/scenette.ts` (senza scenetta usa la posa viva con gesti a sorpresa).
 - Il sistema con «movimento ridotto» ferma pioggia, neve e nuvole; il
-  personaggio tiene solo i movimenti lievi.
+  personaggio tiene solo i movimenti lievi (niente salti, scosse né corse).
+  Sul PC di sviluppo Windows ha gli effetti di animazione spenti: il browser
+  chiede movimento ridotto e l'albero si muove poco.
 
 ## Branch e versioni
 

@@ -177,6 +177,7 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
                   stadio={stadio}
                   stagione={stagione}
                   titolo={`${albero.name}, ${INFO_STRADE[strada].nome.toLowerCase()}`}
+                  interattivo={false}
                 />
               ) : (
                 <span className="scheda-mistero">?</span>

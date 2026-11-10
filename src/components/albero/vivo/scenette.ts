@@ -281,11 +281,10 @@ const notte: Scenetta = (b, p) => {
     c.evento((r) => zeta(r));
     c.vai(1.6, { sy: 0.99, sx: 1.005, boccaSu: -8, boccaGiu: 8, chiomaSy: 1 });
   };
-  respiro();
-  if (forse(p, 0.4)) respiro();
-
-  // Russa
+  // Russa (1 o 2 volte; se russa una volta sola, a volte prima un altro respiro)
   const russate = 1 + Math.floor(p.rnd() * 2);
+  respiro();
+  if (russate === 1 && forse(p, 0.5)) respiro();
   for (let i = 0; i < russate; i++) {
     c.vai(1.2, { sy: 1.06, sx: 0.985, chiomaSy: 1.04, cigliaY: -1.5, boccaL: 4.6, boccaSu: -9, boccaGiu: 9 });
     c.pausa(0.2);
@@ -301,7 +300,7 @@ const notte: Scenetta = (b, p) => {
   c.oscilla("boccaStorta", 2, 3, 0.8).pausa(0.8);
 
   // Il berretto scivola: mezzo sveglio, lo rimette a posto con un braccio elastico.
-  if (forse(p, 0.65)) {
+  if (forse(p, 0.55)) {
     c.vai(0.5, { berretto: 16 * s }, "in");
     c.vai(0.25, { palpebra: 0.55, cigliaY: -2 }).pausa(0.4);
     const lato: Lato = s > 0 ? "dx" : "sx";
