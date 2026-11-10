@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Linfa — l'offerta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --verde: #3f7d52; --lime: #c4e46a; --crema: #eef1e2; --carta: #ffffff;
+    --inchiostro: #17261d; --grigio: #4f5d53; --tenue: #7c8a80; --linea: #d9dfcb;
+  }
+  html, body { background: #888; }
+  body { font-family: "Inter", system-ui, sans-serif; color: var(--inchiostro); font-size: 8.6pt; line-height: 1.5; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pagina { width: 210mm; height: 297mm; position: relative; overflow: hidden; padding: 14mm 14mm 13mm; break-after: page; }
+  .pagina:last-child { break-after: auto; }
+  em { font-family: "Lora", Georgia, serif; font-style: italic; }
+  b { font-weight: 600; }
+  .testata { display: flex; align-items: center; gap: 3.2mm; font-size: 6.6pt; letter-spacing: .22em; text-transform: uppercase; font-weight: 600; }
+  .logo { width: 8mm; height: 8mm; }
+  .piede { position: absolute; left: 14mm; right: 14mm; bottom: 8mm; display: flex; justify-content: space-between; font-size: 6.3pt; letter-spacing: .2em; text-transform: uppercase; font-weight: 600; }
+  .occhiello { font-size: 6.6pt; letter-spacing: .22em; text-transform: uppercase; font-weight: 700; color: var(--verde); }
+
+  /* ---------- Pagina 1 ---------- */
+  .scura { background:
+      radial-gradient(70mm 80mm at 80% 22%, rgba(88,150,98,.32), transparent 70%),
+      radial-gradient(120mm 90mm at 20% 0%, rgba(40,90,60,.35), transparent 70%),
+      linear-gradient(180deg, #123322 0%, #0d281b 45%, #0a2016 100%);
+    color: #e9efe2; }
+  .scura .testata, .scura .piede { color: var(--lime); }
+  .scura p { color: #cfdacb; font-size: 8.8pt; }
+  .scura p b { color: #fff; }
+  .lucciole span { position: absolute; width: 1.1mm; height: 1.1mm; border-radius: 50%; background: #f3e7a6; box-shadow: 0 0 2.2mm .6mm rgba(243,231,166,.55); opacity: .85; }
+  .copertina { display: grid; grid-template-columns: 1fr 62mm; gap: 6mm; margin-top: 6mm; }
+  .titolo-linfa { font-family: "Lora", serif; font-style: italic; font-weight: 400; font-size: 58pt; line-height: .95; color: #f3f1e4; }
+  .titolo-linfa i { color: var(--lime); font-style: normal; }
+  .scura .sottotitolo { font-family: "Lora", serif; font-size: 18pt; line-height: 1.2; margin-top: 3.5mm; color: #f3f1e4; }
+  .scura .sottotitolo em { color: var(--lime); }
+  .intro { margin-top: 5mm; }
+  .intro p + p { margin-top: 2.4mm; }
+  .albero-copertina { width: 62mm; margin-top: -2mm; clip-path: inset(1.2mm); -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); }
+  .scura h2 { font-family: "Lora", serif; font-weight: 400; font-style: italic; font-size: 15pt; color: #f3f1e4; margin: 5mm 0 1.4mm; }
+  .scura .sopra { font-size: 8.2pt; margin-bottom: 3mm; }
+  .meteo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+  .meteo div { border: .3mm solid rgba(255,255,255,.12); border-radius: 3.4mm; background: #1b3729; padding: 0 2.6mm 3mm; text-align: center; }
+  .meteo img { width: 100%; display: block; -webkit-mask-image: radial-gradient(closest-side, #000 74%, transparent 100%); mask-image: radial-gradient(closest-side, #000 74%, transparent 100%); }
+  .meteo .t { font-family: "Lora", serif; font-style: italic; font-size: 11pt; color: #f3f1e4; margin-top: -1mm; }
+  .meteo p { font-size: 7.2pt; color: #b9c8b5; line-height: 1.38; margin-top: .6mm; }
+  .ricevi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3.2mm 5mm; }
+  .ricevi div { border-top: .4mm solid rgba(196,228,106,.45); padding-top: 2.2mm; }
+  .ricevi .t { font-family: "Lora", serif; font-size: 10.5pt; color: #f3f1e4; margin-bottom: .6mm; }
+  .ricevi p { font-size: 7.6pt; line-height: 1.42; }
+
+  /* ---------- Pagine chiare ---------- */
+  .chiara { background: var(--crema); }
+  .chiara .testata, .chiara .piede { color: var(--verde); }
+  .chiara h1 { font-family: "Lora", serif; font-weight: 400; font-size: 23pt; line-height: 1.08; margin-top: 2.4mm; }
+  .chiara h1 em { color: var(--verde); }
+  .lead { font-size: 8.6pt; color: #2b3a30; margin-top: 2.8mm; max-width: 176mm; }
+  .scheda { position: relative; z-index: 1; background: var(--carta); border-radius: 3.4mm; padding: 4mm 4.4mm; box-shadow: 0 .3mm 1mm rgba(30,60,40,.06); }
+  .scheda h3, .scura-box h3 { font-family: "Lora", serif; font-weight: 400; font-size: 12pt; line-height: 1.2; }
+  .sotto { font-size: 7.1pt; color: var(--tenue); margin-top: .5mm; }
+  .scura-box { position: relative; z-index: 1; background: linear-gradient(160deg, #173d2a, #0d281b); color: #dfe8da; border-radius: 3.4mm; padding: 4mm 4.4mm; }
+  .scura-box h3 { color: #f3f1e4; }
+  .scura-box p { color: #c5d3c1; font-size: 7.8pt; }
+  .scura-box b { color: var(--lime); }
+
+  /* Pacchetti */
+  .pacchetti { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3.2mm; margin-top: 4.4mm; }
+  .pacchetto { background: #fff; border-radius: 3.4mm; padding: 4.2mm 4mm 3.8mm; position: relative; border: .35mm solid transparent; }
+  .pacchetto.evidenza { border-color: var(--verde); box-shadow: 0 1mm 3mm rgba(47,107,69,.12); }
+  .bollino { position: absolute; top: -2.5mm; left: 4mm; background: var(--verde); color: #fff; font-size: 6.1pt; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; padding: .8mm 2.4mm; border-radius: 9mm; }
+  .pacchetto .nome { font-family: "Lora", serif; font-size: 12.5pt; }
+  .pacchetto .prezzo { font-family: "Lora", serif; font-size: 21pt; line-height: 1; margin-top: 1.8mm; color: var(--inchiostro); }
+  .pacchetto .prezzo small { font-family: "Inter", sans-serif; font-size: 7.2pt; color: var(--grigio); }
+  .pacchetto .finale { font-size: 6.9pt; color: var(--tenue); margin-top: 1mm; }
+  .pacchetto .perchi { font-family: "Lora", serif; font-style: italic; font-size: 8.4pt; color: var(--verde); margin-top: 2.4mm; line-height: 1.35; }
+  .etichetta { font-size: 6.2pt; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--tenue); margin-top: 2.8mm; }
+  .lista { list-style: none; margin-top: 1.2mm; display: grid; gap: 1.1mm; }
+  .lista li { font-size: 7.4pt; color: #2b3a30; padding-left: 3.4mm; position: relative; line-height: 1.38; }
+  .lista li::before { content: ""; position: absolute; left: 0; top: 1.45mm; width: 1.5mm; height: 1.5mm; border-radius: 50%; background: var(--verde); }
+  .lista.no li::before { background: none; border: .3mm solid #b7a9a0; }
+  .lista.no li { color: var(--grigio); }
+
+  .riga-2 { display: grid; grid-template-columns: .82fr 1.18fr; gap: 3.2mm; margin-top: 3.4mm; }
+  .tessera-box { display: grid; grid-template-columns: 46mm 1fr; gap: 4.4mm; align-items: center; }
+  .tessera { width: 46mm; height: 29mm; border-radius: 2.6mm; padding: 3mm 3.4mm; position: relative; color: #1d2a20;
+    background: linear-gradient(125deg, #e9edd9 0%, #c9d3b2 22%, #f6f8ec 38%, #b9c59e 55%, #e2e8cf 72%, #aebb90 100%);
+    box-shadow: 0 1mm 2.4mm rgba(20,40,25,.28), inset 0 0 0 .3mm rgba(255,255,255,.6); }
+  .tessera .club { font-size: 5.2pt; letter-spacing: .24em; font-weight: 700; text-transform: uppercase; color: #2f5a3c; }
+  .tessera .nome-albero { font-family: "Lora", serif; font-style: italic; font-size: 13pt; margin-top: 2.6mm; line-height: 1; }
+  .tessera .socio { font-size: 6pt; letter-spacing: .12em; margin-top: 1.6mm; font-weight: 600; }
+  .tessera .citta { font-size: 5.6pt; color: #3d4c40; margin-top: .4mm; }
+  .tessera .qr { position: absolute; right: 3mm; bottom: 3mm; width: 9mm; height: 9mm; background:
+      conic-gradient(from 90deg at 50% 50%, #1d2a20 25%, transparent 0 50%, #1d2a20 0 75%, transparent 0) 0 0 / 2.25mm 2.25mm;
+      border: .5mm solid #1d2a20; border-radius: .6mm; opacity: .85; }
+  .tessera .foglia { position: absolute; right: 3.2mm; top: 2.6mm; width: 5mm; height: 5mm; }
+  .tessera-box p { font-size: 7.6pt; color: #2b3a30; }
+  .tessera-box h3 { margin-bottom: 1.2mm; }
+
+  .pillole { display: flex; flex-wrap: wrap; gap: 1.8mm; margin-top: 2.2mm; }
+  .pillole span { border: .3mm solid #c9d2b8; background: #fff; border-radius: 9mm; padding: 1mm 3mm; font-size: 7.2pt; color: #2b3a30; }
+  .pillole span em { color: var(--verde); }
+  h4 { font-family: "Lora", serif; font-weight: 400; font-size: 12pt; margin-top: 4mm; }
+  .archetipi { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 3mm; padding: 0 2mm; }
+  .archetipi figure { text-align: center; }
+  .archetipi img { width: 24mm; display: block; }
+  .archetipi figcaption { font-family: "Lora", serif; font-style: italic; font-size: 8.4pt; color: var(--inchiostro); margin-top: .4mm; }
+  .archetipi .chissa { width: 24mm; height: 28mm; display: flex; align-items: center; justify-content: center; font-family: "Lora", serif; font-style: italic; font-size: 10pt; color: var(--lime); background: #12301f; border-radius: 9mm; height: 9mm; margin-bottom: 8mm; }
+
+  /* ---------- Pagina 3: numeri ---------- */
+  .kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin-top: 4mm; }
+  .kpi div { background: #fff; border-radius: 3mm; padding: 3mm 3.4mm; }
+  .kpi .numero { font-family: "Lora", serif; font-size: 16pt; line-height: 1.05; color: var(--inchiostro); white-space: nowrap; }
+  .kpi .numero small { font-size: 9pt; color: var(--verde); }
+  .kpi .e { font-size: 6.9pt; color: var(--grigio); margin-top: 1mm; line-height: 1.35; }
+  .griglia { display: grid; grid-template-columns: 1fr 1fr; gap: 3.2mm; margin-top: 3.2mm; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 2mm; }
+  th, td { text-align: right; padding: .95mm 1.2mm; font-size: 7.3pt; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; padding-left: 0; }
+  thead th { font-size: 5.9pt; letter-spacing: .08em; text-transform: uppercase; color: var(--tenue); font-weight: 600; border-bottom: .3mm solid var(--linea); white-space: normal; }
+  tbody td { border-bottom: .2mm solid #edf0e6; color: #2b3a30; }
+  tr.totale td { font-weight: 700; color: var(--inchiostro); border-top: .35mm solid var(--inchiostro); border-bottom: none; }
+  tr.totale td.v { color: var(--verde); }
+  td.meno { color: #8b5a4a; }
+  tr.forte td { font-weight: 700; color: var(--inchiostro); }
+  .nota { font-size: 7.1pt; color: #2b3a30; margin-top: 2mm; background: var(--crema); border-radius: 2mm; padding: 1.8mm 2.4mm; }
+  .nota b { color: var(--verde); }
+  .cac { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.6mm; margin-top: 2.2mm; }
+  .cac div { border: .3mm solid var(--linea); border-radius: 2mm; padding: 1.6mm 1mm; text-align: center; }
+  .cac div.base { border-color: var(--verde); background: #f4f8ec; }
+  .cac .v { font-family: "Lora", serif; font-size: 9.6pt; white-space: nowrap; }
+  .cac .e { font-size: 6.2pt; color: var(--tenue); }
+  .pareggio { margin-top: 2.4mm; font-size: 7.2pt; color: #2b3a30; }
+  .pareggio b { color: var(--verde); }
+  .chiusura { display: grid; grid-template-columns: 1.15fr .85fr; gap: 3.2mm; margin-top: 3.2mm; }
+  .chiusura .scura-box h3 { font-size: 13pt; }
+  .chiusura .scura-box p { margin-top: 1.4mm; }
+  .ipotesi { border: .3mm dashed #b9c4a6; border-radius: 3mm; padding: 2.6mm 3.4mm; }
+  .ipotesi p { font-size: 6.5pt; color: var(--grigio); line-height: 1.48; }
+  .ipotesi b { color: var(--inchiostro); }
+</style>
+</head>
+<body>
+
+<!-- ======================= PAGINA 1 ======================= -->
+<section class="pagina scura">
+  <div class="lucciole" aria-hidden="true">
+    <span style="left:62%;top:4%"></span><span style="left:74%;top:6.5%;transform:scale(.6)"></span><span style="left:86%;top:3.5%"></span>
+    <span style="left:93%;top:9%;transform:scale(.7)"></span><span style="left:57%;top:13%;transform:scale(.5)"></span><span style="left:96%;top:19%"></span>
+    <span style="left:66%;top:24%;transform:scale(.6)"></span><span style="left:52%;top:8%;transform:scale(.4)"></span><span style="left:80%;top:12%;transform:scale(.45)"></span>
+  </div>
+
+  <div class="testata">
+    <svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18.5" fill="none" stroke="#c4e46a" stroke-width="1.4"/><circle cx="20" cy="20" r="13" fill="#2f6b45"/><path d="M20 29V18" stroke="#c4e46a" stroke-width="1.8" stroke-linecap="round"/><path d="M20 21c-5.5 0-7.5-3.6-7.5-7 4.6 0 7.5 2.4 7.5 7Z" fill="#c4e46a"/><path d="M20 18.5c0-4.5 2.6-7 7-7 0 4-2.6 7-7 7Z" fill="#9fcf5a"/></svg>
+    Linfa · l'offerta
+  </div>
+
+  <div class="copertina">
+    <div>
+      <h1 class="titolo-linfa">Linfa<i>.</i></h1>
+      <p class="sottotitolo">Compri un albero.<br><em>Non sai chi diventerà.</em></p>
+      <div class="intro">
+        <p>Con Linfa una persona pianta un <b>albero digitale tutto suo</b>. Non è un videogioco e non c'è niente da curare: l'albero ha un carattere, una sua intelligenza artificiale e una vita che va avanti da sola, giorno dopo giorno, anche quando nessuno lo guarda.</p>
+        <p>Chi lo pianta riceve le sue lettere, entra nel giardino quando ne ha voglia e può rispondergli. Dopo qualche mese si accorge che l'albero ha preso delle abitudini ed è diventato qualcuno: un filosofo, un imprenditore, un piccolo furfante del bosco. <b>È questa curiosità che fa aprire ogni lettera.</b></p>
+      </div>
+    </div>
+    <img class="albero-copertina" src="img/albero_copertina.png" alt="">
+  </div>
+
+  <h2>Un albero con le sue abitudini</h2>
+  <p class="sopra">La giornata dell'albero segue il <b>meteo vero</b> della città di chi lo possiede: se a Pescara piove, la persona apre il giardino e lo trova fuori, sotto la pioggia.</p>
+  <div class="meteo">
+    <div><img src="img/meteo_sole.png" alt=""><p class="t">Il sole</p><p>Mette gli occhiali da sole e si gode la giornata.</p></div>
+    <div><img src="img/meteo_pioggia.png" alt=""><p class="t">La pioggia</p><p>Esce e si fa la doccia, con tanto di schiuma.</p></div>
+    <div><img src="img/meteo_freddo.png" alt=""><p class="t">Il freddo</p><p>Tira fuori cappello e sciarpa e cammina più svelto.</p></div>
+    <div><img src="img/meteo_notte.png" alt=""><p class="t">La notte</p><p>Si infila il berretto e dorme come un sasso.</p></div>
+  </div>
+
+  <h2>Che cosa riceve chi pianta un albero</h2>
+  <div class="ricevi">
+    <div><p class="t">Le lettere</p><p>Una al mese, più una per ogni momento importante, scritte dall'albero con la sua voce.</p></div>
+    <div><p class="t">Il giardino</p><p>Una pagina dove lo trova mentre fa quello che sta facendo, con il meteo della sua città.</p></div>
+    <div><p class="t">Le risposte</p><p>Può scrivergli: l'albero legge i consigli, ma poi decide da solo.</p></div>
+    <div><p class="t">Il diario dell'anno</p><p>La sua storia raccolta in un diario, che arriva il mese prima del rinnovo.</p></div>
+    <div><p class="t">La tessera del fan club</p><p>A casa arriva la tessera con il nome del suo albero e il numero di socio.</p></div>
+    <div><p class="t">Nessun senso di colpa</p><p>Se lo trascura non muore; se non rinnova va in letargo e conserva il suo diario.</p></div>
+  </div>
+
+  <div class="piede"><span>Linfa · ZIZI Group</span><span>01 / 03</span></div>
+</section>
+
+<!-- ======================= PAGINA 2 ======================= -->
+<section class="pagina chiara">
+  <p class="occhiello">L'offerta</p>
+  <h1>Tre modi di piantare un albero,<br><em>e uno è fatto per essere regalato.</em></h1>
+  <p class="lead">Tutti i pacchetti comprendono l'albero, le lettere, il giardino e le risposte. Cambiano il diario di fine anno, gli extra di ogni mese e la tessera. I prezzi sono IVA esclusa; sotto c'è il prezzo finale per chi compra.</p>
+
+  <div class="pacchetti">
+    <div class="pacchetto">
+      <p class="nome">Albero</p>
+      <p class="prezzo">29 € <small>+ IVA all'anno</small></p>
+      <p class="finale">35,38 € IVA inclusa</p>
+      <p class="perchi">Per chi vuole cominciare e seguire il suo albero per un anno.</p>
+      <p class="etichetta">Comprende</p>
+      <ul class="lista">
+        <li>L'albero, con il suo carattere e la sua intelligenza artificiale</li>
+        <li>Le lettere ogni mese e nei momenti importanti</li>
+        <li>Il giardino con il meteo vero e le risposte dell'albero</li>
+        <li>Il diario di fine anno in digitale, illustrato</li>
+        <li>La tessera del fan club, spedita a casa</li>
+      </ul>
+      <p class="etichetta">Non comprende</p>
+      <ul class="lista no">
+        <li>Il libro stampato, che si può aggiungere all'undicesimo mese</li>
+        <li>Gli extra mensili del Premium</li>
+      </ul>
+    </div>
+
+    <div class="pacchetto evidenza">
+      <span class="bollino">Da regalare</span>
+      <p class="nome">Premium annuale</p>
+      <p class="prezzo">49 € <small>+ IVA all'anno</small></p>
+      <p class="finale">59,78 € IVA inclusa</p>
+      <p class="perchi">Per chi vuole tenere il ricordo stampato, e per chi lo regala.</p>
+      <p class="etichetta">Comprende</p>
+      <ul class="lista">
+        <li>Tutto quello che c'è nell'Albero</li>
+        <li><b>Il libro dell'anno stampato</b>, che arriva il mese prima del rinnovo</li>
+        <li>Ogni mese un regalo da mandare all'albero, che risponde con una lettera</li>
+        <li>Il riepilogo illustrato del mese</li>
+        <li>La cartolina digitale del mese, per le storie e come sfondo del telefono</li>
+        <li>La tessera premium del fan club</li>
+      </ul>
+    </div>
+
+    <div class="pacchetto">
+      <p class="nome">Premium mensile</p>
+      <p class="prezzo">6 € <small>+ IVA al mese</small></p>
+      <p class="finale">7,32 € IVA inclusa · 72 € + IVA in un anno</p>
+      <p class="perchi">Per chi preferisce pagare un mese alla volta.</p>
+      <p class="etichetta">Comprende</p>
+      <ul class="lista">
+        <li>Tutto quello che c'è nel Premium annuale, pagato mese per mese</li>
+      </ul>
+      <p class="etichetta">Come funziona</p>
+      <ul class="lista">
+        <li>La tessera premium arriva al terzo mese</li>
+        <li>Il libro stampato arriva al dodicesimo mese, a chi ha completato l'anno</li>
+        <li>In un anno costa 23 € in più dell'annuale: chi è convinto risparmia scegliendo l'annuale</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="riga-2">
+    <div class="scura-box">
+      <h3>«Ho piantato un albero per te.»</h3>
+      <p style="margin-top:1.6mm">Il Premium annuale è pensato anche come <b>regalo</b>: per una nascita, un compleanno, un matrimonio o per Natale. Chi lo riceve trova a casa la tessera con il nome del suo albero e vive il primo anno da regalo. Quando arriva il diario, prima del rinnovo, il secondo anno può diventare suo.</p>
+    </div>
+    <div class="scheda tessera-box">
+      <div class="tessera" aria-hidden="true">
+        <p class="club">Linfa · Fan club</p>
+        <svg class="foglia" viewBox="0 0 20 20"><path d="M10 18V9" stroke="#2f5a3c" stroke-width="1.4" stroke-linecap="round"/><path d="M10 11c-4 0-5.5-2.7-5.5-5.2 3.4 0 5.5 1.8 5.5 5.2Z" fill="#2f5a3c"/><path d="M10 9.2c0-3.3 1.9-5.2 5.2-5.2 0 3-1.9 5.2-5.2 5.2Z" fill="#4f8a5a"/></svg>
+        <p class="nome-albero">Ottavio</p>
+        <p class="socio">Socio n. 00042</p>
+        <p class="citta">Pescara · socio fondatore</p>
+        <div class="qr"></div>
+      </div>
+      <div>
+        <h3>La tessera del fan club</h3>
+        <p>Ogni albero ha la sua tessera, con il nome, il numero di socio e un codice che apre il suo giardino. I primi mille soci sono <b>soci fondatori</b>, e lo resteranno.</p>
+      </div>
+    </div>
+  </div>
+
+  <h4>In più, in ogni pacchetto</h4>
+  <div class="pillole">
+    <span><em>Aggiungi un albero</em> con lo sconto, per famiglie, coppie e amici</span>
+    <span><em>Seme da regalare:</em> un codice per far piantare un albero a un amico</span>
+    <span><em>Regali all'albero</em> oltre a quelli inclusi (in arrivo)</span>
+  </div>
+
+  <h4>Chi diventerà?</h4>
+  <div class="archetipi">
+    <figure><img src="img/albero_imprenditore.png" alt=""><figcaption>L'imprenditore</figcaption></figure>
+    <figure><img src="img/albero_artista.png" alt=""><figcaption>L'artista</figcaption></figure>
+    <figure><img src="img/albero_filosofo.png" alt=""><figcaption>Il filosofo</figcaption></figure>
+    <figure><img src="img/albero_furfante.png" alt=""><figcaption>Il furfante del bosco</figcaption></figure>
+    <figure><img src="img/albero_sportivo.png" alt=""><figcaption>Lo sportivo</figcaption></figure>
+    <figure><span class="chissa">…e chissà</span></figure>
+  </div>
+
+  <div class="piede"><span>Linfa · ZIZI Group</span><span>02 / 03</span></div>
+</section>
+
+<!-- ======================= PAGINA 3 ======================= -->
+<section class="pagina chiara">
+  <p class="occhiello">I numeri del progetto</p>
+  <h1>Che cosa può rendere Linfa,<br><em>con 5.000 alberi nel primo anno.</em></h1>
+  <p class="lead">Questa pagina riassume il business plan. Le cifre sono al netto dell'IVA e si basano sulle ipotesi elencate in fondo, che vanno aggiornate con i preventivi e con i dati del primo test.</p>
+
+  <div class="kpi">
+    <div><p class="numero">212.250 <small>€</small></p><p class="e">incasso netto del primo anno con 5.000 iscritti</p></div>
+    <div><p class="numero">~140.100 <small>€</small></p><p class="e">margine prima della pubblicità</p></div>
+    <div><p class="numero">~90.100 <small>€</small></p><p class="e">margine dopo le ads, a 10 € per iscritto</p></div>
+    <div><p class="numero">28 <small>€</small></p><p class="e">il massimo di ads per iscritto prima di andare in perdita</p></div>
+  </div>
+
+  <div class="griglia">
+    <div class="scheda">
+      <h3>Il margine di ogni iscritto</h3>
+      <p class="sotto">In un anno, per pacchetto</p>
+      <table>
+        <thead><tr><th></th><th>Albero</th><th>Premium annuale</th><th>Premium mensile</th></tr></thead>
+        <tbody>
+          <tr><td>Incasso netto</td><td>29,00 €</td><td>49,00 €</td><td>72,00 €</td></tr>
+          <tr><td>Commissioni della carta</td><td class="meno">−0,78 €</td><td class="meno">−1,15 €</td><td class="meno">−4,32 €</td></tr>
+          <tr><td>Intelligenza artificiale</td><td class="meno">−2,50 €</td><td class="meno">−3,00 €</td><td class="meno">−3,00 €</td></tr>
+          <tr><td>Libro stampato e spedito</td><td>—</td><td class="meno">−12,00 €</td><td class="meno">−12,00 €</td></tr>
+          <tr><td>Tessera e spedizione</td><td class="meno">−2,50 €</td><td class="meno">−6,00 €</td><td class="meno">−6,00 €</td></tr>
+          <tr class="totale"><td>Margine</td><td class="v">23,22 €</td><td class="v">26,85 €</td><td class="v">46,68 €</td></tr>
+        </tbody>
+      </table>
+      <p class="nota">Con il mix ipotizzato ogni iscritto porta in media <b>42,45 €</b> di incasso e <b>28,01 €</b> di margine.</p>
+    </div>
+
+    <div class="scheda">
+      <h3>Il primo anno, per numero di iscritti</h3>
+      <p class="sotto">Con 10 € di ads per ogni iscritto</p>
+      <table>
+        <thead><tr><th>Iscritti</th><th>Incasso netto</th><th>Prima delle ads</th><th>Ads</th><th>Dopo le ads</th></tr></thead>
+        <tbody>
+          <tr><td>1.000</td><td>42.450 €</td><td>28.000 €</td><td class="meno">−10.000 €</td><td>18.000 €</td></tr>
+          <tr><td>2.500</td><td>106.100 €</td><td>70.000 €</td><td class="meno">−25.000 €</td><td>45.000 €</td></tr>
+          <tr class="forte"><td>5.000</td><td>212.250 €</td><td>140.100 €</td><td class="meno">−50.000 €</td><td>90.100 €</td></tr>
+          <tr><td>10.000</td><td>424.500 €</td><td>280.100 €</td><td class="meno">−100.000 €</td><td>180.100 €</td></tr>
+        </tbody>
+      </table>
+      <p class="nota">Il pacchetto mensile è il 15% degli iscritti ma porta circa un quarto del margine, se chi lo sceglie resta tutto l'anno.</p>
+    </div>
+
+    <div class="scheda">
+      <h3>Tre anni, con il 40% di rinnovi</h3>
+      <p class="sotto">5.000 nuovi iscritti l'anno; chi rinnova non costa ads</p>
+      <table>
+        <thead><tr><th></th><th>Anno 1</th><th>Anno 2</th><th>Anno 3</th></tr></thead>
+        <tbody>
+          <tr><td>Iscritti attivi</td><td>5.000</td><td>7.000</td><td>7.800</td></tr>
+          <tr><td>di cui rinnovi</td><td>—</td><td>2.000</td><td>2.800</td></tr>
+          <tr><td>Incasso netto</td><td>212.250 €</td><td>297.150 €</td><td>331.110 €</td></tr>
+          <tr class="totale"><td>Margine dopo le ads</td><td class="v">90.100 €</td><td class="v">146.100 €</td><td class="v">168.500 €</td></tr>
+        </tbody>
+      </table>
+      <p class="nota">Ogni <b>10 punti di rinnovi</b> in più valgono circa <b>14.000 €</b> l'anno, senza spendere in pubblicità.</p>
+    </div>
+
+    <div class="scheda">
+      <h3>Il costo delle ads decide tutto</h3>
+      <p class="sotto">Margine del primo anno con 5.000 iscritti</p>
+      <div class="cac">
+        <div><p class="v">115.100 €</p><p class="e">5 € a iscritto</p></div>
+        <div class="base"><p class="v">90.100 €</p><p class="e">10 € a iscritto</p></div>
+        <div><p class="v">65.100 €</p><p class="e">15 € a iscritto</p></div>
+        <div><p class="v">40.100 €</p><p class="e">20 € a iscritto</p></div>
+      </div>
+      <p class="pareggio">Con 10 € di ads ogni iscritto lascia circa <b>18 €</b> per i costi fissi, che non sono ancora preventivati. Se fossero 20.000 € l'anno basterebbero circa <b>1.100 iscritti</b> per il pareggio; con 40.000 € ne servirebbero circa <b>2.200</b>.</p>
+    </div>
+  </div>
+
+  <div class="chiusura">
+    <div class="scura-box">
+      <h3>Il prossimo passo: partiamo da Natale.</h3>
+      <p>Una prevendita del Premium annuale come regalo, con un budget di ads contenuto, misura le due cose che ancora non sappiamo: <b>quanto costa portare un iscritto</b> e <b>quale pacchetto scelgono</b> le persone. Con quei numeri il piano si conferma o si corregge prima di investire nelle animazioni definitive e nei fornitori.</p>
+    </div>
+    <div class="ipotesi">
+      <p><b>Ipotesi.</b> Mix degli iscritti: 50% Albero, 35% Premium annuale, 15% Premium mensile; i mensili restano 12 mesi (ipotesi ottimista). Ads: 10 € per iscritto. AI: 2,50 € l'anno (Albero), 3 € (Premium). Libro stampato e spedito: 12 €. Tessera con spedizione: 2,50 € e 6 €. Commissioni: 1,5% + 0,25 € ad addebito (tariffa standard di Stripe, da verificare). Rinnovi: 40%. Esclusi costi fissi, tasse sul reddito e i ricavi extra (regali, alberi aggiunti, libri per chi ha l'Albero).</p>
+    </div>
+  </div>
+
+  <div class="piede"><span>Linfa · ZIZI Group</span><span>03 / 03</span></div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,71 @@
+/* L'albero vivo (prefisso lv-): solo quello che serve all'interazione. Le animazioni le fa il
+   motore (motore.ts) scrivendo gli attributi SVG, non ci sono keyframe qui. */
+
+.lv-radice {
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.lv-interattivo {
+  cursor: grab;
+}
+
+.lv-interattivo[data-trascina] {
+  cursor: grabbing;
+}
+
+/* Anello di messa a fuoco, visibile solo con la tastiera */
+.lv-anello {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.lv-radice:focus-visible .lv-anello {
+  opacity: 0.75;
+}
+
+.lv-particelle,
+.lv-fumetto {
+  pointer-events: none;
+}
+
+.lv-fumetto text {
+  font-family: var(--font-gochi), cursive;
+}
+
+.lv-solo-lettori {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Scena: il cielo cambia colore piano piano, pioggia e sole compaiono sfumando */
+.lv-cielo {
+  transition: stop-color 1.4s ease;
+}
+.lv-compare {
+  animation: lv-compare 1s ease both;
+}
+@keyframes lv-compare {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lv-cielo {
+    transition: none;
+  }
+  .lv-compare {
+    animation: none;
+  }
+}

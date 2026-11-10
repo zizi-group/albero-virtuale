@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="it">
+  <body style="margin:0;padding:0;background:#f4efe3;font-family:Georgia,'Times New Roman',serif;color:#2b2a24;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4efe3;padding:40px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;background:#fffdf7;border:1px solid #e3dac4;border-radius:14px;padding:36px;">
+            <tr>
+              <td>
+                <p style="margin:0 0 6px;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#5f7a3a;">Linfa</p>
+                <h1 style="margin:0 0 18px;font-size:26px;font-weight:normal;">Il tuo albero ti aspetta.</h1>
+                <p style="margin:0 0 24px;font-size:16px;line-height:1.6;">
+                  Premi il bottone per entrare nel giardino. Il link vale un'ora e funziona una volta sola.
+                </p>
+                <p style="margin:0 0 28px;">
+                  <a href="{{ .SiteURL }}/auth/conferma?token_hash={{ .TokenHash }}&type=email"
+                     style="display:inline-block;background:#3f5a2a;color:#fffdf7;text-decoration:none;padding:13px 26px;border-radius:999px;font-family:Arial,sans-serif;font-size:15px;">
+                    Entra in Linfa
+                  </a>
+                </p>
+                <p style="margin:0 0 6px;font-size:14px;color:#6b6656;">Oppure scrivi questo codice nella pagina di accesso:</p>
+                <p style="margin:0 0 28px;font-family:'Courier New',monospace;font-size:24px;letter-spacing:.3em;">{{ .Token }}</p>
+                <p style="margin:0;font-size:13px;color:#8a846f;">Se non hai chiesto tu di entrare, ignora questa email.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
