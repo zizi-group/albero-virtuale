@@ -104,6 +104,22 @@ export interface Meteo {
   descrizione: string;
 }
 
+/**
+ * Quanti giorni ci mette a diventare adulto (Federico, 11/11/2026: non deve
+ * partire già grande). Si cambia qui e basta.
+ */
+export const GIORNI_PER_CRESCERE = 90;
+
+/**
+ * Quanto è cresciuto, da 0 (appena spuntato) a 1 (adulto). Cresce in fretta
+ * le prime settimane, poi rallenta: ogni giorno si vede un po' di differenza.
+ */
+export function crescitaDa(giorni: number): number {
+  const t = Math.min(1, Math.max(0, giorni) / GIORNI_PER_CRESCERE);
+  return 1 - (1 - t) * (1 - t);
+}
+
+/** Lo stadio dà il nome (Piantina, Alberello, Albero); la grandezza la dà crescitaDa. */
 export function stadioDa(giorni: number): Stadio {
   if (giorni >= 30) return "albero";
   if (giorni >= 7) return "alberello";

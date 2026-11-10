@@ -14,6 +14,11 @@ export interface AlberoProps {
   innevato?: boolean;
   /** Clic, trascinamento e occhi che seguono il puntatore. Di serie è attivo. */
   interattivo?: boolean;
+  /**
+   * L'età in giorni: l'albero ha la grandezza di quell'età (da germoglio ad
+   * adulto in GIORNI_PER_CRESCERE). Senza, la grandezza tipica dello stadio.
+   */
+  giorni?: number;
 }
 
 /** Il personaggio come gruppo SVG, da mettere dentro una scena. */

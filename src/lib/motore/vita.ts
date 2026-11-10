@@ -39,6 +39,16 @@ export interface StatoAlbero {
   strada: Strada | null;
   umore: string;
   biografia: FattoBiografia[];
+  /** I regali ricevuti dalla persona (Premium: uno al mese). */
+  regali?: RegaloRicevuto[];
+}
+
+export interface RegaloRicevuto {
+  mese: number;
+  /** Con l'articolo: «un berretto di lana rosso». */
+  cosa: string;
+  /** Che cosa ha deciso di farne, in breve. */
+  come: string;
 }
 
 export interface PaginaDiario {
@@ -148,6 +158,12 @@ export function descriviStato(stato: StatoAlbero): string {
     righe.push(
       "Fatti della sua vita da ricordare:",
       ...stato.biografia.slice(-15).map((f) => `- giorno ${f.giorno}: ${f.testo}`),
+    );
+  }
+  if (stato.regali?.length) {
+    righe.push(
+      "Regali ricevuti dalla persona (li ha ancora, e se ne ricorda):",
+      ...stato.regali.map((r) => `- mese ${r.mese}: ${r.cosa}. ${r.come}`),
     );
   }
   return righe.join("\n");

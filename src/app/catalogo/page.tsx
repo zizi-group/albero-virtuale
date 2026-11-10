@@ -6,7 +6,7 @@ import { Intestazione } from "@/components/Intestazione";
 import { AZIONI } from "@/lib/albero/azioni";
 import { FRASI_ROUTINE, risolviScena } from "@/lib/albero/scena";
 import { INFO_STRADE, STRADE } from "@/lib/albero/strade";
-import type { Stadio } from "@/lib/albero/tipi";
+import { GIORNI_PER_CRESCERE, stadioDa } from "@/lib/albero/tipi";
 import { meteoDiProva } from "@/lib/meteo";
 
 export const metadata: Metadata = { title: "Catalogo delle azioni — Linfa" };
@@ -25,7 +25,8 @@ const COMPATIBILITA = {
   qualsiasi: { testo: "con ogni tempo", simbolo: "◎" },
   notte: { testo: "di notte", simbolo: "☾" },
 };
-const STADI: Stadio[] = ["piantina", "alberello", "albero"];
+/** Le tappe della crescita: da germoglio ad adulto in GIORNI_PER_CRESCERE giorni. */
+const TAPPE = [0, 10, 30, 60, GIORNI_PER_CRESCERE];
 
 export default function Catalogo() {
   return (
@@ -127,13 +128,25 @@ export default function Catalogo() {
           <h2 id="titolo-crescita" className="font-titolo mb-6 text-3xl sm:text-4xl">
             Come cresce
           </h2>
+          <p className="mb-6 max-w-3xl text-lg text-matita">
+            Non nasce grande: spunta come un germoglio e cresce un po&apos; ogni giorno, in fretta le prime settimane e
+            poi con calma. Dopo {GIORNI_PER_CRESCERE} giorni è un albero fatto.
+          </p>
           <div className="crescita">
-            {STADI.map((st, i) => (
-              <figure key={st} className="text-center">
-                <Albero posa={AZIONI[0].posa} stadio={st} stagione="estate" className="mx-auto h-44 w-40 sm:h-56 sm:w-48" titolo={st} interattivo={false} />
+            {TAPPE.map((g) => (
+              <figure key={g} className="text-center">
+                <Albero
+                  posa={AZIONI[0].posa}
+                  stadio={stadioDa(g)}
+                  giorni={g}
+                  stagione="estate"
+                  className="mx-auto h-44 w-40 sm:h-56 sm:w-48"
+                  titolo={`${stadioDa(g)}, giorno ${g}`}
+                  interattivo={false}
+                />
                 <figcaption className="mt-2">
-                  <span className="font-mano text-xl capitalize">{st}</span>
-                  <span className="block text-sm text-matita">dal giorno {[0, 7, 30][i]}</span>
+                  <span className="font-mano text-xl capitalize">{stadioDa(g)}</span>
+                  <span className="block text-sm text-matita">{g === 0 ? "il giorno della semina" : `giorno ${g}`}</span>
                 </figcaption>
               </figure>
             ))}

@@ -1,7 +1,9 @@
-// Il motore notturno: per ogni albero fa passare un giorno; ogni 30 giorni parte la lettera del mese.
+// Il motore notturno: per ogni albero fa passare un giorno. Ogni 30 giorni vissuti
+// si chiude il mese (riepilogo del Premium) e parte la lettera del mese.
 // In produzione si lancia una volta a notte (cron). In locale: npm run notte
 import "./_env";
 import { createAdminClient } from "../src/lib/supabase/admin";
+import { apriNuovoMese, meseCorrente, meseFinito } from "../src/lib/motore/extra";
 import { faiPassareGiorni, scriviEInviaLettera } from "../src/lib/motore/servizio";
 
 async function main() {
@@ -12,9 +14,10 @@ async function main() {
     try {
       const r = await faiPassareGiorni(a.id, 1);
       let nota = r.rivelata ? `, strada rivelata: ${r.rivelata}` : "";
-      if (r.giorni % 30 === 0) {
+      if (meseFinito(await meseCorrente(a.id), r.giorni)) {
+        const m = await apriNuovoMese(a.id);
         await scriviEInviaLettera(a.id, "mensile");
-        nota += ", lettera del mese spedita";
+        nota += `, chiuso il mese ${m.chiuso} («${m.titolo}») e spedita la lettera del mese`;
       }
       console.log(`- ${a.name}: giorno ${r.giorni}${nota}`);
     } catch (e) {

@@ -36,7 +36,7 @@ export function ModuloSemina({ pacchetto = "albero" }: { pacchetto?: IdPiano }) 
           className="h-full"
           seme={!inCorso}
           chiaveAlbero={inCorso ? "germoglio" : "seme"}
-          albero={<Albero posa={SALUTO} stadio="piantina" stagione="primavera" titolo={nome ? `${nome}, appena spuntato` : "Un germoglio"} />}
+          albero={<Albero posa={SALUTO} stadio="piantina" giorni={0} stagione="primavera" titolo={nome ? `${nome}, appena spuntato` : "Un germoglio"} />}
           palco={
             <>
               <Seme />

@@ -2,6 +2,7 @@ import { createAdminClient } from "../supabase/admin";
 import type { Database, Json } from "../supabase/database.types";
 import { INFO_STRADE, isStrada, trattiCasuali, type PunteggiStrade, type Tratti } from "../albero/strade";
 import { azione } from "../albero/azioni";
+import { regalo } from "../albero/regali";
 import { meteoAttuale, oggiNelFuso, previsioni, type Luogo } from "../meteo";
 import { inviaLettera } from "./email";
 import { scriviRisposta, scriviTestoLettera, type TipoLettera } from "./scritture";
@@ -11,6 +12,7 @@ import {
   preparaGiorni,
   type ContestoVita,
   type FattoBiografia,
+  type RegaloRicevuto,
   type StatoAlbero,
 } from "./vita";
 
@@ -21,10 +23,10 @@ import {
 export type RigaAlbero = Database["public"]["Tables"]["trees"]["Row"];
 export const MAX_GIORNI_PER_VOLTA = 7;
 
-const db = () => createAdminClient();
-const json = (v: unknown) => v as NonNullable<Json>;
+export const db = () => createAdminClient();
+export const json = (v: unknown) => v as NonNullable<Json>;
 
-export function statoDaRiga(r: RigaAlbero): StatoAlbero {
+export function statoDaRiga(r: RigaAlbero, regali: RegaloRicevuto[] = []): StatoAlbero {
   return {
     nome: r.name,
     nomePersona: r.owner_name,
@@ -36,16 +38,33 @@ export function statoDaRiga(r: RigaAlbero): StatoAlbero {
     strada: isStrada(r.path) ? r.path : null,
     umore: r.mood,
     biografia: (r.biography ?? []) as unknown as FattoBiografia[],
+    regali,
   };
 }
 
-async function caricaAlbero(alberoId: string): Promise<RigaAlbero> {
+export async function caricaAlbero(alberoId: string): Promise<RigaAlbero> {
   const { data, error } = await db().from("trees").select("*").eq("id", alberoId).single();
   if (error || !data) throw new Error(`Albero non trovato: ${error?.message ?? alberoId}`);
   return data;
 }
 
-async function contesto(alberoId: string, pagine = 6): Promise<ContestoVita> {
+/** I regali ricevuti, come li ricorda l'albero nei prompt. */
+export async function regaliRicevuti(alberoId: string): Promise<RegaloRicevuto[]> {
+  const { data } = await db()
+    .from("gifts")
+    .select("month_number, gift, how")
+    .eq("tree_id", alberoId)
+    .order("created_at", { ascending: true });
+  return (data ?? []).map((g) => ({ mese: g.month_number, cosa: regalo(g.gift)?.articolo ?? g.gift, come: g.how }));
+}
+
+/** La riga dell'albero e il suo stato per il motore, con i regali. */
+export async function caricaStato(alberoId: string): Promise<{ riga: RigaAlbero; stato: StatoAlbero }> {
+  const [riga, regali] = await Promise.all([caricaAlbero(alberoId), regaliRicevuti(alberoId)]);
+  return { riga, stato: statoDaRiga(riga, regali) };
+}
+
+export async function contesto(alberoId: string, pagine = 6): Promise<ContestoVita> {
   const [diario, messaggi] = await Promise.all([
     db()
       .from("diary_entries")
@@ -72,7 +91,7 @@ async function contesto(alberoId: string, pagine = 6): Promise<ContestoVita> {
   };
 }
 
-async function emailDelProprietario(ownerId: string): Promise<string | null> {
+export async function emailDelProprietario(ownerId: string): Promise<string | null> {
   const { data } = await db().auth.admin.getUserById(ownerId);
   return data.user?.email ?? null;
 }
@@ -123,6 +142,8 @@ export async function piantaAlbero({
     body: `Sono spuntato oggi a ${luogo.citta}${meteo ? `, con ${meteo.descrizione}` : ""}. Non so ancora chi sono, ma ho delle radici e mi sembra un buon inizio.`,
     milestone: true,
   });
+  // Il mese 1 parte alla semina: serve agli extra del Premium (regalo, riepilogo, cartolina).
+  await db().from("tree_months").insert({ tree_id: albero.id, number: 1, first_day: 0 });
 
   try {
     await scriviEInviaLettera(albero.id, "benvenuto", meteo?.descrizione);
@@ -136,8 +157,7 @@ export async function piantaAlbero({
 /** Fa passare da 1 a 7 giorni: una chiamata all'AI, diario, strada, lettere. */
 export async function faiPassareGiorni(alberoId: string, n: number) {
   const giorniDaVivere = Math.max(1, Math.min(MAX_GIORNI_PER_VOLTA, Math.round(n)));
-  const riga = await caricaAlbero(alberoId);
-  const stato = statoDaRiga(riga);
+  const { riga, stato } = await caricaStato(alberoId);
   const [prev, ctx] = await Promise.all([previsioni(riga.latitude, riga.longitude), contesto(alberoId)]);
 
   const giorni = preparaGiorni(stato, giorniDaVivere, prev);
@@ -209,14 +229,22 @@ async function giorniDallUltimaLettera(alberoId: string, tipo: TipoLettera, oggi
 
 /** L'albero scrive una lettera, la salva e la spedisce per email. */
 export async function scriviEInviaLettera(alberoId: string, tipo: TipoLettera, motivo?: string) {
-  const riga = await caricaAlbero(alberoId);
-  const stato = statoDaRiga(riga);
+  const { riga, stato } = await caricaStato(alberoId);
   const ctx = await contesto(alberoId, tipo === "mensile" ? 30 : 6);
   const { oggetto, testo } = await scriviTestoLettera(stato, tipo, ctx, motivo);
+  return salvaEInviaLettera(riga, tipo, oggetto, testo);
+}
 
+/** Salva una lettera già scritta e la spedisce per email (se l'email non parte, la lettera resta). */
+export async function salvaEInviaLettera(
+  riga: RigaAlbero,
+  tipo: TipoLettera | "regalo",
+  oggetto: string,
+  testo: string,
+) {
   const { data: lettera, error } = await db()
     .from("letters")
-    .insert({ tree_id: alberoId, kind: tipo, day_number: riga.day_count, subject: oggetto, body: testo })
+    .insert({ tree_id: riga.id, kind: tipo, day_number: riga.day_count, subject: oggetto, body: testo })
     .select("*")
     .single();
   if (error || !lettera) throw new Error(`Lettera non salvata: ${error?.message}`);
@@ -240,8 +268,7 @@ export async function rispondiAllaPersona(alberoId: string, testo: string) {
 
   await db().from("messages").insert({ tree_id: alberoId, author: "persona", body: pulito });
 
-  const riga = await caricaAlbero(alberoId);
-  const stato = statoDaRiga(riga);
+  const { stato } = await caricaStato(alberoId);
   const [{ data: storia }, ctx] = await Promise.all([
     db()
       .from("messages")

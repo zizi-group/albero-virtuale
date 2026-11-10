@@ -7,12 +7,15 @@ import { oraDelGiorno, type Ora } from "@/components/ambiente/atmosfera";
 import { Cassetta, Taccuino } from "@/components/ambiente/Oggetti";
 import { Intestazione } from "@/components/Intestazione";
 import { azione } from "@/lib/albero/azioni";
+import { vestiConRegali } from "@/lib/albero/regali";
 import { FRASI_ROUTINE, risolviScena } from "@/lib/albero/scena";
 import { classifica, INFO_STRADE, isStrada, NOMI_TRATTI, TRATTI, type PunteggiStrade, type Tratti } from "@/lib/albero/strade";
 import { stadioDa, stagioneDa, type Cielo, type Meteo } from "@/lib/albero/tipi";
 import { meteoAttuale, meteoDiProva, oggiNelFuso } from "@/lib/meteo";
+import type { RecapMese } from "@/lib/motore/extra";
 import { createClient, getUtente } from "@/lib/supabase/server";
 import { Conversazione } from "./Conversazione";
+import { ExtraDelMese } from "./Extra";
 import { Strumenti } from "./Strumenti";
 
 export const metadata: Metadata = { title: "Il giardino — Linfa" };
@@ -30,6 +33,7 @@ const TIPI_LETTERA: Record<string, string> = {
   benvenuto: "Benvenuto",
   mensile: "Lettera del mese",
   momento: "Un momento importante",
+  regalo: "Grazie per il regalo",
 };
 
 const NOMI_STADIO = { piantina: "Piantina", alberello: "Alberello", albero: "Albero" } as const;
@@ -48,18 +52,27 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
   const sceltaMeteo = typeof parametri.meteo === "string" ? parametri.meteo : undefined;
   const nuovo = parametri.nuovo === "1";
 
-  const [diario, lettere, messaggi, meteoVero] = await Promise.all([
+  const [diario, lettere, messaggi, meteoVero, mesi, regali] = await Promise.all([
     supabase.from("diary_entries").select("*").eq("tree_id", albero.id).order("day_number", { ascending: false }).limit(12),
     supabase.from("letters").select("id, kind, subject, created_at, read_at, day_number").eq("tree_id", albero.id).order("created_at", { ascending: false }),
     supabase.from("messages").select("id, author, body").eq("tree_id", albero.id).order("created_at", { ascending: true }).limit(40),
     meteoDiProva(sceltaMeteo) ? Promise.resolve(null) : meteoAttuale(albero.latitude, albero.longitude),
+    supabase.from("tree_months").select("number, first_day, closed_at, recap").eq("tree_id", albero.id).order("number", { ascending: false }),
+    supabase.from("gifts").select("gift, use, how, month_number, letter_id, included").eq("tree_id", albero.id).order("created_at", { ascending: true }),
   ]);
+  const elencoMesi = mesi.data ?? [];
+  const meseCorrente = elencoMesi[0] ?? { number: 1, first_day: 0, closed_at: null, recap: null };
+  const ultimoChiuso = elencoMesi.find((m) => m.closed_at);
+  const doni = regali.data ?? [];
+  const regaloDelMese = doni.find((g) => g.included && g.month_number === meseCorrente.number) ?? null;
 
   const prova = meteoDiProva(sceltaMeteo);
   const meteo: Meteo = prova ??
     meteoVero ??
     (albero.last_weather as Meteo | null) ?? { cielo: "nuvole", temperatura: 15, giorno: true, descrizione: "cielo nuvoloso" };
   const scena = risolviScena(meteo, albero.today_action, albero.path);
+  // I regali che ha deciso di usare compaiono nella scena, se li sa già disegnare.
+  const posa = vestiConRegali(scena.posa, doni, meteo);
   const stadio = stadioDa(albero.day_count);
   const stagione = stagioneDa(new Date(`${oggiNelFuso(albero.timezone)}T12:00:00`));
   const strada = isStrada(albero.path) ? albero.path : null;
@@ -100,7 +113,8 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
             chiaveAlbero={`${scena.azione.id}-${stadio}`}
             albero={
               <Albero
-                posa={scena.posa}
+                posa={posa}
+                giorni={albero.day_count}
                 stadio={stadio}
                 stagione={stagione}
                 innevato={meteo.cielo === "neve"}
@@ -157,6 +171,7 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
                 <a href="#lettere">
                   Lettere{nonLette > 0 && <span className="segnalibro-numero">{nonLette}</span>}
                 </a>
+                <a href="#extra">Il mese</a>
                 <a href="#diario">Diario</a>
                 <a href="#scrivigli">Scrivigli</a>
               </nav>
@@ -164,7 +179,7 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
           </Ambiente>
         </section>
 
-        <Strumenti nome={albero.name} meteoScelto={sceltaMeteo} />
+        <Strumenti nome={albero.name} meteoScelto={sceltaMeteo} piano={albero.plan} />
 
         <div className="mx-auto w-full max-w-6xl px-4 pt-10 pb-24 sm:px-8">
           {/* La scheda del personaggio */}
@@ -174,6 +189,7 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
                 <Albero
                   className="h-full w-full"
                   posa={{ ...azione("guardare-cielo").posa, occhi: "felici", indossa: [INFO_STRADE[strada].accessorio] }}
+                  giorni={albero.day_count}
                   stadio={stadio}
                   stagione={stagione}
                   titolo={`${albero.name}, ${INFO_STRADE[strada].nome.toLowerCase()}`}
@@ -225,6 +241,14 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
               ))}
             </dl>
           </section>
+
+          <ExtraDelMese
+            nome={albero.name}
+            piano={albero.plan}
+            mese={meseCorrente}
+            regaloDelMese={regaloDelMese}
+            ultimoChiuso={ultimoChiuso ? { number: ultimoChiuso.number, recap: ultimoChiuso.recap as RecapMese | null } : null}
+          />
 
           <div className="mt-14 grid gap-12 lg:grid-cols-3 lg:gap-8">
             {/* Le lettere */}

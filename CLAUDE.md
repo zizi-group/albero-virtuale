@@ -50,22 +50,32 @@ Tutto in italiano: codice (nomi), testi, commit, report.
 
 ## Dove sta cosa
 
-- `src/lib/albero/`: vocabolario visivo (`tipi.ts`), libreria delle 23 azioni
-  con la compatibilità col meteo (`azioni.ts`), tratti e strade (`strade.ts`),
-  regole delle abitudini col meteo (`scena.ts`).
+- `src/lib/albero/`: vocabolario visivo e crescita (`tipi.ts`), libreria delle
+  23 azioni con la compatibilità col meteo (`azioni.ts`), tratti e strade
+  (`strade.ts`), regole delle abitudini col meteo (`scena.ts`), catalogo dei
+  regali e quando compaiono nella scena (`regali.ts`).
+- `src/lib/piani.ts`: i tre pacchetti (`albero`, `premium-annuale`,
+  `premium-mensile`) e `isPremium`. Prezzi e testi per il sito in
+  `src/components/landing/Pacchetti.tsx`.
 - `src/components/albero/`: `Albero.tsx` (l'albero nel suo SVG) e `Scena.tsx`
   (con il cielo) usano il pupazzo animato e interattivo di `vivo/`: scenette,
   strato di vita, clic, trascinamento, fumetti. Motore a fotogrammi senza
   librerie, CSS con prefisso `lv-` in `vivo/vivo.css`. Come si muove, scenetta
   per scenetta: `docs/animazioni-albero.md`. Le classi `l-*` di `globals.css`
-  servono solo al cielo della `Scena`.
+  servono solo al cielo della `Scena`. Il disegno fermo del personaggio sta in
+  `vivo/figura.tsx` (senza hook): lo animano `AlberoVivo` nel browser e
+  `fermo.ts` lo trasforma in SVG per le immagini fatte sul server.
 - `src/lib/motore/`: `personaggio.ts` (prompt di sistema fisso, eventi),
   `vita.ts` (giornate: parte pura, gira anche in memoria), `scritture.ts`
   (lettere e risposte), `servizio.ts` (collegato a database ed email),
-  `email.ts` (SMTP di Mailpit), `ai.ts` (unico punto che chiama Claude).
+  `email.ts` (SMTP di Mailpit), `ai.ts` (unico punto che chiama Claude),
+  `extra.ts` (extra mensili del Premium: mesi dell'albero, regalo del mese,
+  riepilogo, cambio pacchetto della demo).
 - `src/app/`: `/` landing, `/accedi`, `/auth/conferma`, `/auth/esci`,
   `/pianta`, `/giardino` (con gli strumenti della demo e `?meteo=`),
-  `/giardino/lettere/[id]`, `/catalogo`.
+  `/giardino/lettere/[id]`, `/giardino/mese/[numero]` (riepilogo illustrato
+  del mese) con `cartolina` (PNG con `next/og`, `?formato=storia|sfondo`,
+  `&scarica=1`), `/catalogo`.
 - `supabase/`: `config.toml`, migrazioni, template dell'email di accesso.
 
 ## Regole
@@ -78,8 +88,17 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   religione o contenuti inadatti. Si cambiano lì, non nei singoli prompt.
 - L'AI sceglie solo azioni della libreria: una nuova azione si aggiunge in
   `azioni.ts` (posa) e, se serve, con oggetti o indumenti nuovi in
-  `vivo/disegni.tsx` e `vivo/AlberoVivo.tsx`; la sua scenetta in
+  `vivo/disegni.tsx` e `vivo/figura.tsx`; la sua scenetta in
   `vivo/scenette.ts` (senza scenetta usa la posa viva con gesti a sorpresa).
+- **Extra del Premium** (regalo, riepilogo, cartolina): solo per i piani
+  Premium; chi ha l'Albero vede un invito garbato, mai un blocco. Il mese
+  dell'albero dura 30 giorni vissuti (`tree_months`); nella demo «Inizio mese»
+  lo chiude subito. L'albero decide da solo che cosa fare del regalo; i regali
+  entrano nei prompt (`StatoAlbero.regali`) e non cambiano mai la strada.
+- **Crescita**: l'albero nasce germoglio e diventa adulto in
+  `GIORNI_PER_CRESCERE` giorni (`tipi.ts`, oggi 90). Per l'albero vero si passa
+  `giorni` ad `Albero`/`Scena`; senza `giorni` vale la grandezza tipica dello
+  stadio (illustrazioni del sito).
 - Il sistema con «movimento ridotto» ferma pioggia, neve e nuvole; il
   personaggio tiene solo i movimenti lievi (niente salti, scosse né corse).
   Sul PC di sviluppo Windows ha gli effetti di animazione spenti: il browser

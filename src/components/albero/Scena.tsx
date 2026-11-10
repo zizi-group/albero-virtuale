@@ -45,11 +45,13 @@ export interface ScenaProps {
   interattivo?: boolean;
   /** Chiamata quando l'albero finisce una scenetta. */
   onCiclo?: () => void;
+  /** L'età in giorni, per la grandezza dell'albero (crescita continua). */
+  giorni?: number;
 }
 
 const VENTO: Record<Meteo["cielo"], number> = { sole: 0.25, nuvole: 0.35, pioggia: 0.6, temporale: 1, neve: 0.45, nebbia: 0.15 };
 
-export function Scena({ meteo, posa, stadio = "albero", stagione = "estate", className, etichetta, interattivo = true, onCiclo }: ScenaProps) {
+export function Scena({ meteo, posa, stadio = "albero", stagione = "estate", className, etichetta, interattivo = true, onCiclo, giorni }: ScenaProps) {
   const notte = !meteo.giorno;
   const chiave = notte ? "notte" : meteo.cielo;
   const [alto, basso] = CIELI[chiave];
@@ -164,6 +166,7 @@ export function Scena({ meteo, posa, stadio = "albero", stagione = "estate", cla
           freddo={meteo.temperatura < FREDDO_SOTTO || neve}
           ricorda
           onCiclo={onCiclo}
+          giorni={giorni}
         />
       </g>
 

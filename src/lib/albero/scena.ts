@@ -52,16 +52,7 @@ export function risolviScena(
   }
 
   for (const i of scelta.posa.indossa) indossa.add(i);
-
-  if (isStrada(strada)) {
-    const acc = INFO_STRADE[strada].accessorio;
-    const conflitto =
-      (acc === "occhiali-tondi" && indossa.has("occhiali-sole")) ||
-      (acc === "fascia" && (indossa.has("cappello") || indossa.has("berretto-notte"))) ||
-      (acc === "basco" && (indossa.has("cappello") || indossa.has("berretto-notte"))) ||
-      (acc === "bandana" && indossa.has("sciarpa"));
-    if (!conflitto) indossa.add(acc);
-  }
+  aggiungiAccessorio(indossa, strada);
 
   // Il berretto da notte prende il posto del cappello di lana.
   if (indossa.has("berretto-notte")) indossa.delete("cappello");
@@ -71,6 +62,36 @@ export function risolviScena(
     posa: { ...scelta.posa, indossa: [...indossa] },
     routine,
   };
+}
+
+/** L'accessorio della strada, se non va in conflitto con quello che ha già addosso. */
+function aggiungiAccessorio(indossa: Set<Indumento>, strada: string | null | undefined) {
+  if (!isStrada(strada)) return;
+  const acc = INFO_STRADE[strada].accessorio;
+  const conflitto =
+    (acc === "occhiali-tondi" && indossa.has("occhiali-sole")) ||
+    (acc === "fascia" && (indossa.has("cappello") || indossa.has("berretto-notte"))) ||
+    (acc === "basco" && (indossa.has("cappello") || indossa.has("berretto-notte"))) ||
+    (acc === "bandana" && indossa.has("sciarpa"));
+  if (!conflitto) indossa.add(acc);
+}
+
+/**
+ * La posa di un giorno passato (riepilogo del mese, cartolina): l'azione scelta
+ * quel giorno, senza le abitudini che la cambierebbero, ma vestita per il suo meteo.
+ */
+export function posaDelGiorno(azioneDelGiorno: string, meteo: Meteo, strada: string | null | undefined): Posa {
+  const scelta = azione(azioneDelGiorno);
+  const indossa = new Set<Indumento>(scelta.posa.indossa);
+  if (meteo.temperatura < FREDDO_SOTTO || meteo.cielo === "neve") {
+    indossa.add("cappello");
+    indossa.add("sciarpa");
+  } else if (meteo.cielo === "sole" && meteo.temperatura >= SOLE_DA) {
+    indossa.add("occhiali-sole");
+  }
+  aggiungiAccessorio(indossa, strada);
+  if (indossa.has("berretto-notte")) indossa.delete("cappello");
+  return { ...scelta.posa, indossa: [...indossa] };
 }
 
 export const FRASI_ROUTINE: Record<NonNullable<ScenaRisolta["routine"]>, string> = {

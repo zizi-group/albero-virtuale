@@ -43,6 +43,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"gifts": {
+                  Row: {
+                    "created_at": string,"gift": string,"how": string,"id": string,"included": boolean,"letter_id": string | null,"month_number": number,"tree_id": string,"use": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"gift": string,"how": string,"id"?: string,"included"?: boolean,"letter_id"?: string | null,"month_number": number,"tree_id": string,"use": string
+                  }
+                  Update: {
+                    "created_at"?: string,"gift"?: string,"how"?: string,"id"?: string,"included"?: boolean,"letter_id"?: string | null,"month_number"?: number,"tree_id"?: string,"use"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "gifts_letter_id_fkey"
+      columns: ["letter_id"]
+isOneToOne: false
+      referencedRelation: "letters"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "gifts_tree_id_fkey"
+      columns: ["tree_id"]
+isOneToOne: false
+      referencedRelation: "trees"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"letters": {
                   Row: {
                     "body": string,"created_at": string,"day_number": number,"emailed_at": string | null,"id": string,"kind": string,"read_at": string | null,"subject": string,"tree_id": string
@@ -77,6 +103,26 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "messages_tree_id_fkey"
+      columns: ["tree_id"]
+isOneToOne: false
+      referencedRelation: "trees"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"tree_months": {
+                  Row: {
+                    "closed_at": string | null,"first_day": number,"id": string,"number": number,"recap": Json | null,"started_at": string,"tree_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "closed_at"?: string | null,"first_day"?: number,"id"?: string,"number": number,"recap"?: Json | null,"started_at"?: string,"tree_id": string
+                  }
+                  Update: {
+                    "closed_at"?: string | null,"first_day"?: number,"id"?: string,"number"?: number,"recap"?: Json | null,"started_at"?: string,"tree_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tree_months_tree_id_fkey"
       columns: ["tree_id"]
 isOneToOne: false
       referencedRelation: "trees"

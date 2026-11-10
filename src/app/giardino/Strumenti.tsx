@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
+import { ID_PACCHETTI, NOMI_PACCHETTO } from "@/lib/piani";
 import { azioneDemo, type Esito } from "./actions";
 
 const METEO_DI_PROVA = [
@@ -14,9 +15,9 @@ const METEO_DI_PROVA = [
 ];
 
 /** Gli strumenti della demo, in un cassetto discreto in basso a destra. */
-export function Strumenti({ nome, meteoScelto }: { nome: string; meteoScelto?: string }) {
+export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoScelto?: string; piano: string }) {
   const [esito, azione, inCorso] = useActionState<Esito, FormData>(azioneDemo, {});
-  const [cosa, setCosa] = useState<"giorni" | "lettera">("giorni");
+  const [cosa, setCosa] = useState<"giorni" | "lettera" | "mese" | "pacchetto">("giorni");
   const [aperto, setAperto] = useState(false);
   const maniglia = useRef<HTMLButtonElement>(null);
 
@@ -56,16 +57,60 @@ export function Strumenti({ nome, meteoScelto }: { nome: string; meteoScelto?: s
           <button name="cosa" value="lettera" className="timbro timbro-carta timbro-piccolo" disabled={inCorso} onClick={() => setCosa("lettera")}>
             Lettera del mese
           </button>
+          <button name="cosa" value="mese" className="timbro timbro-carta timbro-piccolo" disabled={inCorso} onClick={() => setCosa("mese")}>
+            Inizio mese
+          </button>
         </form>
+        <p className="mt-1.5 text-sm leading-snug text-matita">
+          «Inizio mese» chiude il mese dell&apos;albero: arrivano il riepilogo, la cartolina e un regalo nuovo da fare.
+        </p>
         <p className="mt-3 min-h-6 text-[0.95rem] leading-snug" aria-live="polite">
           {inCorso ? (
             <span className="font-mano text-lg">
-              {cosa === "lettera" ? `${nome} sta scrivendo, con calma…` : `${nome} sta vivendo le sue giornate…`}
+              {
+                {
+                  lettera: `${nome} sta scrivendo, con calma…`,
+                  giorni: `${nome} sta vivendo le sue giornate…`,
+                  mese: `${nome} sfoglia il diario del mese…`,
+                  pacchetto: "Cambio il pacchetto…",
+                }[cosa]
+              }
             </span>
           ) : (
-            esito.messaggio && <span className={esito.ok ? "text-muschio" : "text-rosso"}>{esito.messaggio}</span>
+            esito.messaggio && (
+              <span className={esito.ok ? "text-muschio" : "text-rosso"}>
+                {esito.messaggio}
+                {esito.link && (
+                  <>
+                    {" "}
+                    <Link href={esito.link.href} className="font-semibold underline decoration-linfa decoration-2 underline-offset-4">
+                      {esito.link.testo}
+                    </Link>
+                  </>
+                )}
+              </span>
+            )
           )}
         </p>
+        <p className="mt-3 mb-1.5 text-sm text-matita" id="pacchetto-prova">
+          Il pacchetto · demo, nessun pagamento
+        </p>
+        <form action={azione} className="gettoni" role="group" aria-labelledby="pacchetto-prova">
+          <input type="hidden" name="cosa" value="pacchetto" />
+          {ID_PACCHETTI.map((id) => (
+            <button
+              key={id}
+              name="piano"
+              value={id}
+              aria-pressed={piano === id}
+              disabled={inCorso}
+              onClick={() => setCosa("pacchetto")}
+              className="gettone min-h-9 px-3 text-[0.9rem]"
+            >
+              {NOMI_PACCHETTO[id]}
+            </button>
+          ))}
+        </form>
         <p className="mt-3 mb-1.5 text-sm text-matita" id="meteo-prova">
           Il meteo della scena
         </p>
