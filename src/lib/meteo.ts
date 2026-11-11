@@ -117,6 +117,12 @@ export function meteoDiProva(tipo: string | undefined): Meteo | null {
       return { cielo: "neve", temperatura: -1, giorno: true, descrizione: "neve, -1° (prova)" };
     case "notte":
       return { cielo: "sole", temperatura: 9, giorno: false, descrizione: "cielo sereno, 9° (prova)" };
+    case "temporale":
+      return { cielo: "temporale", temperatura: 17, giorno: true, descrizione: "temporale, 17° (prova)" };
+    case "caldo":
+      return { cielo: "sole", temperatura: 33, giorno: true, descrizione: "sole e caldo, 33° (prova)" };
+    case "nebbia":
+      return { cielo: "nebbia", temperatura: 8, giorno: true, descrizione: "nebbia, 8° (prova)" };
     case "nuvole":
       return { cielo: "nuvole", temperatura: 15, giorno: true, descrizione: "cielo nuvoloso, 15° (prova)" };
     default:

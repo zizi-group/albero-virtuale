@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
+import { provaNelGiardino } from "@/components/giardino3d/reazioni";
+import { AZIONI } from "@/lib/albero/azioni";
+import { UMORI } from "@/lib/motore/personaggio";
 import { ID_PACCHETTI, NOMI_PACCHETTO } from "@/lib/piani";
 import { azioneDemo, type Esito } from "./actions";
 import { EVENTO_TEMPO, type DettaglioTempo } from "./Immersivo";
@@ -13,6 +16,9 @@ const METEO_DI_PROVA = [
   { id: "freddo", nome: "Freddo", simbolo: "❄" },
   { id: "neve", nome: "Neve", simbolo: "❅" },
   { id: "notte", nome: "Notte", simbolo: "☾" },
+  { id: "temporale", nome: "Temporale", simbolo: "⚡" },
+  { id: "caldo", nome: "Caldo", simbolo: "☀" },
+  { id: "nebbia", nome: "Nebbia", simbolo: "≋" },
 ];
 
 /** Gli strumenti della demo, in un cassetto discreto in basso a destra. */
@@ -20,6 +26,8 @@ export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoSce
   const [esito, azione, inCorso] = useActionState<Esito, FormData>(azioneDemo, {});
   const [cosa, setCosa] = useState<"giorni" | "lettera" | "mese" | "pacchetto" | "mattina" | "settimana">("giorni");
   const [aperto, setAperto] = useState(false);
+  const [umoreProva, setUmoreProva] = useState("");
+  const [azioneProva, setAzioneProva] = useState("");
   const maniglia = useRef<HTMLButtonElement>(null);
 
   // Il time-lapse del giardino: avvisa quando i giorni iniziano e finiscono di passare.
@@ -153,6 +161,47 @@ export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoSce
               </Link>
             );
           })}
+        </div>
+        <p className="mt-3 mb-1.5 text-sm text-matita">Prova un umore o un&apos;azione (solo la scena, per un momento)</p>
+        <div className="flex flex-wrap gap-2">
+          <label className="sr-only" htmlFor="umore-prova">
+            Umore di prova
+          </label>
+          <select
+            id="umore-prova"
+            className="gettone min-h-9 px-2 text-[0.9rem]"
+            value={umoreProva}
+            onChange={(e) => {
+              setUmoreProva(e.target.value);
+              provaNelGiardino({ umore: e.target.value || null });
+            }}
+          >
+            <option value="">Umore vero</option>
+            {UMORI.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
+          <label className="sr-only" htmlFor="azione-prova">
+            Azione di prova
+          </label>
+          <select
+            id="azione-prova"
+            className="gettone min-h-9 px-2 text-[0.9rem]"
+            value={azioneProva}
+            onChange={(e) => {
+              setAzioneProva(e.target.value);
+              provaNelGiardino({ azione: e.target.value || null });
+            }}
+          >
+            <option value="">Azione di oggi</option>
+            {AZIONI.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.etichetta}
+              </option>
+            ))}
+          </select>
         </div>
       </section>
 

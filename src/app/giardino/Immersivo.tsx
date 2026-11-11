@@ -8,6 +8,7 @@ import { Ambiente } from "@/components/ambiente/Ambiente";
 import type { Ora } from "@/components/ambiente/atmosfera";
 import { Cassetta, Taccuino } from "@/components/ambiente/Oggetti";
 import { EVENTO_MOVIMENTO, InterruttoreMovimento, movimentoRidotto } from "@/components/Movimento";
+import { EVENTO_PROVA, type DettaglioProva } from "@/components/giardino3d/reazioni";
 import { Scena3D } from "@/components/giardino3d/Scena3D";
 import { azione } from "@/lib/albero/azioni";
 import type { Meteo, Posa, Stadio, Stagione } from "@/lib/albero/tipi";
@@ -143,6 +144,17 @@ export function Immersivo(p: PropsImmersivo) {
   const hudNascosto = schermoIntero && calma;
   const [suoniAccesi, setSuoniAccesi] = useState(false);
   const [tempo, setTempo] = useState<{ ora: Ora; posa: string } | null>(null);
+  // Strumenti della demo: umore e azione di prova, solo nella scena.
+  const [prova, setProva] = useState<{ umore: string | null; azione: string | null }>({ umore: null, azione: null });
+  useEffect(() => {
+    const ascolta = (e: Event) => {
+      const d = (e as CustomEvent<DettaglioProva>).detail;
+      setProva((x) => ({ umore: d.umore !== undefined ? d.umore : x.umore, azione: d.azione !== undefined ? d.azione : x.azione }));
+    };
+    window.addEventListener(EVENTO_PROVA, ascolta);
+    return () => window.removeEventListener(EVENTO_PROVA, ascolta);
+  }, []);
+
   // All'arrivo, se c'è una lettera da aprire, l'albero lo fa notare.
   const [reazione] = useState(() => (p.nonLette > 0 ? { tipo: "lettera" as const, n: 1 } : null));
   const vista = useSyncExternalStore(iscriviVista, leggiVista, () => "3d" as const);
@@ -349,8 +361,8 @@ export function Immersivo(p: PropsImmersivo) {
             nome={p.nome}
             giorni={p.giorno}
             strada={p.idStrada}
-            azione={tempo ? tempo.posa : p.idAzione}
-            umore={p.umore}
+            azione={tempo ? tempo.posa : (prova.azione ?? p.idAzione)}
+            umore={prova.umore ?? p.umore}
             meteo={p.meteo}
             ora={ora}
             stagione={p.stagione}
