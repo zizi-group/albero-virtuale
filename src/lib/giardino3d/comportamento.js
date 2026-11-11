@@ -46,6 +46,8 @@ export { busta };
 // ------------------------------------------------------------------ Routine
 /** @type {Record<string, Attivita>} */
 export const ROUTINE = {
+  // fermo davanti alla camera (per le prove e per i momenti di quiete)
+  fermo: { durata: 6, posa: (p) => { p.giro = 0; } },
   stiracchia: {
     durata: 3.4,
     inizia: (c) => c.viso.breve("sbadiglia", 2.2),
@@ -335,7 +337,7 @@ export function creaComportamento(albero, op) {
     if (a.cammina) {
       // un punto nella radura, lontano dalla cassetta e dal taccuino
       for (let k = 0; k < 20; k++) {
-        const ang = Math.random() * Math.PI * 2, r = 0.8 + Math.random() * 2.2;
+        const ang = Math.random() * Math.PI * 2, r = 0.6 + Math.random() * 1.4;
         const m = new THREE.Vector2(casa.x + Math.cos(ang) * r, casa.y + Math.sin(ang) * r * 0.7);
         if (m.length() > RAGGIO_RADURA - 1.5) continue;
         if (Math.hypot(m.x - 2.7, m.y - 1.4) < 1 || Math.hypot(m.x + 2.6, m.y - 1.8) < 1) continue;
@@ -356,7 +358,7 @@ export function creaComportamento(albero, op) {
     if (piove && azione !== "giornale-ombrello" && Math.random() < 0.65) return avvia("ripara");
     if (m.temperatura > 28 && Math.random() < 0.35) return avvia("fa-vento");
     // torna verso casa se si è allontanato
-    if (pos.distanceTo(casa) > 2.6 && Math.random() < 0.6) { meta = casa.clone(); att = { nome: "torna", a: ROUTINE.cammina, t: 0, ctx: contesto({}) }; return; }
+    if (pos.distanceTo(casa) > 1.6 && Math.random() < 0.7) { meta = casa.clone(); att = { nome: "torna", a: ROUTINE.cammina, t: 0, ctx: contesto({}) }; return; }
     if (azione && AZIONI[azione] && (contaAttivita % 2 === 1 || Math.random() < 0.3)) return avvia(azione);
     const gusti = GUSTI[umore] ?? GUSTI.curioso;
     const lista = Object.entries(gusti);
@@ -372,7 +374,7 @@ export function creaComportamento(albero, op) {
     const ctx = contesto({});
     if (nome === "lettera") {
       const d = new THREE.Vector2(op.cassetta.x - pos.x, op.cassetta.z - pos.y);
-      ctx.dati.versoCassetta = THREE.MathUtils.clamp(Math.atan2(d.x, d.y), -1.2, 1.2);
+      ctx.dati.versoCassetta = THREE.MathUtils.clamp(Math.atan2(d.x, d.y), -0.6, 0.6); // si gira, ma il viso resta verso di noi
     }
     // svegliarsi di soprassalto se dormiva
     if (att?.nome === "dormi") { att.a.fine?.(att.ctx); libera(); att = null; }
@@ -415,10 +417,11 @@ export function creaComportamento(albero, op) {
     lascia() {
       if (!preso) return;
       preso = false; caduta = true; vy = 0;
-      albero.viso.breve("spaventato", 0.01);
       casa.set(pos.x, pos.y);
     },
     get preso() { return preso; },
+    /** Posizione sul prato (x, z): si può spostare per non sovrapporsi agli altri. */
+    get posizione() { return pos; },
     get casa() { return casa; },
 
     /** @param {number} dt @param {number} t */
@@ -447,7 +450,7 @@ export function creaComportamento(albero, op) {
           altezza += vy * dt;
           if (altezza <= 0) {
             altezza = 0;
-            if (vy < -1.5) vy = -vy * 0.3; else { caduta = false; vy = 0; albero.viso.breve("spaventato", 0.01); reagisci("posato"); }
+            if (vy < -1.5) vy = -vy * 0.3; else { caduta = false; vy = 0; albero.viso.pulisci(); reagisci("posato"); }
           }
           p.bracci[0].alza = p.bracci[1].alza = 1.2;
           p.gambe = [0.3, -0.3];

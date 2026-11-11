@@ -58,7 +58,8 @@ export function creaGiardino(canvas, opzioni) {
 
   // _conservaFotogramma: solo per le catture dello schermo nelle pagine di prova
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: !!(/** @type {any} */ (opzioni)._conservaFotogramma) });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  let rapporto = Math.min(window.devicePixelRatio || 1, 2); // pixel ratio massimo 2 (scende se il computer fatica)
+  renderer.setPixelRatio(rapporto);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.shadowMap.enabled = true;
@@ -127,7 +128,7 @@ export function creaGiardino(canvas, opzioni) {
   const POSIZIONE = new THREE.Vector3();
   function inquadra() {
     const w = canvas.clientWidth || canvas.width, h = canvas.clientHeight || canvas.height;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(rapporto);
     renderer.setSize(w, h, false);
     camera.aspect = w / Math.max(1, h);
     camera.updateProjectionMatrix();
@@ -233,6 +234,24 @@ export function creaGiardino(canvas, opzioni) {
       const alto = Math.max(0, r.y - quota(r.x, r.z));
       a.ombra.scale.set(1.15 * s * (1 - alto * 0.25), 0.85 * s * (1 - alto * 0.25), 1);
     }
+    // gli alberi non si sovrappongono fra loro né alla cassetta e al taccuino
+    const ostacoli = [[2.7, 1.4, 0.9], [-2.6, 1.8, 0.9]];
+    for (let i = 0; i < alberi.length; i++) {
+      const pi = alberi[i].comp.posizione;
+      for (let j = i + 1; j < alberi.length; j++) {
+        const pj = alberi[j].comp.posizione;
+        const dx = pj.x - pi.x, dz = pj.y - pi.y, d = Math.hypot(dx, dz) || 0.001;
+        if (d < 1.5) {
+          const k = (1.5 - d) / 2 / d;
+          if (!alberi[i].comp.preso) { pi.x -= dx * k; pi.y -= dz * k; }
+          if (!alberi[j].comp.preso) { pj.x += dx * k; pj.y += dz * k; }
+        }
+      }
+      for (const [ox, oz, r] of ostacoli) {
+        const dx = pi.x - ox, dz = pi.y - oz, d = Math.hypot(dx, dz) || 0.001;
+        if (d < r && !alberi[i].comp.preso) { pi.x = ox + (dx / d) * r; pi.y = oz + (dz / d) * r; }
+      }
+    }
     // lo sguardo del principale segue il puntatore
     if (performance.now() - ultimoPuntatore < 2500 && !ridotto) {
       const a = alberi[0].albero;
@@ -240,10 +259,22 @@ export function creaGiardino(canvas, opzioni) {
       a.viso.guarda((ndc.x - testa.x) * 2.2, (ndc.y - testa.y) * 2.2);
     }
   }
+  // qualità adattiva: se il computer fatica (sotto i 45 fps per qualche secondo),
+  // la risoluzione scende un poco, fino a pixel ratio 1
+  let media = 1 / 60, finestra = 0;
   function disegna() {
     orologio.update(performance.now());
-    passo(Math.min(orologio.getDelta(), 0.05));
+    const dt = orologio.getDelta();
+    passo(Math.min(dt, 0.05));
     renderer.render(scena, camera);
+    media += (Math.min(dt, 0.2) - media) * 0.05;
+    finestra += dt;
+    if (finestra > 3 && media > 1 / 45 && rapporto > 1) {
+      rapporto = Math.max(1, rapporto - 0.25);
+      renderer.setPixelRatio(rapporto);
+      renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+      finestra = 0;
+    }
   }
   const avvia = () => { if (!fermo) renderer.setAnimationLoop(disegna); };
   const visibilita = () => {
