@@ -287,11 +287,16 @@ function chioma(mod, tr, r, fronteLibera) {
   const rami = new THREE.Group();
   const cort = texCorteccia(sp.corteccia).colori;
   const legno = mat(cort.base, { roughness: 0.85 });
-  for (let k = 0; k < 7; k++) {
-    const a = (k / 7) * Math.PI * 2 + 0.4;
-    const out = 0.25 + r() * 0.35;
-    const alto = sp.forma === "colonna" || sp.forma === "stretta" ? 1.0 : 0.55;
-    rami.add(tubo([[0, -0.15, 0], [Math.cos(a) * out * 0.5, alto * 0.5, Math.sin(a) * out * 0.5], [Math.cos(a) * out, alto + r() * 0.25, Math.sin(a) * out]], 0.06, 0.014, legno, 10, 6));
+  // rami che si aprono a ventaglio, con una biforcazione ciascuno
+  const stretto = sp.forma === "colonna" || sp.forma === "stretta" || sp.forma === "cono";
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2 + 0.4 + r() * 0.3;
+    const out = (stretto ? 0.3 : 0.6) + r() * 0.3;
+    const alto = (stretto ? 0.9 : 0.42) + r() * 0.2;
+    const mx = Math.cos(a) * out * 0.55, mz = Math.sin(a) * out * 0.55, my = alto * 0.55;
+    rami.add(tubo([[0, -0.12, 0], [mx * 0.5, my * 0.45, mz * 0.5], [mx, my, mz], [Math.cos(a) * out, alto, Math.sin(a) * out]], 0.065, 0.012, legno, 10, 6));
+    const b = a + (r() < 0.5 ? 0.6 : -0.6);
+    rami.add(tubo([[mx, my, mz], [mx + Math.cos(b) * 0.18, my + 0.2, mz + Math.sin(b) * 0.18], [mx + Math.cos(b) * 0.3, my + 0.38, mz + Math.sin(b) * 0.3]], 0.03, 0.008, legno, 6, 5));
   }
   rami.visible = sp.forma === "ombrello"; // il pino marittimo ha il collo sempre a vista
   gruppo.add(rami);
@@ -644,7 +649,9 @@ export function creaAlbero(mod, op = {}) {
     /** @param {string} s */
     stagione: (s) => {
       ch.stagione(s);
-      const c = new THREE.Color(/** @type {any} */ (sp)[s]?.[1] ?? sp.estate[1]);
+      const spoglio = !sp.sempreverde && s === "inverno";
+      // d'inverno le mani-foglia diventano secche
+      const c = new THREE.Color(spoglio ? "#a07a4a" : /** @type {any} */ (sp)[s]?.[1] ?? sp.estate[1]);
       bracci.forEach((b) => b.foglieMano.color.copy(c));
     },
     cresci,

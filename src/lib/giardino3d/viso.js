@@ -191,6 +191,8 @@ export function creaViso(tronco, m) {
       if (!ex) return;
       brevi.push({ e: ex, inizio: 0, fine: durata });
     },
+    /** Toglie tutte le espressioni brevi (si torna all'umore). */
+    pulisci() { brevi.length = 0; },
     /** La bocca si muove come se parlasse (o canticchiasse) per qualche secondo. @param {number} s @param {boolean} [canta] */
     parla(s, canta = false) {
       if (canta) canticchia = s; else parla = s;
@@ -207,13 +209,14 @@ export function creaViso(tronco, m) {
       // bersaglio = base + espressioni brevi (con dissolvenza in entrata e in uscita)
       /** @type {Record<string, number>} */
       const b = { ...base };
-      for (let i = brevi.length - 1; i >= 0; i--) {
-        const x = brevi[i];
+      // dalla più vecchia alla più nuova: l'ultima espressione arrivata vince
+      for (const x of brevi) {
         x.inizio += dt;
         const peso = Math.min(1, x.inizio / 0.2) * Math.min(1, Math.max(0, (x.fine - x.inizio) / 0.3));
         for (const [k, v] of Object.entries(x.e)) b[k] = b[k] + (/** @type {number} */ (v) - b[k]) * peso;
-        if (x.inizio >= x.fine) brevi.splice(i, 1);
       }
+      for (let i = brevi.length - 1; i >= 0; i--) if (brevi[i].inizio >= brevi[i].fine) brevi.splice(i, 1);
+      if (brevi.length > 12) brevi.splice(0, brevi.length - 12);
       // sguardo: segue il puntatore, altrimenti ogni tanto si guarda intorno
       if (guardaAttivo > 0) { guardaAttivo -= dt; b.sguardoX = guarda.x; b.sguardoY = guarda.y; }
       else if (!ridotto) {

@@ -28,7 +28,7 @@ export function ombrelloFoglia(alto = 0.9) {
   g.add(tubo([[0, 0, 0], [0, alto * 0.6, 0], [0.02, alto, 0]], 0.024, 0.016, mat("#6a8a2a"), 6, 6));
   const f = foglia("quercia", "#4caa38", 1.5);
   f.rotation.set(-Math.PI / 2 + 0.15, 0, 0);
-  f.position.set(0, alto + 0.02, -0.95);
+  f.position.set(-0.5, alto + 0.02, 0.95); // centrata sopra la chioma, non sopra la mano
   g.add(f);
   return g;
 }

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <title>Linfa — i 30 modelli a confronto</title>
+  <style>body { margin: 0; background: #eef6ea; font-family: system-ui, sans-serif; } canvas { max-width: 100vw; height: auto; }</style>
+  <script type="importmap">
+    { "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/addons/" } }
+  </script>
+</head>
+<body>
+  <script type="module">
+    // Foglio di confronto: i 30 modelli del catalogo, uno per riquadro, nella stagione scelta
+    // (?stagione=estate|autunno|inverno|primavera). Sfondo trasparente.
+    import * as THREE from "three";
+    import { MODELLI, SPECIE } from "/src/lib/giardino3d/modelli.js";
+    import { creaAlbero } from "/src/lib/giardino3d/albero.js";
+
+    const P = new URLSearchParams(location.search);
+    const stagione = P.get("stagione") ?? "estate";
+    const C = 6, R = Math.ceil(MODELLI.length / C), T = 420, TH = 520;
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(1);
+    renderer.setSize(T * C, TH * R);
+    renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    document.body.prepend(renderer.domElement);
+    const scena = new THREE.Scene();
+    scena.add(new THREE.HemisphereLight("#d8f0ff", "#5a7a3a", 1.3));
+    const sole = new THREE.DirectionalLight("#fff0cc", 2.8); sole.position.set(-4, 6, 6);
+    const contro = new THREE.DirectionalLight("#ffe0a0", 1.4); contro.position.set(3, 5, -6);
+    scena.add(sole, contro);
+    const cam = new THREE.PerspectiveCamera(26, T / TH, 0.1, 50);
+    const alberi = MODELLI.map((m) => { const a = creaAlbero(m, { seme: m.id }); a.stagione(stagione); a.viso.aggiorna(0.5, 0.5, true); scena.add(a.radice); a.radice.visible = false; return a; });
+    renderer.setScissorTest(true);
+    alberi.forEach((a, i) => {
+      alberi.forEach((b) => (b.radice.visible = b === a));
+      const x = (i % C) * T, y = (R - 1 - Math.floor(i / C)) * TH;
+      // inquadra l'albero intero (i cipressi e gli abeti sono più alti)
+      const alto = Math.max(3.4, a.altezza + 0.3);
+      const d = (alto * 0.62) / Math.tan(THREE.MathUtils.degToRad(13));
+      cam.position.set(0.6, alto * 0.55, d); cam.lookAt(0, alto * 0.47, 0);
+      renderer.setViewport(x, y, T, TH); renderer.setScissor(x, y, T, TH);
+      renderer.render(scena, cam);
+    });
+    // nomi sotto ogni albero
+    const foglio = document.createElement("canvas");
+    foglio.width = T * C; foglio.height = TH * R;
+    const g = foglio.getContext("2d");
+    g.drawImage(renderer.domElement, 0, 0);
+    MODELLI.forEach((m, i) => {
+      const x = (i % C) * T, y = Math.floor(i / C) * TH;
+      g.fillStyle = "rgba(255,255,255,.88)"; g.beginPath(); g.roundRect(x + 30, y + TH - 58, T - 60, 48, 12); g.fill();
+      g.fillStyle = "#1d3a24"; g.textAlign = "center";
+      g.font = "bold 20px system-ui, sans-serif"; g.fillText(m.nome, x + T / 2, y + TH - 37);
+      g.font = "15px system-ui, sans-serif"; g.fillText(SPECIE[m.specie].nome + " · " + m.id, x + T / 2, y + TH - 18);
+    });
+    document.body.replaceChildren(foglio);
+    window.__salva = async (nome) => (await fetch(`/salva?nome=${encodeURIComponent(nome)}`, { method: "POST", body: foglio.toDataURL(nome.endsWith(".png") ? "image/png" : "image/jpeg", 0.88) })).status;
+    window.__pronto = true;
+  </script>
+</body>
+</html>
