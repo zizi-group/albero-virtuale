@@ -21,6 +21,7 @@
 
 ## Fatto in casa
 
-Il personaggio Linfa (`linfa.js`), il terreno dipinto, il pulviscolo, i raggi di
+Il personaggio Linfa con specie, strade e accessori (`linfa.js`), le texture di
+foglie, cortecce, guance e stoffe (`texture.js`), il terreno dipinto, il pulviscolo, i raggi di
 luce e le ombre finte sono costruiti in codice per questo prototipo, a partire
 dal disegno 2D del progetto (`src/components/albero/vivo/figura.tsx`).

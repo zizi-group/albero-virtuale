@@ -1,295 +1,674 @@
-// Linfa in 3D: il personaggio-albero costruito in codice, con le proporzioni del
-// disegno 2D (src/components/albero/vivo/figura.tsx e disegni.tsx).
-// Coordinate del disegno: x 0..240 (centro 120), terreno a y = 262, chioma in alto.
+// Linfa in 3D, versione morbida: tronco con venature e rilievo, chioma fatta di
+// tante foglie vere (istanze con texture dipinta), occhi grandi lucidi, guance,
+// sorriso, braccia-rami e piedini. Stessa identità del disegno 2D
+// (src/components/albero/vivo/figura.tsx), proporzioni più tonde.
+//
+// creaLinfa(opzioni) costruisce un albero; generaOpzioni(seme) sceglie le
+// opzioni in modo deterministico: stesso seme, stesso albero.
 import * as THREE from "three";
+import { generatore, hash, texCorteccia, texFoglia, texGuancia, texStoffa } from "./texture.js";
 
-const K = 0.0125; // metri di scena per unità del disegno
-const X = (x) => (x - 120) * K;
-const Y = (y) => (262 - y) * K;
+/** Tempo condiviso dalle foglie di tutti gli alberi (lo aggiorna la scena). */
+export const tempo = { value: 0 };
 
-// Colori del disegno (disegni.tsx), estate
-const CORTECCIA = "#7a5236";
-const CORTECCIA_SCURA = "#5b3b25";
-const INCHIOSTRO = "#23261d";
-const CARTA = "#fbf7ec";
-const CHIOMA_SCURO = new THREE.Color("#2c5520");
-const CHIOMA_MEDIO = new THREE.Color("#4f7f2e");
-const CHIOMA_CHIARO = new THREE.Color("#86b04a");
-const CHIOMA = [
-  [120, 74, 52], [76, 94, 34], [164, 94, 34], [90, 54, 30],
-  [150, 54, 30], [120, 34, 28], [100, 112, 24], [140, 112, 24],
-];
+// ------------------------------------------------------------------ Catalogo
+export const SPECIE = {
+  quercia: { foglia: "quercia", dim: [0.21, 0.27], toni: [["#2c6a1c", "#4c8f28"], ["#3f7f22", "#73ad38"]], forma: "tonda", foglie: 1150 },
+  pino: { foglia: "aghi", dim: [0.19, 0.32], toni: [["#1c4a2a", "#2e6a3a"], ["#285a24", "#447f34"]], forma: "cono", foglie: 1150 },
+  ulivo: { foglia: "ulivo", dim: [0.13, 0.27], toni: [["#3f5f32", "#6f8f5a"], ["#4f7040", "#86a070"]], forma: "larga", foglie: 1400 },
+  betulla: { foglia: "betulla", dim: [0.16, 0.18], toni: [["#4a8a28", "#79b23a"], ["#5c9c2e", "#9ccb4c"]], forma: "ovale", foglie: 1100 },
+  ciliegio: { foglia: "ciliegio", dim: [0.17, 0.23], toni: [["#3a7424", "#5c9832"], ["#467f26", "#6eaa3a"]], forma: "tonda", foglie: 800, fiori: 500 },
+};
 
-/** Rumore liscio e deterministico, abbastanza per sfaccettare la chioma. */
-function rumore(x, y, z) {
-  return (
-    Math.sin(x * 3.1 + y * 1.7) * 0.5 +
-    Math.sin(y * 4.3 + z * 2.9) * 0.3 +
-    Math.sin(z * 5.7 + x * 3.7) * 0.2
-  );
+/** Le strade del personaggio e i loro accessori (niente persone o marchi reali). */
+export const STRADE = {
+  filosofo: ["occhiali-tondi"],
+  artista: ["basco", "pennello"],
+  sportivo: ["fascia"],
+  viaggiatore: ["zaino", "occhialoni"],
+  imprenditore: ["cravatta"],
+  furfante: ["bandana"],
+  "poeta-pigro": ["berretto-notte"],
+};
+export const OCCHI = ["tondi", "ovali", "mandorla"];
+export const SOPRACCIGLIA = ["arco", "dritte", "folte"];
+export const BOCCHE = ["sorriso", "aperta"];
+
+/** Opzioni deterministiche dal seme dell'albero. */
+export function generaOpzioni(seme) {
+  const r = generatore(hash(`linfa:${seme}`));
+  const scegli = (lista) => lista[Math.floor(r() * lista.length)];
+  return {
+    seme: String(seme),
+    specie: scegli(Object.keys(SPECIE)),
+    altezza: 0.9 + r() * 0.24,
+    larghezza: 0.88 + r() * 0.24,
+    occhi: scegli(OCCHI),
+    sopracciglia: scegli(SOPRACCIGLIA),
+    lentiggini: r() < 0.35,
+    bocca: r() < 0.7 ? "sorriso" : "aperta",
+    tono: r(),
+    strada: scegli([...Object.keys(STRADE), "nessuna"]),
+  };
 }
 
-/** Corteccia dipinta: striature verticali su un canvas. */
-function texCorteccia() {
-  const c = document.createElement("canvas");
-  c.width = 256; c.height = 512;
-  const g = c.getContext("2d");
-  g.fillStyle = CORTECCIA; g.fillRect(0, 0, 256, 512);
-  for (let i = 0; i < 70; i++) {
-    const x = Math.random() * 256, w = 2 + Math.random() * 7;
-    g.strokeStyle = Math.random() < 0.7 ? "rgba(60,36,20,.45)" : "rgba(170,120,80,.35)";
-    g.lineWidth = w;
-    g.beginPath(); g.moveTo(x, 0);
-    for (let y = 0; y <= 512; y += 32) g.lineTo(x + Math.sin(y * 0.02 + i) * 6, y);
-    g.stroke();
+// ------------------------------------------------------------------ Utilità
+const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const mat = (colore, extra = {}) => new THREE.MeshStandardMaterial({ color: colore, roughness: 0.75, ...extra });
+
+/** Tubo affusolato lungo una curva (da r0 a r1), con le punte arrotondate. */
+function tubo(punti, r0, r1, materiale, segmenti = 24, giro = 12) {
+  const curva = new THREE.CatmullRomCurve3(punti.map((p) => v3(...p)));
+  const geo = new THREE.TubeGeometry(curva, segmenti, 1, giro, false);
+  const pos = geo.attributes.position, nor = geo.attributes.normal;
+  const c = new THREE.Vector3();
+  for (let i = 0; i <= segmenti; i++) {
+    const t = i / segmenti;
+    curva.getPointAt(t, c);
+    const r = r0 + (r1 - r0) * t;
+    for (let j = 0; j <= giro; j++) {
+      const k = i * (giro + 1) + j;
+      pos.setXYZ(k, c.x + nor.getX(k) * r, c.y + nor.getY(k) * r, c.z + nor.getZ(k) * r);
+    }
   }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  return t;
-}
-
-const mat = (colore, extra = {}) => new THREE.MeshStandardMaterial({ color: colore, roughness: 0.85, ...extra });
-
-/** Un tubo lungo una curva, con le estremità arrotondate. */
-function ramo(punti, raggio, materiale) {
-  const curva = new THREE.CatmullRomCurve3(punti.map((p) => new THREE.Vector3(...p)));
   const g = new THREE.Group();
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(curva, 16, raggio, 8, false), materiale));
-  for (const t of [0, 1]) {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(raggio, 8, 6), materiale);
-    s.position.copy(curva.getPoint(t));
+  g.add(new THREE.Mesh(geo, materiale));
+  for (const [t, r] of [[0, r0], [1, r1]]) {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 8), materiale);
+    s.position.copy(curva.getPointAt(t));
     g.add(s);
   }
   return g;
 }
 
-/** Il tronco: un profilo ruotato, più largo in mezzo come nel disegno, ellittico in pianta. */
-function tronco(corteccia) {
-  // [mezza larghezza nel disegno, y del disegno]
-  const profilo = [[0, 228], [22, 226], [25, 220], [30, 206], [31.5, 190], [31, 170], [29, 145], [27, 125], [25, 104], [0, 98]];
-  const pts = profilo.map(([r, y]) => new THREE.Vector2(r * K, Y(y)));
-  const geo = new THREE.LatheGeometry(pts, 20);
-  geo.scale(1, 1, 0.82);
-  return new THREE.Mesh(geo, corteccia);
+function ovale(rx, ry, rz, materiale, seg = 20) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(1, seg, Math.round(seg * 0.75)), materiale);
+  m.scale.set(rx, ry, rz);
+  return m;
 }
 
-/** Raggio del tronco (lungo x e z) all'altezza y del disegno: serve a posare la faccia. */
-function superficie(xMondo, yDisegno) {
-  const r = (yDisegno > 190 ? 31 : 30) * K;
-  const a = r, b = r * 0.82;
-  const t = Math.min(Math.abs(xMondo) / a, 0.98);
+// ------------------------------------------------------------------ Il tronco
+/** Profilo del tronco: [raggio, altezza], tondo come un personaggio da cartone. */
+function profiloTronco(larg, alt) {
+  const base = 0.3;
+  const h = 1.28 * alt;
+  const punti = [
+    [0, 0], [0.22, 0.01], [0.35, 0.06], [0.42, 0.16], [0.45, 0.33], [0.455, 0.5],
+    [0.445, 0.68], [0.42, 0.84], [0.37, 0.94], [0.27, 0.99], [0.0, 1.0],
+  ].map(([r, f]) => v3(r * 1.1 * larg, base + f * h, 0));
+  const curva = new THREE.CatmullRomCurve3(punti, false, "centripetal");
+  const campioni = curva.getPoints(40).map((p) => new THREE.Vector2(Math.max(0, p.x), p.y));
+  campioni[0].x = 0; campioni[campioni.length - 1].x = 0;
+  return { campioni, Y: (f) => base + f * h };
+}
+
+/** Raggio del tronco all'altezza y (interpolando il profilo). */
+function raggioA(campioni, y) {
+  for (let i = 1; i < campioni.length; i++) {
+    const a = campioni[i - 1], b = campioni[i];
+    if ((y - a.y) * (y - b.y) <= 0 && a.y !== b.y) return a.x + ((y - a.y) / (b.y - a.y)) * (b.x - a.x);
+  }
+  return 0.3;
+}
+
+const SCHIACCIA = 0.88; // il tronco è un po' ellittico in pianta
+
+/** Punto e normale sulla superficie anteriore del tronco. */
+function superficie(campioni, x, y) {
+  const r = raggioA(campioni, y);
+  const a = r, b = r * SCHIACCIA;
+  const t = Math.min(Math.abs(x) / a, 0.97);
   const z = b * Math.sqrt(1 - t * t);
-  const normale = new THREE.Vector3(xMondo / (a * a), 0, z / (b * b)).normalize();
-  return { z, normale };
+  const normale = v3(x / (a * a), 0, z / (b * b)).normalize();
+  return { punto: v3(x, y, z), normale, r };
 }
 
-/** La chioma: palle sfaccettate e bitorzolute, unite in una sola geometria colorata ai vertici. */
-function chioma(sole) {
-  const parti = [];
-  const blob = (x, y, z, r, seme) => {
-    const g = new THREE.IcosahedronGeometry(r, 2);
-    const p = g.attributes.position;
-    const v = new THREE.Vector3();
-    for (let i = 0; i < p.count; i++) {
-      v.fromBufferAttribute(p, i);
-      const n = v.clone().normalize();
-      const d = 1 + 0.13 * rumore(n.x * 2 + seme, n.y * 2, n.z * 2 - seme);
-      v.multiplyScalar(d);
-      p.setXYZ(i, v.x + x, v.y + y, v.z + z);
-    }
-    parti.push(g.index ? g.toNonIndexed() : g);
+/** Mette un oggetto sulla superficie, girato verso fuori, staccato di `fuori`. */
+function posa(oggetto, campioni, x, y, fuori = 0) {
+  const { punto, normale } = superficie(campioni, x, y);
+  oggetto.position.copy(punto).addScaledVector(normale, fuori);
+  oggetto.lookAt(oggetto.position.clone().add(normale));
+  return oggetto;
+}
+
+// ------------------------------------------------------------------ Foglie
+const geoFoglia = (() => {
+  const g = new THREE.PlaneGeometry(1, 1, 2, 5);
+  g.translate(0, 0.5, 0);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i);
+    p.setZ(i, -0.22 * y * y + 0.12 * x * x); // si piega all'indietro e a barchetta
+  }
+  g.computeVertexNormals();
+  return g;
+})();
+
+/** Materiale delle foglie: normali «a palla» (luce morbida) e un fruscio leggero. */
+function materialeFoglie(texture, centro) {
+  // Lambert: molto più leggero dello Standard, e le foglie sono tante e sovrapposte
+  const m = new THREE.MeshLambertMaterial({ map: texture, alphaTest: 0.45, side: THREE.DoubleSide });
+  m.onBeforeCompile = (s) => {
+    s.uniforms.uTempo = tempo;
+    s.uniforms.uCentro = { value: centro };
+    s.vertexShader = s.vertexShader
+      .replace("#include <common>", "#include <common>\nuniform float uTempo;\nuniform vec3 uCentro;")
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+        #ifdef USE_INSTANCING
+          float fase = dot(instanceMatrix[3].xyz, vec3(7.1, 5.3, 3.7));
+          transformed.z += sin(uTempo * 2.4 + fase) * 0.06 * position.y;
+          transformed.x += sin(uTempo * 1.7 + fase * 1.3) * 0.04 * position.y;
+        #endif`,
+      )
+      .replace(
+        "#include <defaultnormal_vertex>",
+        `#include <defaultnormal_vertex>
+        #ifdef USE_INSTANCING
+          vec3 radiale = normalize(instanceMatrix[3].xyz - uCentro + vec3(0.0, 0.25, 0.0));
+          transformedNormal = normalize(normalMatrix * normalize(mix(radiale, normalize(mat3(instanceMatrix) * objectNormal), 0.25)));
+        #endif`,
+      );
+    // Stessa luce sulle due facce della foglia
+    s.fragmentShader = s.fragmentShader.replace(
+      "#include <normal_fragment_begin>",
+      "#include <normal_fragment_begin>\nnormal = normalize(vNormal);",
+    );
   };
-  // Le palle del disegno, distribuite anche in profondità
-  CHIOMA.forEach(([cx, cy, r], i) => {
-    const z = i === 0 ? 0 : (i % 2 ? 0.12 : -0.1) * (r / 34);
-    blob(X(cx), Y(cy), z, r * K * 1.08, i * 1.3);
-  });
-  // Volume dietro e sopra, visto che la camera guarda dall'alto
-  blob(X(120), Y(70), -0.42, 44 * K, 9);
-  blob(X(92), Y(80), -0.36, 30 * K, 11);
-  blob(X(150), Y(80), -0.34, 30 * K, 13);
-  blob(X(120), Y(96), 0.34, 30 * K, 15);
-
-  // Unione manuale (BufferGeometryUtils non serve per geometrie non indicizzate)
-  let n = 0; parti.forEach((g) => (n += g.attributes.position.count));
-  const pos = new Float32Array(n * 3);
-  let o = 0;
-  parti.forEach((g) => { pos.set(g.attributes.position.array, o); o += g.attributes.position.array.length; });
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  geo.computeVertexNormals();
-
-  // Colori dipinti: scuro sotto, chiaro dove batte il sole radente
-  const nrm = geo.attributes.normal;
-  const col = new Float32Array(n * 3);
-  const c = new THREE.Color(), v = new THREE.Vector3(), nv = new THREE.Vector3();
-  const basso = Y(140), alto = Y(6);
-  for (let i = 0; i < n; i++) {
-    v.fromBufferAttribute(geo.attributes.position, i);
-    nv.fromBufferAttribute(nrm, i);
-    const h = THREE.MathUtils.clamp((v.y - basso) / (alto - basso), 0, 1);
-    const luce = THREE.MathUtils.clamp(nv.dot(sole) * 0.5 + 0.5, 0, 1);
-    c.copy(CHIOMA_SCURO).lerp(CHIOMA_MEDIO, Math.min(1, h * 1.6));
-    c.lerp(CHIOMA_CHIARO, Math.max(0, luce - 0.45) * 1.1 * (0.4 + h * 0.6));
-    const macchia = 0.92 + 0.08 * rumore(v.x * 9, v.y * 9, v.z * 9);
-    col.set([c.r * macchia, c.g * macchia, c.b * macchia], i * 3);
-  }
-  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9 }));
+  m.customProgramCacheKey = () => "foglie-linfa";
+  return m;
 }
 
-/** Occhio grande con pupilla, luce e ciglia; la palpebra si chiude scalando in altezza. */
-function occhio(x, inchiostro) {
-  const g = new THREE.Group();
-  const { z, normale } = superficie(x, 164);
-  g.position.set(x, Y(164), z - 0.02);
-  g.lookAt(g.position.clone().add(normale));
-  const palla = new THREE.Group(); // quella che si chiude
-  const bianco = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 14), mat(CARTA, { roughness: 0.4 }));
-  bianco.scale.set(0.1, 0.12, 0.06);
-  const pupilla = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), mat(INCHIOSTRO, { roughness: 0.3 }));
-  pupilla.scale.set(0.058, 0.068, 0.03);
-  pupilla.position.set(0, -0.008, 0.045);
-  const luce = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color: "#ffffff" }));
-  luce.scale.setScalar(0.018);
-  luce.position.set(0.018, 0.022, 0.072);
-  palla.add(bianco, pupilla, luce);
-  g.add(palla);
-  // Ciglia: arco sopra l'occhio con due ciuffetti verso l'esterno
-  const esterno = Math.sign(x);
+/** Ciuffi della chioma secondo la forma della specie: [x, y, z, raggio] rispetto al centro. */
+function ciuffi(forma, r) {
+  const out = [];
+  const sfera = (n, R, rc) => {
+    for (let i = 0; i < n; i++) {
+      const y = 1 - (2 * (i + 0.5)) / n;
+      const raggio = Math.sqrt(1 - y * y);
+      const a = i * 2.39996 + r() * 0.4;
+      out.push([Math.cos(a) * raggio * R[0] * 0.78, y * R[1] * 0.78, Math.sin(a) * raggio * R[2] * 0.78, rc * (0.85 + r() * 0.3)]);
+    }
+    for (let i = 0; i < 6; i++) out.push([(r() - 0.5) * R[0], (r() - 0.5) * R[1], (r() - 0.5) * R[2], rc]);
+  };
+  let R;
+  if (forma === "tonda") { R = [1.0, 0.8, 0.9]; sfera(26, R, 0.36); }
+  if (forma === "larga") {
+    R = [1.22, 0.56, 0.95]; sfera(28, R, 0.3);
+    for (let i = out.length - 1; i >= 0; i--) if (r() < 0.18) out.splice(i, 1); // l'ulivo è rado
+  }
+  if (forma === "ovale") { R = [0.72, 1.08, 0.68]; sfera(26, R, 0.3); }
+  if (forma === "cono") {
+    R = [0.95, 1.2, 0.95];
+    const piani = 5;
+    for (let p = 0; p < piani; p++) {
+      const f = p / (piani - 1);
+      const y = -0.85 + f * 1.75;
+      const rr = 0.95 * (1 - f * 0.82);
+      const n = Math.max(1, Math.round(10 * (1 - f * 0.7)));
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + p * 0.5;
+        out.push([Math.cos(a) * rr, y + (r() - 0.5) * 0.08, Math.sin(a) * rr * 0.92, 0.3 * (1 - f * 0.35)]);
+      }
+    }
+    out.push([0, 1.05, 0, 0.2]);
+  }
+  // La chioma è una capigliatura: più piccola del tronco-testa, come nel riferimento
+  const K = 0.8;
+  return { lista: out.map(([x, y, z, rc]) => [x * K, y * K, z * K, rc * K]), R: R.map((v) => v * K) };
+}
+
+/** La chioma: InstancedMesh di foglie (e di fiori per il ciliegio). */
+function chioma(o, campioni, Y, r) {
+  const sp = SPECIE[o.specie];
+  const { lista, R } = ciuffi(sp.forma, r);
+  const yCima = Y(1);
+  // Il centro della chioma sta sopra il tronco; la frangia ricade sulla fronte
+  const centro = v3(0, sp.forma === "cono" ? 0.6 : R[1] * 0.42, -0.04);
+  const fronte = superficie(campioni, 0, yCima - 0.14);
+  const frangia = [];
+  for (let i = 0; i < 6; i++) {
+    const x = (i / 5 - 0.5) * 0.7;
+    frangia.push([x, -0.06 - Math.abs(x) * 0.2 - centro.y, fronte.punto.z * 0.95 - centro.z, 0.22]);
+  }
+  // una corona di ciuffi intorno alla cima del tronco, che la nasconde
+  const rCima = raggioA(campioni, yCima - 0.12);
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + 0.3;
+    if (Math.sin(a) > 0.6) continue; // davanti c'è già la frangia
+    frangia.push([Math.cos(a) * rCima * 0.95 - centro.x, -0.1 - centro.y, Math.sin(a) * rCima * 0.85 - centro.z, 0.24]);
+  }
+  const tutti = [...lista, ...frangia];
+  const peso = tutti.map((c) => c[3] ** 2);
+  const somma = peso.reduce((a, b) => a + b, 0);
+
+  const gruppo = new THREE.Group(); // perno della chioma: in cima al tronco
+  const toni = [0, 1].map((k) => new THREE.Color(sp.toni[0][k]).lerp(new THREE.Color(sp.toni[sp.toni.length - 1][k]), o.tono));
+
+  const strati = [{ tipo: sp.foglia, n: sp.foglie, dim: sp.dim, colori: toni }];
+  if (sp.fiori) strati.push({ tipo: "fiore", n: sp.fiori, dim: [0.15, 0.15], colori: [new THREE.Color("#ffffff"), new THREE.Color("#ffe6ec")], fiore: true });
+
+  const yOcchi = Y(0.56) - yCima;
+  const fronteLibera = ["sportivo", "furfante"].includes(o.strada) ? Y(0.95) - yCima : 0;
+  const m4 = new THREE.Matrix4(), col = new THREE.Color();
+  let yMax = 0, zFronte = 0;
+  for (const strato of strati) {
+    const materiale = materialeFoglie(texFoglia(strato.tipo), centro);
+    const mesh = new THREE.InstancedMesh(geoFoglia, materiale, strato.n);
+    mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: materiale.map, alphaTest: 0.45 });
+    let n = 0;
+    for (let tentativi = 0; n < strato.n && tentativi < strato.n * 4; tentativi++) {
+      // un ciuffo a caso, i grandi più spesso
+      let x = r() * somma, k = 0;
+      while ((x -= peso[k]) > 0 && k < tutti.length - 1) k++;
+      const [cx, cy, cz, rc] = tutti[k];
+      const dir = v3(r() - 0.5, r() - 0.5, r() - 0.5).normalize();
+      const dist = rc * (0.35 + 0.65 * Math.cbrt(r()));
+      const p = v3(cx, cy, cz).add(centro).addScaledVector(dir, dist);
+      // niente foglie davanti agli occhi
+      if (p.y < yOcchi + 0.3 && p.z > 0.05 && Math.abs(p.x) < 0.45) continue;
+      // con fascia o bandana la fronte resta scoperta, così si vedono
+      if (fronteLibera && p.y < fronteLibera) continue;
+      // i fiori stanno fuori, dove si vedono
+      const daCentro = p.clone().sub(centro);
+      const fuori = daCentro.length() / ((R[0] + R[1] + R[2]) / 3);
+      if (strato.fiore && fuori < 0.65) continue;
+      // quelle dentro la chioma non si vedono: costano e basta
+      if (fuori < 0.42 && k < lista.length) continue;
+      const nrm = dir.clone().multiplyScalar(0.5).add(daCentro.clone().normalize().multiplyScalar(0.7))
+        .add(v3(r() - 0.5, r() - 0.5, r() - 0.5).multiplyScalar(0.6)).normalize();
+      const punta = nrm.clone().add(v3((r() - 0.5) * 1.2, 0.35 + (r() - 0.5) * 0.8, (r() - 0.5) * 1.2)).normalize();
+      const zAsse = nrm;
+      const yAsse = punta.sub(zAsse.clone().multiplyScalar(punta.dot(zAsse))).normalize();
+      const xAsse = new THREE.Vector3().crossVectors(yAsse, zAsse);
+      const s = 0.8 + r() * 0.45;
+      m4.makeBasis(xAsse.multiplyScalar(strato.dim[0] * s), yAsse.multiplyScalar(strato.dim[1] * s), zAsse.multiplyScalar(strato.dim[0] * s));
+      m4.setPosition(p);
+      mesh.setMatrixAt(n, m4);
+      // più scure dentro e sotto, più chiare fuori e in alto
+      const luce = THREE.MathUtils.smoothstep(fuori, 0.25, 1.0) * 0.55 + THREE.MathUtils.smoothstep(p.y - centro.y, -R[1], R[1]) * 0.45;
+      col.copy(strato.colori[0]).lerp(strato.colori[1], r());
+      if (!strato.fiore) col.multiplyScalar(0.55 + 0.6 * luce);
+      mesh.setColorAt(n, col);
+      yMax = Math.max(yMax, p.y);
+      if (Math.abs(p.y - 0.15) < 0.15 && Math.abs(p.x) < 0.2) zFronte = Math.max(zFronte, p.z);
+      n++;
+    }
+    mesh.count = n;
+    gruppo.add(mesh);
+  }
+  gruppo.position.y = yCima;
+  return { gruppo, centro, R, yMax: yCima + yMax, zFronte };
+}
+
+// ------------------------------------------------------------------ Il viso
+const DIM_OCCHI = { tondi: [0.125, 0.14, 0], ovali: [0.105, 0.155, 0], mandorla: [0.138, 0.108, 0.16] };
+
+function occhio(campioni, x, y, forma, lato) {
+  const [rx, ry, inclina] = DIM_OCCHI[forma];
+  const g = posa(new THREE.Group(), campioni, x, y, -0.022);
+  const palpebra = new THREE.Group(); // si chiude scalando in altezza
+  palpebra.rotation.z = -lato * inclina;
+  palpebra.add(ovale(rx * 1.16, ry * 1.12, 0.05, mat("#fbf7ec", { roughness: 0.35 })));
+  const iride = ovale(rx, ry, 0.06, new THREE.MeshPhysicalMaterial({ color: "#3a2214", roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 }));
+  iride.position.z = 0.014;
+  const riflessoIride = ovale(rx * 0.7, ry * 0.42, 0.03, new THREE.MeshPhysicalMaterial({ color: "#8a5530", roughness: 0.3, clearcoat: 1 }));
+  riflessoIride.position.set(0, -ry * 0.42, 0.05);
+  const pupilla = ovale(rx * 0.48, ry * 0.5, 0.05, new THREE.MeshPhysicalMaterial({ color: "#120a06", roughness: 0.15, clearcoat: 1 }));
+  pupilla.position.set(0, ry * 0.05, 0.04);
+  const bianco = new THREE.MeshBasicMaterial({ color: "#ffffff" });
+  const luce1 = ovale(rx * 0.3, ry * 0.3, 0.02, bianco, 10);
+  luce1.position.set(rx * 0.32, ry * 0.36, 0.085);
+  const luce2 = ovale(rx * 0.14, ry * 0.14, 0.02, bianco, 8);
+  luce2.position.set(-rx * 0.3, -ry * 0.34, 0.085);
+  palpebra.add(iride, riflessoIride, pupilla, luce1, luce2);
+  g.add(palpebra);
+  // Ciglia: due ciuffetti verso l'esterno
   const ciglia = new THREE.Group();
-  const arco = [];
-  for (let i = 0; i <= 8; i++) {
-    const a = Math.PI * (0.15 + 0.7 * (i / 8));
-    arco.push([Math.cos(a) * 0.105, Math.sin(a) * 0.1 + 0.03, 0.05]);
+  const inchiostro = mat("#23261d", { roughness: 0.5 });
+  for (const [a, l] of [[0.35, 0.07], [0.7, 0.06]]) {
+    const bx = lato * rx * Math.cos(a) * 1.1, by = ry * Math.sin(a) * 1.1;
+    ciglia.add(tubo([[bx, by, 0.035], [bx + lato * l * 0.7, by + l * 0.7, 0.03]], 0.011, 0.004, inchiostro, 6, 6));
   }
-  ciglia.add(ramo(arco, 0.011, inchiostro));
-  ciglia.add(ramo([[esterno * 0.085, 0.075, 0.05], [esterno * 0.13, 0.11, 0.045]], 0.009, inchiostro));
-  ciglia.add(ramo([[esterno * 0.055, 0.11, 0.05], [esterno * 0.08, 0.155, 0.045]], 0.009, inchiostro));
+  ciglia.rotation.z = -lato * inclina;
   g.add(ciglia);
-  return { gruppo: g, palla, ciglia };
+  return { gruppo: g, palpebra, ciglia, rx, ry };
 }
 
-/** Braccio-ramo: gruppo con il perno sulla spalla, rametto e mano di foglie. */
-function braccio(lato, corteccia, foglia) {
-  const s = lato; // -1 sinistra, +1 destra (per chi guarda)
-  const perno = new THREE.Group();
-  perno.position.set(s * 0.33, Y(150), 0.02);
-  perno.add(ramo([[0, 0, 0], [s * 0.3, -0.12, 0.06], [s * 0.56, -0.02, 0.12], [s * 0.7, 0.2, 0.14]], 0.058, corteccia));
-  // Rametto dal gomito, con una foglia
-  perno.add(ramo([[s * 0.36, -0.1, 0.08], [s * 0.42, 0.06, 0.04], [s * 0.38, 0.16, 0.02]], 0.025, corteccia));
-  const f = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), foglia);
-  f.scale.set(0.07, 0.035, 0.05);
-  f.position.set(s * 0.37, 0.2, 0.02);
-  f.rotation.z = s * 0.6;
-  perno.add(f);
-  // Mano: due foglie
-  const mano = new THREE.Group();
-  mano.position.set(s * 0.72, 0.24, 0.14);
-  const m1 = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), foglia);
-  m1.scale.set(0.1, 0.065, 0.06); m1.rotation.z = s * 0.35;
-  const m2 = m1.clone(); m2.scale.set(0.08, 0.05, 0.05);
-  m2.position.set(s * 0.03, 0.07, 0.02); m2.rotation.z = s * 1.1;
-  mano.add(m1, m2);
-  perno.add(mano);
-  return perno;
+function sopracciglio(campioni, x, y, tipo, lato, materiale) {
+  const pts = [];
+  const n = 6;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n - 0.5; // -0.5 .. 0.5, dall'interno all'esterno
+    let dy = 0;
+    if (tipo === "arco") dy = (0.25 - t * t) * 0.09;
+    if (tipo === "dritte") dy = t * 0.03;
+    if (tipo === "folte") dy = (0.25 - t * t) * 0.06;
+    const s = superficie(campioni, x + lato * t * 0.17, y + dy);
+    pts.push([s.punto.x, s.punto.y, s.punto.z + 0.008]);
+  }
+  const r = tipo === "folte" ? [0.026, 0.016] : [0.016, 0.01];
+  return tubo(pts, r[0], r[1], materiale, 14, 8);
 }
 
-function piede(lato, scura) {
+function bocca(campioni, y, tipo) {
   const g = new THREE.Group();
-  const x = lato * 0.17;
-  g.add(ramo([[x * 0.8, Y(222), 0], [x, Y(238), 0.02], [x, 0.09, 0.04]], 0.065, scura));
-  const p = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), scura);
-  p.scale.set(0.15, 0.075, 0.2);
-  p.position.set(x, 0.06, 0.08);
-  g.add(p);
-  // Dita-radici
-  for (const d of [-1, 0, 1]) {
-    g.add(ramo([[x + d * 0.06, 0.04, 0.2], [x + d * 0.09, 0.02, 0.3]], 0.022, scura));
+  const scuro = mat("#4a1f1a", { roughness: 0.5 });
+  if (tipo === "sorriso") {
+    const pts = [];
+    for (let i = 0; i <= 10; i++) {
+      const t = i / 5 - 1;
+      const s = superficie(campioni, t * 0.1, y + 0.04 * t * t);
+      pts.push([s.punto.x, s.punto.y, s.punto.z + 0.004]);
+    }
+    g.add(tubo(pts, 0.016, 0.016, scuro, 20, 8));
+  } else {
+    const forma = new THREE.Shape();
+    forma.moveTo(-0.1, 0.02);
+    forma.quadraticCurveTo(0, 0.0, 0.1, 0.02);
+    forma.quadraticCurveTo(0.09, -0.1, 0, -0.1);
+    forma.quadraticCurveTo(-0.09, -0.1, -0.1, 0.02);
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(forma, 12), mat("#5a1c16", { roughness: 0.6 }));
+    const lingua = ovale(0.055, 0.03, 0.01, mat("#e07b78", { roughness: 0.5 }));
+    lingua.position.set(0, -0.072, 0.004);
+    const piano = posa(new THREE.Group(), campioni, 0, y + 0.01, 0.006);
+    piano.add(m, lingua);
+    g.add(piano);
   }
   return g;
 }
 
+function guancia(campioni, x, y, lentiggini) {
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.2, 0.15),
+    new THREE.MeshStandardMaterial({ map: texGuancia(lentiggini), transparent: true, depthWrite: false, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -4 }),
+  );
+  return posa(m, campioni, x, y, 0.012);
+}
+
+// ------------------------------------------------------------------ Corpo
+function braccio(lato, campioni, Y, corteccia, foglia, tinta) {
+  const y = Y(0.42);
+  const r = raggioA(campioni, y);
+  const perno = new THREE.Group();
+  perno.position.set(lato * r * 0.9, y, 0.02);
+  perno.add(tubo([[0, 0, 0], [lato * 0.28, -0.1, 0.05], [lato * 0.5, -0.03, 0.1], [lato * 0.62, 0.13, 0.12]], 0.075, 0.045, corteccia));
+  perno.add(tubo([[lato * 0.36, -0.08, 0.08], [lato * 0.42, 0.06, 0.05], [lato * 0.38, 0.16, 0.03]], 0.028, 0.014, corteccia, 10, 8));
+  const materialeFoglia = new THREE.MeshStandardMaterial({ map: foglia, alphaTest: 0.45, side: THREE.DoubleSide, color: tinta, roughness: 0.7 });
+  const fogliolina = (x, y2, z, ang, s = 1) => {
+    const f = new THREE.Mesh(geoFoglia, materialeFoglia);
+    f.scale.set(0.13 * s, 0.17 * s, 0.13 * s);
+    f.position.set(x, y2, z);
+    f.rotation.set(-0.3, 0, ang);
+    return f;
+  };
+  perno.add(fogliolina(lato * 0.38, 0.15, 0.03, -lato * 0.4, 0.9));
+  // Mano: un pugnetto di legno con tre foglie, come le mani-foglia del disegno
+  const mano = new THREE.Group();
+  mano.position.set(lato * 0.64, 0.16, 0.13);
+  mano.add(ovale(0.06, 0.055, 0.055, corteccia));
+  mano.add(fogliolina(0, 0.03, 0.02, -lato * 0.5), fogliolina(lato * 0.02, 0.04, 0.0, -lato * 1.2, 0.85), fogliolina(-lato * 0.01, 0.04, 0.02, lato * 0.2, 0.8));
+  perno.add(mano);
+  perno.userData.mano = mano;
+  return perno;
+}
+
+function piede(lato, larg, scura) {
+  const g = new THREE.Group();
+  const x = lato * 0.19 * larg;
+  g.add(tubo([[x * 0.85, 0.4, 0], [x, 0.22, 0.02], [x * 1.05, 0.1, 0.05]], 0.075, 0.07, scura, 10, 10));
+  const p = ovale(0.15, 0.085, 0.2, scura);
+  p.position.set(x * 1.05, 0.075, 0.09);
+  g.add(p);
+  for (const d of [-1, 0, 1]) {
+    const dito = ovale(0.04, 0.035, 0.05, scura, 10);
+    dito.position.set(x * 1.05 + d * 0.075, 0.04, 0.26);
+    g.add(dito);
+  }
+  return g;
+}
+
+// ------------------------------------------------------------------ Accessori
+/** Una fascia che abbraccia il tronco fra due altezze (frazioni del tronco). */
+function fascia(campioni, Y, y0, y1, materiale, gonfia = 0.022) {
+  const pts = [];
+  for (let i = 0; i <= 8; i++) {
+    const y = Y(y0 + ((y1 - y0) * i) / 8);
+    pts.push(new THREE.Vector2(raggioA(campioni, y) + gonfia + Math.sin((i / 8) * Math.PI) * 0.012, y));
+  }
+  const geo = new THREE.LatheGeometry(pts, 40);
+  geo.scale(1, 1, SCHIACCIA);
+  return new THREE.Mesh(geo, materiale);
+}
+
+function accessori(nomi, ctx) {
+  const { campioni, Y, occhi, chioma: ch, bracci } = ctx;
+  const g = new THREE.Group();
+  const vetro = new THREE.MeshPhysicalMaterial({ color: "#cfe6f0", transparent: true, opacity: 0.28, roughness: 0.05, clearcoat: 1 });
+  for (const nome of nomi) {
+    if (nome === "occhiali-tondi") {
+      const tartaruga = mat("#4a2c1a", { roughness: 0.35 });
+      const R = Math.max(occhi[0].rx, occhi[0].ry) * 1.32;
+      const centri = [];
+      for (const o of occhi) {
+        const q = new THREE.Group();
+        q.position.copy(o.gruppo.position).addScaledVector(o.gruppo.getWorldDirection(v3()), 0.1);
+        q.quaternion.copy(o.gruppo.quaternion);
+        q.add(new THREE.Mesh(new THREE.TorusGeometry(R, 0.014, 10, 32), tartaruga), new THREE.Mesh(new THREE.CircleGeometry(R, 32), vetro));
+        g.add(q);
+        centri.push(q.position.clone());
+      }
+      const [a, b] = centri;
+      g.add(tubo([[a.x + R * 0.9, a.y + 0.01, a.z], [0, a.y + 0.035, a.z + 0.02], [b.x - R * 0.9, b.y + 0.01, b.z]], 0.011, 0.011, tartaruga, 10, 6));
+      for (const [c, s] of [[a, -1], [b, 1]]) {
+        const lato = superficie(campioni, s * 0.42, c.y);
+        g.add(tubo([[c.x + s * R, c.y, c.z - 0.02], [lato.punto.x + s * 0.03, c.y + 0.01, lato.punto.z * 0.6], [lato.punto.x + s * 0.02, c.y - 0.02, -0.15]], 0.01, 0.01, tartaruga, 10, 6));
+      }
+    }
+    if (nome === "occhialoni") {
+      // Occhialoni da viaggio poggiati sulla chioma, sopra la fronte
+      const q = new THREE.Group();
+      const y = Y(1) + 0.12;
+      q.position.set(0, y, ch.zFronte + 0.02);
+      q.rotation.x = -0.45;
+      const ottone = mat("#b98a3a", { metalness: 0.75, roughness: 0.28 });
+      const lente = new THREE.MeshPhysicalMaterial({ color: "#2e4a52", roughness: 0.05, clearcoat: 1, metalness: 0.2 });
+      for (const s of [-1, 1]) {
+        const corpo = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.13, 0.09, 28), ottone);
+        corpo.rotation.x = Math.PI / 2;
+        corpo.position.set(s * 0.15, 0, 0);
+        const bordo = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.022, 10, 28), ottone);
+        bordo.position.set(s * 0.15, 0, 0.05);
+        const vetroL = new THREE.Mesh(new THREE.CircleGeometry(0.1, 28), lente);
+        vetroL.position.set(s * 0.15, 0, 0.048);
+        const riflesso = ovale(0.025, 0.04, 0.005, new THREE.MeshBasicMaterial({ color: "#ffffff" }), 8);
+        riflesso.position.set(s * 0.15 + 0.04, 0.03, 0.055);
+        q.add(corpo, bordo, vetroL, riflesso);
+      }
+      q.add(tubo([[-0.04, 0, 0], [0.04, 0, 0]], 0.025, 0.025, mat("#5a3a22"), 4, 8));
+      g.add(q);
+      const cinghia = new THREE.Mesh(new THREE.TorusGeometry(ch.R[0] * 0.82, 0.03, 8, 48), mat("#5a3a22", { roughness: 0.6 }));
+      cinghia.rotation.x = Math.PI / 2 - 0.3;
+      cinghia.position.set(0, y + 0.08, -0.05);
+      g.add(cinghia);
+    }
+    if (nome === "zaino") {
+      const tela = mat("#8a5a2a", { roughness: 0.8 });
+      const scuro = mat("#5e3c1c", { roughness: 0.8 });
+      const yZ = Y(0.5);
+      const dietro = raggioA(campioni, yZ) * SCHIACCIA;
+      const corpo = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.22, 8, 20), tela);
+      corpo.scale.set(1.15, 1, 0.6);
+      corpo.position.set(0, yZ, -dietro - 0.1);
+      const tasca = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.06, 6, 16), scuro);
+      tasca.scale.set(1.2, 1, 0.5);
+      tasca.position.set(0, yZ - 0.08, -dietro - 0.24);
+      const rotolo = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.56, 20), mat("#c9b48a", { roughness: 0.9 }));
+      rotolo.rotation.z = Math.PI / 2;
+      rotolo.position.set(0, yZ + 0.34, -dietro - 0.1);
+      g.add(corpo, tasca, rotolo);
+      for (const s of [-1, 1]) {
+        const y2 = Y(0.78);
+        const r2 = raggioA(campioni, y2);
+        g.add(tubo([[s * 0.2, y2, -r2 * 0.7], [s * r2 * 1.02, Y(0.7), 0], [s * raggioA(campioni, Y(0.38)) * 0.96, Y(0.38), 0.2]], 0.026, 0.026, scuro, 16, 6));
+      }
+    }
+    if (nome === "basco") {
+      const basco = ovale(0.4, 0.13, 0.4, mat("#8e2a3a", { roughness: 0.85 }), 28);
+      basco.position.set(0.06, ch.yMax - 0.04, -0.04);
+      basco.rotation.z = -0.25;
+      const picciolo = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.07, 8), mat("#6e1f2c"));
+      picciolo.position.set(0.03, ch.yMax + 0.1, -0.04);
+      g.add(basco, picciolo);
+    }
+    if (nome === "pennello") {
+      const p = new THREE.Group();
+      p.add(tubo([[0, -0.08, 0], [0, 0.22, 0]], 0.018, 0.014, mat("#c99a5a", { roughness: 0.5 }), 4, 8));
+      const ghiera = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.06, 12), mat("#cfd3d6", { metalness: 0.8, roughness: 0.25 }));
+      ghiera.position.y = 0.25;
+      p.add(ghiera);
+      p.add(tubo([[0, 0.28, 0], [0, 0.34, 0], [0.01, 0.4, 0]], 0.02, 0.004, mat("#3a7bd5", { roughness: 0.4 }), 8, 8));
+      p.rotation.z = 0.35;
+      p.position.set(0, 0, 0.05);
+      bracci[0].userData.mano.add(p);
+    }
+    if (nome === "fascia") {
+      g.add(fascia(campioni, Y, 0.8, 0.92, mat("#c8382a", { roughness: 0.75 })));
+      g.add(fascia(campioni, Y, 0.845, 0.875, mat("#f4ead6", { roughness: 0.75 }), 0.03));
+    }
+    if (nome === "bandana") {
+      const t = texStoffa("pallini", "#b8322a", "#f4ead6");
+      t.repeat.set(5, 1);
+      const stoffa = mat("#ffffff", { map: t, roughness: 0.8 });
+      g.add(fascia(campioni, Y, 0.78, 0.94, stoffa, 0.024));
+      // nodo e code sul lato destro (per chi guarda), un po' indietro
+      const y = Y(0.86);
+      const r = raggioA(campioni, y);
+      const nodo = ovale(0.07, 0.06, 0.06, stoffa);
+      nodo.position.set(r * 0.86, y, -r * 0.42);
+      g.add(nodo);
+      g.add(tubo([[r * 0.9, y, -r * 0.45], [r * 1.05, y - 0.12, -r * 0.5], [r * 1.0, y - 0.26, -r * 0.62]], 0.045, 0.012, stoffa, 12, 8));
+      g.add(tubo([[r * 0.9, y, -r * 0.45], [r * 1.1, y - 0.06, -r * 0.3], [r * 1.16, y - 0.2, -r * 0.24]], 0.04, 0.012, stoffa, 12, 8));
+    }
+    if (nome === "cravatta") {
+      const tt = texStoffa("righe", "#24427a", "#d9b44a");
+      tt.repeat.set(1, 3); tt.rotation = 0.7;
+      const blu = mat("#ffffff", { map: tt, roughness: 0.6 });
+      const nodo = posa(ovale(0.05, 0.045, 0.03, blu), campioni, 0, Y(0.25), 0.01);
+      const forma = new THREE.Shape();
+      forma.moveTo(-0.03, 0); forma.lineTo(0.03, 0); forma.lineTo(0.065, -0.24); forma.lineTo(0, -0.3); forma.lineTo(-0.065, -0.24); forma.closePath();
+      nodo.scale.multiplyScalar(1.5);
+      const lama = new THREE.Mesh(new THREE.ExtrudeGeometry(forma, { depth: 0.018, bevelEnabled: true, bevelSize: 0.006, bevelThickness: 0.006, bevelSegments: 2 }), blu);
+      const s = superficie(campioni, 0, Y(0.16));
+      lama.position.set(0, Y(0.25) - 0.02, s.punto.z + 0.012);
+      lama.rotation.x = -0.12;
+      lama.scale.setScalar(1.5);
+      lama.position.y += 0.02;
+      g.add(nodo, lama);
+      for (const k of [-1, 1]) {
+        const c = new THREE.Shape();
+        c.moveTo(0, 0); c.lineTo(k * 0.11, 0.03); c.lineTo(k * 0.07, -0.07); c.closePath();
+        g.add(posa(new THREE.Mesh(new THREE.ShapeGeometry(c), mat("#f4f1ea", { side: THREE.DoubleSide })), campioni, k * 0.03, Y(0.26), 0.014));
+      }
+    }
+    if (nome === "berretto-notte") {
+      const t = texStoffa("righe", "#3a5aa8", "#f2eee2");
+      t.repeat.set(1, 6);
+      t.rotation = Math.PI / 2;
+      const stoffa = mat("#ffffff", { map: t, roughness: 0.9 });
+      const base = v3(-0.05, ch.yMax - 0.22, -0.06);
+      const pts = [[0, 0, 0], [0.02, 0.32, 0], [0.16, 0.52, 0.02], [0.4, 0.48, 0.06], [0.54, 0.28, 0.1]].map(([x, y, z]) => [x + base.x, y + base.y, z + base.z]);
+      g.add(tubo(pts, 0.36, 0.035, stoffa, 32, 20));
+      const pon = ovale(0.085, 0.085, 0.085, mat("#f7f4ec", { roughness: 1 }), 14);
+      pon.position.set(pts[4][0], pts[4][1] - 0.06, pts[4][2]);
+      const risvolto = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.06, 12, 40), mat("#f2eee2", { roughness: 1 }));
+      risvolto.rotation.x = Math.PI / 2;
+      risvolto.position.copy(base).add(v3(0, 0.02, 0));
+      g.add(pon, risvolto);
+    }
+  }
+  return g;
+}
+
+// ------------------------------------------------------------------ Linfa
 /**
- * Costruisce Linfa. `sole` è la direzione della luce (verso la sorgente).
- * Restituisce il gruppo e una funzione `aggiorna(t, dt)` per l'animazione.
+ * Costruisce un albero. `opzioni` sovrascrive quelle generate dal seme.
+ * Restituisce { gruppo, aggiorna(t, dt), saluta(), opzioni }.
  */
-export function creaLinfa(sole) {
+export function creaLinfa(opzioni = {}) {
+  const o = { ...generaOpzioni(opzioni.seme ?? "linfa"), ...opzioni };
+  const r = generatore(hash(`foglie:${o.seme}:${o.specie}`));
+  const { campioni, Y } = profiloTronco(o.larghezza, o.altezza);
+
   const radice = new THREE.Group();
   const corpo = new THREE.Group(); // respira
   radice.add(corpo);
 
-  const texture = texCorteccia();
-  const corteccia = mat("#ffffff", { map: texture });
-  const scura = mat(CORTECCIA_SCURA, { roughness: 0.9 });
-  const foglia = mat(CHIOMA_MEDIO, { flatShading: true });
-  const inchiostro = mat(INCHIOSTRO, { roughness: 0.5 });
+  const { map, bump, colori } = texCorteccia(o.specie);
+  const ripeti = (t, x, y) => { const c = t.clone(); c.repeat.set(x, y); c.needsUpdate = true; return c; };
+  const corteccia = new THREE.MeshStandardMaterial({ map: ripeti(map, 2, 1.4), bumpMap: ripeti(bump, 2, 1.4), bumpScale: 3, roughness: 0.82 });
+  const corteccia2 = new THREE.MeshStandardMaterial({ map: ripeti(map, 0.5, 2), bumpMap: ripeti(bump, 0.5, 2), bumpScale: 1.5, roughness: 0.85 });
+  const scura = mat(o.specie === "betulla" ? "#6e6458" : colori.scuro, { roughness: 0.85 });
 
-  radice.add(piede(-1, scura), piede(1, scura));
-  const busto = tronco(corteccia);
+  // Tronco tondo e morbido
+  const geoT = new THREE.LatheGeometry(campioni, 48);
+  geoT.scale(1, 1, SCHIACCIA);
+  const busto = new THREE.Mesh(geoT, corteccia);
   corpo.add(busto);
+  radice.add(piede(-1, o.larghezza, scura), piede(1, o.larghezza, scura));
 
-  const fronda = new THREE.Group();
-  const verde = chioma(sole);
-  // La chioma respira intorno a dove poggia sul tronco (come nel 2D: perno 120,132)
-  fronda.position.set(0, Y(132), 0);
-  verde.position.set(0, -Y(132), 0);
-  fronda.add(verde);
-  corpo.add(fronda);
+  // Chioma
+  const ch = chioma(o, campioni, Y, r);
+  corpo.add(ch.gruppo);
 
-  // Faccia
+  // Viso
   const faccia = new THREE.Group();
-  const occhi = [occhio(X(110) * 1.12, inchiostro), occhio(X(130) * 1.12, inchiostro)];
-  occhi.forEach((o) => faccia.add(o.gruppo));
-  for (const x of [X(103) * 1.1, X(137) * 1.1]) {
-    const { z, normale } = superficie(x, 177);
-    const guancia = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), mat("#e8806a", { roughness: 0.6 }));
-    guancia.scale.set(0.085, 0.06, 0.02);
-    guancia.position.set(x, Y(178), z - 0.004);
-    guancia.lookAt(guancia.position.clone().add(normale));
-    faccia.add(guancia);
-  }
-  // Bocca: un sorriso a mezzo anello
-  const { z: zb } = superficie(0, 186);
-  const bocca = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.014, 8, 16, Math.PI), mat("#4a1f1a", { roughness: 0.5 }));
-  bocca.rotation.z = Math.PI;
-  bocca.position.set(0, Y(184), zb + 0.002);
-  faccia.add(bocca);
-  // Sopracciglia
-  for (const s of [-1, 1]) {
-    const x = s * 0.15;
-    const { z } = superficie(x, 150);
-    faccia.add(ramo([[x - s * 0.07, Y(149), z], [x, Y(146.5), z + 0.01], [x + s * 0.06, Y(148), z - 0.005]], 0.013, scura));
-  }
+  const yOcchi = Y(0.56);
+  const xOcchi = 0.19 * o.larghezza;
+  const occhi = [occhio(campioni, -xOcchi, yOcchi, o.occhi, -1), occhio(campioni, xOcchi, yOcchi, o.occhi, 1)];
+  occhi.forEach((oc) => faccia.add(oc.gruppo));
+  const sop = mat(o.specie === "betulla" ? "#4a3a2c" : colori.scuro, { roughness: 0.7 });
+  const ySop = yOcchi + DIM_OCCHI[o.occhi][1] + 0.075;
+  faccia.add(sopracciglio(campioni, -xOcchi - 0.01, ySop, o.sopracciglia, -1, sop), sopracciglio(campioni, xOcchi + 0.01, ySop, o.sopracciglia, 1, sop));
+  faccia.add(guancia(campioni, -0.29 * o.larghezza, Y(0.43), o.lentiggini), guancia(campioni, 0.29 * o.larghezza, Y(0.43), o.lentiggini));
+  faccia.add(bocca(campioni, Y(0.4), o.bocca));
   corpo.add(faccia);
 
-  const bracci = [braccio(-1, corteccia, foglia), braccio(1, corteccia, foglia)];
+  // Braccia, con le foglie della specie
+  const sp = SPECIE[o.specie];
+  const tinta = new THREE.Color(sp.toni[0][1]).lerp(new THREE.Color(sp.toni[sp.toni.length - 1][1]), o.tono);
+  const bracci = [-1, 1].map((l) => braccio(l, campioni, Y, corteccia2, texFoglia(sp.foglia), tinta));
   bracci.forEach((b) => corpo.add(b));
 
-  radice.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });
+  // Accessori della strada; quelli in testa seguono la chioma quando respira
+  const nomi = STRADE[o.strada] ?? [];
+  corpo.updateMatrixWorld(true);
+  const inTesta = new Set(["basco", "berretto-notte", "occhialoni"]);
+  const testa = accessori(nomi.filter((n) => inTesta.has(n)), { campioni, Y, occhi, chioma: ch, bracci });
+  testa.position.y = -ch.gruppo.position.y;
+  ch.gruppo.add(testa);
+  corpo.add(accessori(nomi.filter((n) => !inTesta.has(n)), { campioni, Y, occhi, chioma: ch, bracci }));
 
-  // --- Animazione ---
-  let prossimoBattito = 1.5;
-  let battito = -1; // tempo dall'inizio del battito di ciglia
-  let saluto = -1; // tempo dall'inizio del saluto
-  const DURATA_SALUTO = 2.2;
+  radice.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
 
-  function saluta() {
-    if (saluto < 0) saluto = 0;
-  }
+  // ---------------------------------------------------------------- Animazione
+  const fase = (hash(o.seme) % 1000) / 160;
+  let prossimoBattito = 1 + (hash(o.seme) % 300) / 100;
+  let battito = -1, saluto = -1;
+  const DURATA = 2.2;
+  const casuale = generatore(hash(`ciglia:${o.seme}`));
+
+  function saluta() { if (saluto < 0) saluto = 0; }
 
   function aggiorna(t, dt) {
-    // Respiro: la chioma si gonfia, il tronco si allunga appena
-    const r = Math.sin(t * 1.6);
-    fronda.scale.setScalar(1 + 0.03 * r);
-    busto.scale.set(1 - 0.008 * r, 1 + 0.014 * r, 1 - 0.008 * r);
-    fronda.position.y = Y(132) + 0.012 * r;
-    faccia.position.y = 0.006 * r;
+    const s = Math.sin(t * 1.6 + fase);
+    ch.gruppo.scale.setScalar(1 + 0.025 * s);
+    busto.scale.set(1 - 0.006 * s, 1 + 0.012 * s, 1 - 0.006 * s);
+    faccia.position.y = 0.006 * s;
 
-    // Ciglia
     prossimoBattito -= dt;
-    if (prossimoBattito <= 0 && battito < 0) { battito = 0; prossimoBattito = 2.2 + Math.random() * 3.5; }
+    if (prossimoBattito <= 0 && battito < 0) { battito = 0; prossimoBattito = 2.2 + casuale() * 3.5; }
     let apertura = 1;
     if (battito >= 0) {
       battito += dt;
@@ -298,33 +677,30 @@ export function creaLinfa(sole) {
       if (f >= 1) battito = -1;
     }
 
-    // Braccia: dondolio lieve; durante il saluto il destro si alza e sventola
-    let saltello = 0;
-    let avanti = 0;
-    let destro = 0.06 * Math.sin(t * 1.6 + 0.5);
-    const sinistro = -0.06 * Math.sin(t * 1.6 + 0.5);
+    let saltello = 0, avanti = 0;
+    let destro = 0.06 * Math.sin(t * 1.6 + fase + 0.5);
+    const sinistro = -0.06 * Math.sin(t * 1.6 + fase + 0.5);
     if (saluto >= 0) {
       saluto += dt;
-      const s = saluto / DURATA_SALUTO;
-      const su = Math.min(1, saluto / 0.25) * Math.min(1, (DURATA_SALUTO - saluto) / 0.35);
-      destro += su * (0.5 + 0.32 * Math.sin(saluto * 14));
-      avanti = -0.75 * su; // la mano viene in avanti, verso chi guarda
-      saltello = saluto < 0.45 ? Math.sin((saluto / 0.45) * Math.PI) * 0.18 : 0;
-      apertura = Math.min(apertura, saluto > 0.2 && saluto < 1.6 ? 0.55 : 1); // occhi sorridenti
-      if (s >= 1) saluto = -1;
+      const su = Math.min(1, saluto / 0.25) * Math.min(1, Math.max(0, (DURATA - saluto) / 0.35));
+      // la mano resta all'altezza del viso e viene avanti, fuori dalla chioma
+      destro += su * (0.28 + 0.3 * Math.sin(saluto * 14));
+      avanti = -1.05 * su;
+      saltello = saluto < 0.45 ? Math.sin((saluto / 0.45) * Math.PI) * 0.16 : 0;
+      apertura = Math.min(apertura, saluto > 0.2 && saluto < 1.6 ? 0.5 : 1);
+      if (saluto >= DURATA) saluto = -1;
     }
     bracci[1].rotation.z = destro;
     bracci[1].rotation.y = avanti;
     bracci[0].rotation.z = sinistro;
     radice.position.y = radice.userData.terra + saltello;
-    corpo.rotation.z = saluto >= 0 ? -0.05 * Math.sin(Math.min(1, saluto / 0.3) * Math.PI * 0.5) : 0;
-
-    for (const o of occhi) {
-      o.palla.scale.y = Math.max(0.08, apertura);
-      o.ciglia.position.y = (apertura - 1) * 0.1;
+    for (const oc of occhi) {
+      oc.palpebra.scale.y = Math.max(0.08, apertura);
+      oc.ciglia.position.y = (apertura - 1) * oc.ry * 0.9;
     }
   }
 
   radice.userData.terra = 0;
-  return { gruppo: radice, aggiorna, saluta };
+  radice.userData.altezza = ch.yMax;
+  return { gruppo: radice, aggiorna, saluta, opzioni: o };
 }

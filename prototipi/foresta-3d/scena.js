@@ -3,12 +3,17 @@
 // vento e occlusione finta nello shader dei materiali.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { creaLinfa } from "./linfa.js";
+import { creaLinfa, tempo as tempoLinfa } from "./linfa.js";
+
+// Configurazione della pagina (window.RADURA, scritta nell'HTML prima di questo modulo):
+// alberi [{ seme, x, z, scala, ...opzioni }], raggio della radura, camera.
+const CFG = window.RADURA ?? {};
+const PARAMETRI = new URLSearchParams(location.search);
 
 // ---------- Impostazioni ----------
 const SOLE = new THREE.Vector3(-1, 0.5, 0.32).normalize(); // verso la sorgente: basso, da sinistra
 const COLORE_NEBBIA = new THREE.Color("#2a4232");
-const RAGGIO_RADURA = 6.2;
+const RAGGIO_RADURA = CFG.raggio ?? 6.2;
 
 // Numeri casuali ripetibili: la scena è sempre la stessa
 let semeRng = 7;
@@ -29,9 +34,9 @@ function quota(x, z) {
 
 // ---------- Renderer, scena, camera ----------
 // ?foto tiene l'ultimo fotogramma nel canvas: serve solo per le catture dello schermo
-const FOTO = new URLSearchParams(location.search).has("foto");
+const FOTO = PARAMETRI.has("foto");
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: FOTO });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -46,11 +51,11 @@ scena.background = COLORE_NEBBIA;
 scena.fog = new THREE.Fog(COLORE_NEBBIA, 20, 46);
 
 const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.5, 120);
-const BERSAGLIO = new THREE.Vector3(0, 1.6, 0.4);
 // Dall'alto, inclinata come nel riferimento; con ?vicino la camera va da Linfa
-const VICINO = new URLSearchParams(location.search).has("vicino");
-const POSIZIONE = VICINO ? new THREE.Vector3(1.0, 6.2, 8.0) : new THREE.Vector3(1.2, 11.5, 12.8);
-if (VICINO) BERSAGLIO.set(0, 2.2, 0);
+const VICINO = PARAMETRI.has("vicino");
+const cam = (VICINO ? CFG.cameraVicina : CFG.camera) ?? (VICINO ? { da: [0.9, 3.4, 7.6], a: [0, 2.0, 0] } : { da: [1.2, 11.5, 12.8], a: [0, 1.6, 0.4] });
+const BERSAGLIO = new THREE.Vector3(...cam.a);
+const POSIZIONE = new THREE.Vector3(...cam.da);
 camera.position.copy(POSIZIONE);
 camera.lookAt(BERSAGLIO);
 
@@ -66,10 +71,14 @@ sole.shadow.bias = -0.0004;
 sole.shadow.normalBias = 0.03;
 sole.shadow.radius = 4;
 scena.add(sole, sole.target);
-// Un controluce fresco dal lato opposto, per staccare le sagome
-const controluce = new THREE.DirectionalLight("#7fa6c8", 0.35);
-controluce.position.set(18, 10, -14);
+// Controluce caldo da dietro: accende il bordo delle chiome e dei tronchi
+const controluce = new THREE.DirectionalLight("#ffd08a", 1.5);
+controluce.position.set(8, 9, -18);
 scena.add(controluce);
+// e un riempimento fresco dal davanti, per non perdere i visi in ombra
+const riempimento = new THREE.DirectionalLight("#bcd4e6", 0.45);
+riempimento.position.set(4, 6, 16);
+scena.add(riempimento);
 
 // ---------- Terreno dipinto ----------
 const LATO = 80;
@@ -188,6 +197,7 @@ async function carica(nome) {
  * posti: [{ x, z, h (altezza in metri), rot, tinta (0..1), muschio }]
  */
 function istanze(nome, posti, { ombra = true, muschio = false } = {}) {
+  if (!posti.length) return;
   const { box, parti } = modelli[nome];
   const size = box.getSize(new THREE.Vector3());
   const centro = box.getCenter(new THREE.Vector3());
@@ -257,8 +267,8 @@ const NOMI = [
 async function costruisci() {
   await Promise.all(NOMI.map(carica));
 
-  // Linfa al centro, prima di tutto, per riservarle il posto
-  occupati.push([0, 0, 2.2]);
+  // Gli alberi-personaggio, prima di tutto, per riservare il loro posto
+  for (const a of ALBERI) occupati.push([a.x, a.z, 2.0]);
 
   // Alberi alti intorno alla radura
   const alberi = sparpaglia(70, RAGGIO_RADURA + 1.5, 30, 2.6, (x, z) => nonDavanti(x, z) && varcoSole(x, z));
@@ -272,15 +282,19 @@ async function costruisci() {
   });
   tipi.forEach((t) => gruppi[t].length && istanze(t, gruppi[t]));
 
+  // Oggetti messi a mano: si allargano con la radura e lasciano liberi i piedi degli alberi
+  const k = RAGGIO_RADURA / 6.2;
+  const fisso = (lista) => lista.map((p) => ({ ...p, x: p.x * k, z: p.z * k })).filter((p) => ALBERI.every((a) => Math.hypot(p.x - a.x, p.z - a.z) > 1.8));
+
   // Ceppi e tronco caduto vicino al bordo della radura
-  istanze("stump_oldTall", [{ x: -4.6, z: -2.4, h: 1.0, rot: 0.6 }, { x: 5.4, z: -3.8, h: 0.85, rot: 2.1 }]);
-  istanze("stump_roundDetailed", [{ x: 3.6, z: 2.6, h: 0.55, rot: 1.2, sx: 1.2 }, { x: -6.6, z: 3.8, h: 0.5, rot: 0.3 }]);
-  istanze("log_large", [{ x: -2.8, z: -5.4, h: 0.65, rot: 0.35 }]);
-  [[-4.6, -2.4], [5.4, -3.8], [3.6, 2.6], [-6.6, 3.8], [-2.8, -5.4]].forEach(([x, z]) => occupati.push([x, z, 1.2]));
+  istanze("stump_oldTall", fisso([{ x: -4.6, z: -2.4, h: 1.0, rot: 0.6 }, { x: 5.4, z: -3.8, h: 0.85, rot: 2.1 }]));
+  istanze("stump_roundDetailed", fisso([{ x: 3.6, z: 2.6, h: 0.55, rot: 1.2, sx: 1.2 }, { x: -6.6, z: 3.8, h: 0.5, rot: 0.3 }]));
+  istanze("log_large", fisso([{ x: -2.8, z: -5.4, h: 0.65, rot: 0.35 }]));
+  [[-4.6, -2.4], [5.4, -3.8], [3.6, 2.6], [-6.6, 3.8], [-2.8, -5.4]].forEach(([x, z]) => occupati.push([x * k, z * k, 1.2]));
 
   // Rocce sfaccettate con il muschio
-  istanze("rock_largeA", [{ x: 6.8, z: 0.8, h: 1.3, rot: 0.4 }, { x: -7.5, z: -5.5, h: 1.6, rot: 2 }, ...sparpaglia(5, 9, 22, 2)].map((p) => ({ h: tra(1.1, 1.8), ...p })), { muschio: true });
-  istanze("rock_largeC", [{ x: -5.6, z: 1.0, h: 0.9, rot: 1.1 }, ...sparpaglia(5, 8, 22, 2)].map((p) => ({ h: tra(0.9, 1.6), ...p })), { muschio: true });
+  istanze("rock_largeA", [...fisso([{ x: 6.8, z: 0.8, h: 1.3, rot: 0.4 }, { x: -7.5, z: -5.5, h: 1.6, rot: 2 }]), ...sparpaglia(5, 9, 22, 2)].map((p) => ({ h: tra(1.1, 1.8), ...p })), { muschio: true });
+  istanze("rock_largeC", [...fisso([{ x: -5.6, z: 1.0, h: 0.9, rot: 1.1 }]), ...sparpaglia(5, 8, 22, 2)].map((p) => ({ h: tra(0.9, 1.6), ...p })), { muschio: true });
   istanze("rock_tallB", sparpaglia(4, 9, 20, 2.5, varcoSole).map((p) => ({ ...p, h: tra(1.8, 2.6) })), { muschio: true });
   istanze("rock_smallC", sparpaglia(22, 2.5, 18, 0.6).map((p) => ({ ...p, h: tra(0.25, 0.5) })), { muschio: true });
   istanze("rock_smallFlatA", sparpaglia(12, 2.2, 10, 0.6).map((p) => ({ ...p, h: tra(0.12, 0.22) })), { ombra: false });
@@ -302,9 +316,9 @@ async function costruisci() {
   istanze("grass_large", ciuffi, { ombra: false });
 
   // Funghi ai piedi dei ceppi e qualche fiore nella radura
-  istanze("mushroom_redGroup", [{ x: -4.0, z: -1.7, h: 0.32, rot: 0.2 }, { x: 4.2, z: 3.2, h: 0.28, rot: 2.4 }, { x: -2.0, z: -4.6, h: 0.3, rot: 1 }]);
-  istanze("mushroom_tanTall", [{ x: 6.0, z: -3.1, h: 0.4, rot: 0.8 }, { x: -6.0, z: 4.5, h: 0.36, rot: 2 }, { x: 2.6, z: -2.2, h: 0.3, rot: 1.6 }]);
-  istanze("mushroom_red", [{ x: 1.8, z: 1.9, h: 0.22, rot: 0.5 }, { x: -1.6, z: 2.4, h: 0.2, rot: 2.6 }, { x: 3.0, z: 0.4, h: 0.18, rot: 1.1 }]);
+  istanze("mushroom_redGroup", fisso([{ x: -4.0, z: -1.7, h: 0.32, rot: 0.2 }, { x: 4.2, z: 3.2, h: 0.28, rot: 2.4 }, { x: -2.0, z: -4.6, h: 0.3, rot: 1 }]));
+  istanze("mushroom_tanTall", fisso([{ x: 6.0, z: -3.1, h: 0.4, rot: 0.8 }, { x: -6.0, z: 4.5, h: 0.36, rot: 2 }, { x: 2.6, z: -2.2, h: 0.3, rot: 1.6 }]));
+  istanze("mushroom_red", fisso([{ x: 1.8, z: 1.9, h: 0.22, rot: 0.5 }, { x: -1.6, z: 2.4, h: 0.2, rot: 2.6 }, { x: 3.0, z: 0.4, h: 0.18, rot: 1.1 }]));
   istanze("flower_yellowA", sparpaglia(16, 1.8, RAGGIO_RADURA, 0.5).map((p) => ({ ...p, h: tra(0.25, 0.4) })), { ombra: false });
 }
 
@@ -356,44 +370,68 @@ function raggi() {
 }
 
 // ---------- Avvio ----------
-const linfa = creaLinfa(SOLE.clone());
-linfa.gruppo.position.set(0, 0, 0);
-linfa.gruppo.userData.terra = quota(0, 0) - 0.02;
-linfa.gruppo.rotation.y = 0.08;
-linfa.gruppo.scale.setScalar(1.45);
-scena.add(linfa.gruppo);
+const ALBERI = CFG.alberi ?? [{ seme: "linfa", x: 0, z: 0, scala: 1.3, specie: "quercia", strada: "nessuna", occhi: "tondi", sopracciglia: "arco", bocca: "sorriso", lentiggini: false, tono: 0.55, altezza: 1, larghezza: 1 }];
+const linfe = ALBERI.map(({ x, z, scala = 1.3, giro = 0, ...opzioni }) => {
+  const l = creaLinfa(opzioni);
+  l.gruppo.userData.terra = quota(x, z) - 0.02;
+  l.gruppo.position.set(x, l.gruppo.userData.terra, z);
+  l.gruppo.rotation.y = giro;
+  l.gruppo.scale.setScalar(scala);
+  scena.add(l.gruppo);
+  return l;
+});
+window.__alberi = linfe.map((l) => l.opzioni);
+window.__prove = { scena, linfe, renderer, camera }; // solo per le prove dalla console
 
-// Ombra di Linfa: una macchia morbida stesa lontano dal sole (Linfa si muove,
-// così le ombre del bosco restano precalcolate).
+// Ombra di contatto sotto i piedi (le ombre lunghe sono quelle vere, precalcolate)
 {
   const c = document.createElement("canvas"); c.width = c.height = 128;
   const g = c.getContext("2d");
   const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  gr.addColorStop(0, "rgba(0,0,0,.55)"); gr.addColorStop(0.6, "rgba(0,0,0,.25)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+  gr.addColorStop(0, "rgba(0,0,0,.5)"); gr.addColorStop(0.6, "rgba(0,0,0,.22)"); gr.addColorStop(1, "rgba(0,0,0,0)");
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
-  const ombra = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
-  ombra.rotation.x = -Math.PI / 2;
-  const dir = new THREE.Vector2(-SOLE.x, -SOLE.z).normalize();
-  const lungo = 4.2;
-  ombra.scale.set(lungo, 1.5, 1);
-  ombra.rotation.z = Math.atan2(dir.y, dir.x) * -1;
-  ombra.position.set(dir.x * lungo * 0.42, quota(0, 0) + 0.02, dir.y * lungo * 0.42);
-  scena.add(ombra);
-  const piedi = ombra.clone(); // contatto scuro sotto i piedi
-  piedi.scale.set(1.1, 0.8, 1);
-  piedi.position.set(0.05, quota(0, 0) + 0.025, 0.05);
-  scena.add(piedi);
+  const mat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+  for (const l of linfe) {
+    const o = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+    o.rotation.x = -Math.PI / 2;
+    const s = l.gruppo.scale.x;
+    o.scale.set(1.0 * s, 0.75 * s, 1);
+    o.position.set(l.gruppo.position.x, l.gruppo.userData.terra + 0.04, l.gruppo.position.z + 0.08 * s);
+    scena.add(o);
+  }
 }
 
-// Clic: Linfa saluta
+// Etichette sotto gli alberi (pagina delle varianti)
+const etichette = CFG.etichette
+  ? linfe.map((l) => {
+      const d = document.createElement("div");
+      d.className = "targhetta";
+      const o = l.opzioni;
+      d.innerHTML = `<b>${o.specie}</b> · ${o.strada === "nessuna" ? "senza strada" : o.strada.replace("-", " ")}<br><span>seme ${o.seme}</span>`;
+      document.body.append(d);
+      return d;
+    })
+  : [];
+function posizionaEtichette() {
+  const v = new THREE.Vector3();
+  etichette.forEach((d, i) => {
+    v.copy(linfe[i].gruppo.position).project(camera);
+    d.style.left = `${((v.x + 1) / 2) * innerWidth}px`;
+    d.style.top = `${((1 - v.y) / 2) * innerHeight + 8}px`;
+  });
+}
+
+// Clic: l'albero toccato saluta
 const raggio = new THREE.Raycaster();
 const puntatore = new THREE.Vector2();
 function colpita(e) {
   puntatore.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raggio.setFromCamera(puntatore, camera);
-  return raggio.intersectObject(linfa.gruppo, true).length > 0;
+  const hit = raggio.intersectObjects(linfe.map((l) => l.gruppo), true)[0];
+  if (!hit) return null;
+  return linfe.find((l) => { let o = hit.object; while (o) { if (o === l.gruppo) return true; o = o.parent; } return false; });
 }
-renderer.domElement.addEventListener("click", (e) => { if (colpita(e)) { linfa.saluta(); window.__saluti = (window.__saluti ?? 0) + 1; } });
+renderer.domElement.addEventListener("click", (e) => { const l = colpita(e); if (l) { l.saluta(); window.__saluti = (window.__saluti ?? 0) + 1; } });
 renderer.domElement.addEventListener("pointermove", (e) => {
   renderer.domElement.style.cursor = colpita(e) ? "pointer" : "default";
   mira.set((e.clientX / innerWidth - 0.5) * 2, (e.clientY / innerHeight - 0.5) * 2);
@@ -412,34 +450,43 @@ raggi();
 renderer.shadowMap.needsUpdate = true; // le ombre si calcolano una volta sola
 document.getElementById("carico").remove();
 
+const aggiornaTutti = (t, dt) => { tempo.value = t; tempoLinfa.value = t; for (const l of linfe) l.aggiorna(t, dt); };
+
 // Ciclo: respiro, ciglia, vento; la camera segue appena il mouse
 const orologio = new THREE.Timer();
 const fpsEl = document.getElementById("fps");
-let fotogrammi = 0, finestra = 0;
+let fotogrammi = 0, finestra = 0, tFinto = 0;
 window.__fps = 0;
-// Misura senza il limite del monitor (anche a pannello nascosto): ms per fotogramma
 // Per le prove: porta l'animazione a un istante preciso e disegna
-window.__vai = (secondi, saluta = false) => {
-  if (saluta) linfa.saluta();
-  for (let i = 0; i < Math.round(secondi * 60); i++) { tempo.value += 1 / 60; linfa.aggiorna(tempo.value, 1 / 60); }
+window.__vai = (secondi, saluta = -1) => {
+  if (saluta >= 0) linfe[saluta].saluta();
+  for (let i = 0; i < Math.round(secondi * 60); i++) { tFinto += 1 / 60; aggiornaTutti(tFinto, 1 / 60); }
+  posizionaEtichette();
   renderer.render(scena, camera);
 };
+// Misura senza il limite del monitor (anche a pannello nascosto): ms per fotogramma
 window.__misura = (n = 120) => {
   const gl = renderer.getContext(), px = new Uint8Array(4);
   const t0 = performance.now();
-  for (let i = 0; i < n; i++) { tempo.value += 0.016; linfa.aggiorna(tempo.value, 0.016); renderer.render(scena, camera); }
+  for (let i = 0; i < n; i++) { tFinto += 0.016; aggiornaTutti(tFinto, 0.016); renderer.render(scena, camera); }
   gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
-  return { msPerFotogramma: +((performance.now() - t0) / n).toFixed(2), chiamate: renderer.info.render.calls, triangoli: renderer.info.render.triangles };
+  return { msPerFotogramma: +((performance.now() - t0) / n).toFixed(2), chiamate: renderer.info.render.calls, triangoli: renderer.info.render.triangles, pixel: [renderer.domElement.width, renderer.domElement.height] };
+};
+// Salva il fotogramma in screenshot/ (solo con il server di prova, che accetta /salva)
+window.__salva = async (nome, tipo = "image/jpeg") => {
+  renderer.render(scena, camera);
+  const r = await fetch(`/salva?nome=${encodeURIComponent(nome)}`, { method: "POST", body: renderer.domElement.toDataURL(tipo, 0.9) });
+  return r.status;
 };
 renderer.setAnimationLoop((ms) => {
   orologio.update(ms);
   const dt = Math.min(orologio.getDelta(), 0.05);
-  const t = orologio.getElapsed();
-  tempo.value = t;
-  linfa.aggiorna(t, dt);
+  tFinto += dt;
+  aggiornaTutti(tFinto, dt);
   camera.position.x += (POSIZIONE.x + mira.x * 1.2 - camera.position.x) * 0.03;
   camera.position.y += (POSIZIONE.y - mira.y * 0.6 - camera.position.y) * 0.03;
   camera.lookAt(BERSAGLIO);
+  posizionaEtichette();
   renderer.render(scena, camera);
   fotogrammi++; finestra += dt;
   if (finestra >= 0.5) {
