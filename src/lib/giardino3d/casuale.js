@@ -34,3 +34,6 @@ export const scegli = (r, lista) => lista[Math.floor(r() * lista.length)];
 /** Avvicina `a` a `b` in modo morbido, indipendente dai fotogrammi. */
 export const verso = (/** @type {number} */ a, /** @type {number} */ b, /** @type {number} */ velocita, /** @type {number} */ dt) =>
   a + (b - a) * (1 - Math.exp(-velocita * dt));
+
+/** Una curva che sale, resta e scende dentro un'attività di durata d. */
+export const busta = (/** @type {number} */ t, /** @type {number} */ d, su = 0.4, giu = 0.5) => Math.min(1, t / su) * Math.min(1, Math.max(0, (d - t) / giu));
