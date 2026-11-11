@@ -7,6 +7,7 @@
 // di prova con l'importmap. Modelli e licenze in /giardino3d/.
 import * as THREE from "three";
 import { creaAlbero, UNIFORMI } from "./albero.js";
+import { verso } from "./casuale.js";
 import { CASSETTA, creaAmbiente, quota, TACCUINO } from "./ambiente.js";
 import { creaComportamento } from "./comportamento.js";
 import { MODELLI, MODELLI_PER_ID, modelloDalSeme } from "./modelli.js";
@@ -135,12 +136,16 @@ export function creaGiardino(canvas, opzioni) {
     camera.updateProjectionMatrix();
     // l'albero principale occupa circa il 43% dell'altezza dello schermo, visto poco
     // dall'alto; con più alberi la camera si allontana quanto basta per vederli tutti
+    // computer: l'albero occupa il 43% dell'altezza; telefono in verticale: il 38%
     const tg = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    const alto = alberi[0].albero.altezza * alberi[0].albero.scala.scale.x;
-    let dist = alto / 0.43 / (2 * tg);
+    const s = alberi[0].albero.scala.scale.x;
+    const alto = alberi[0].albero.altezza * s;
+    const quota0 = camera.aspect < 0.8 ? 0.38 : 0.43;
+    let dist = alto / quota0 / (2 * tg);
     if (lista.length > 1) dist = Math.max(dist, 5.4 / (tg * camera.aspect), 12);
-    BERSAGLIO.set(0, alto * 0.42, 0.3);
-    POSIZIONE.set(0, BERSAGLIO.y + dist * 0.24, BERSAGLIO.z + dist);
+    // poco sopra l'altezza degli occhi dell'albero, guardando appena in giù
+    BERSAGLIO.set(0, alto * 0.46, 0.3);
+    POSIZIONE.set(0, 1.0 * s + 0.75 + dist * 0.07, BERSAGLIO.z + dist);
     camera.position.copy(POSIZIONE);
     camera.lookAt(BERSAGLIO);
   }
@@ -224,6 +229,7 @@ export function creaGiardino(canvas, opzioni) {
   let pronto = false;
   let fermo = false;
   const testa = new THREE.Vector3();
+  const seguito = new THREE.Vector3();
   /** @param {number} dt */
   function passo(dt) {
     t += dt;
@@ -256,6 +262,15 @@ export function creaGiardino(canvas, opzioni) {
         const dx = pi.x - ox, dz = pi.y - oz, d = Math.hypot(dx, dz) || 0.001;
         if (d < r && !alberi[i].comp.preso) { pi.x = ox + (dx / d) * r; pi.y = oz + (dz / d) * r; }
       }
+    }
+    // la camera segue piano il principale quando cammina (niente scatti)
+    if (lista.length === 1) {
+      const r0 = alberi[0].albero.radice.position;
+      const fx = verso(camera.position.x - POSIZIONE.x, r0.x * 0.85, 1.2, dt);
+      const fz = verso(camera.position.z - POSIZIONE.z, (r0.z - 0.3) * 0.6, 1.2, dt);
+      camera.position.set(POSIZIONE.x + fx, POSIZIONE.y, POSIZIONE.z + fz);
+      seguito.set(BERSAGLIO.x + fx, BERSAGLIO.y, BERSAGLIO.z + fz);
+      camera.lookAt(seguito);
     }
     // lo sguardo del principale segue il puntatore
     if (performance.now() - ultimoPuntatore < 2500 && !ridotto) {

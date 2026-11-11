@@ -255,6 +255,19 @@ const REAZIONI = {
   },
 };
 
+/** Piccole espressioni che ogni umore fa da solo, ogni tanto. @type {Record<string, string[]>} */
+const MICRO = {
+  curioso: ["sorpreso", "canticchia"],
+  allegro: ["ride", "canticchia", "ride"],
+  pensieroso: ["sospira"],
+  assonnato: ["sbadiglia", "sospira"],
+  furbo: ["occhiolino", "ride"],
+  fiero: ["ride", "canticchia"],
+  sognante: ["sospira", "canticchia"],
+  energico: ["ride", "canticchia"],
+  malinconico: ["sospira", "sospira"],
+};
+
 /** Le routine preferite di ogni umore (pesi). @type {Record<string, Record<string, number>>} */
 const GUSTI = {
   curioso: { cammina: 3, "raccogli-foglia": 3, uccellino: 2, "guarda-cielo": 2, stiracchia: 1 },
@@ -284,6 +297,7 @@ export function creaComportamento(albero, op) {
   /** @type {{ nome: string, r: (typeof REAZIONI)[string], t: number, ctx: Contesto } | null} */
   let reaz = null;
   let primaNotte = op.mondo.ora === "notte";
+  let prossimaMicro = 3 + Math.random() * 3;
   let sveglia = false;
   let contaAttivita = 0;
   let giro = 0;
@@ -524,6 +538,21 @@ export function creaComportamento(albero, op) {
           if (Math.random() < dt * 0.25) albero.viso.breve("trema", 1.5);
         }
       }
+
+      // micro-espressioni dell'umore
+      prossimaMicro -= dt;
+      if (prossimaMicro <= 0 && !reaz && att?.nome !== "dormi") {
+        prossimaMicro = 5 + Math.random() * 5;
+        const lista = MICRO[umore] ?? MICRO.curioso;
+        const m = lista[Math.floor(Math.random() * lista.length)];
+        albero.viso.breve(m, m === "ride" ? 1.6 : m === "sospira" ? 2.2 : m === "canticchia" ? 3.2 : 1.4);
+        if (m === "canticchia") { albero.viso.parla(3, true); if (!op.ridotto) albero.effetti.emetti("nota", 2); }
+      }
+      // il corpo segue il viso: ride scuotendo il tronco, sospira alzando il petto, canticchia dondolando
+      const ride = albero.viso.intensita("ride"), sospiro = albero.viso.intensita("sospira"), canto = albero.viso.intensita("canticchia");
+      if (ride) { p.piega += Math.sin(t * 26) * 0.05 * ride; p.salto += Math.abs(Math.sin(t * 13)) * 0.035 * ride; }
+      if (sospiro) { p.allunga += 0.05 * sospiro; p.inchino -= 0.06 * sospiro; for (const b of p.bracci) b.alza -= 0.15 * sospiro; }
+      if (canto) p.piega += Math.sin(t * 3.2) * 0.07 * canto;
 
       // reazione sopra a tutto
       if (reaz) {
