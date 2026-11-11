@@ -59,7 +59,9 @@ Ritratti già pronti per la landing (PNG 1200×1500 con trasparenza):
 - **Viso «cucciolo»**: occhi piccoli, neri e lucidi (un riflesso grande e uno
   piccolo, un velo di marrone), bassi e distanti sul tronco con la fronte alta;
   niente bianco intorno agli occhi e niente ciglia. Guance rosa grandi e morbide,
-  bocca piccola, sopracciglia piccole e alte oppure nessuna. Braccia-rami affusolate con mani di foglie, piedini
+  bocca piccola. Sopracciglia solo sui visi a puntini (e solo se il seme le
+  vuole): corte, arrotondate, alte, con l'estremità interna un po' più alta, mai
+  abbassate verso il naso. Gli altri visi non le hanno. Braccia-rami affusolate con mani di foglie, piedini
   con le dita-radici.
 - **Animazione**: respiro, ciglia che sbattono, saluto al clic.
 
@@ -71,7 +73,7 @@ seme dell'albero in modo deterministico (stesso seme, stesso albero):
 | `specie` | `quercia`, `pino`, `ulivo`, `betulla`, `ciliegio` (forma della chioma, foglia, corteccia; il ciliegio ha anche i fiori) |
 | `altezza`, `larghezza` | proporzioni del tronco (0,9–1,14 e 0,88–1,12) |
 | `viso` | `puntini` (occhi neri lucidi), `felice` (occhi chiusi ad arco ^ ^), `ridente` (^ ^ e bocca aperta), `assonnato` (palpebre pesanti), `furbetto` (occhiolino e sorriso storto). Il poeta pigro è sempre assonnato, il furfante sempre furbetto; per gli altri decide il seme fra puntini, felice e ridente |
-| `sopracciglia` | `piccole` o `nessuna` |
+| `sopracciglia` | `piccole` o `nessuna`; contano solo sul viso a puntini |
 | `lentiggini`, `bocca` | sì/no; `sorriso`, `aperta` (con la lingua) o `storto` (ridente, furbetto e assonnato hanno la loro) |
 | `tono` | 0–1, il tono delle foglie dentro la specie |
 | `strada` | `filosofo` (occhiali tondi), `artista` (basco e pennello), `sportivo` (fascia), `viaggiatore` (zaino e occhialoni), `imprenditore` (cravatta), `furfante` (bandana), `poeta-pigro` (berretto da notte), `nessuna` |

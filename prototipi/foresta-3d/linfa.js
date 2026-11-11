@@ -366,13 +366,17 @@ function occhioAssonnato(campioni, x, y, lato, materiale) {
   return { gruppo, palpebra: o.palpebra, rx: OCCHIO.rx, ry: OCCHIO.ry, ancora: o.gruppo };
 }
 
-function sopracciglioPiccolo(campioni, x, y, materiale, alza = 0) {
+/**
+ * Sopracciglio corto e arrotondato, alto sopra l'occhio. L'estremità interna
+ * (verso il naso) è un po' più alta: aria dolce o sorpresa, mai arrabbiata.
+ */
+function sopracciglioPiccolo(campioni, x, y, materiale, lato) {
   const pts = [];
   for (let i = 0; i <= 6; i++) {
-    const t = i / 3 - 1;
-    pts.push([x + t * 0.038, y + alza + (1 - t * t) * 0.014]);
+    const t = i / 3 - 1; // -1 .. 1 da sinistra a destra
+    pts.push([x + t * 0.032, y + (1 - t * t) * 0.011 - lato * t * 0.006]);
   }
-  return lineaSulTronco(campioni, pts, 0.013, 0.013, materiale);
+  return lineaSulTronco(campioni, pts, 0.012, 0.012, materiale);
 }
 
 function bocca(campioni, y, tipo) {
@@ -428,10 +432,11 @@ function viso(o, campioni, Y, colori) {
   else occhi = [occhioPuntino(campioni, -x, y), occhioPuntino(campioni, x, y)];
   occhi.forEach((oc) => g.add(oc.gruppo));
 
-  if (o.sopracciglia === "piccole") {
-    const yS = y + 0.155;
-    const alza = o.viso === "furbetto" ? 0.03 : 0;
-    g.add(sopracciglioPiccolo(campioni, -x - 0.005, yS + alza, sop), sopracciglioPiccolo(campioni, x + 0.005, yS - (o.viso === "furbetto" ? 0.01 : 0), sop));
+  // Sopracciglia solo dove servono: sui visi a puntini, se il seme le vuole.
+  // Archi, assonnato e furbetto si leggono già bene senza.
+  if (o.sopracciglia === "piccole" && o.viso === "puntini") {
+    const yS = y + 0.17;
+    g.add(sopracciglioPiccolo(campioni, -x, yS, sop, -1), sopracciglioPiccolo(campioni, x, yS, sop, 1));
   }
   const yG = y - 0.085;
   g.add(guancia(campioni, -(x + 0.075), yG, o.lentiggini), guancia(campioni, x + 0.075, yG, o.lentiggini));
