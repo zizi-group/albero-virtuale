@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Linfa — giardino 3D (prova del motore)</title>
+  <style>
+    html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; background: #d6efe2; overflow: hidden; }
+    canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+    .pannello { position: fixed; top: 10px; left: 10px; width: 250px; max-height: calc(100vh - 20px); overflow: auto;
+      background: rgba(255,255,255,.88); border-radius: 12px; padding: 10px 12px; font-size: 12px; color: #1d3a24;
+      box-shadow: 0 6px 24px rgba(0,40,20,.18); }
+    .pannello h1 { font-size: 14px; margin: 0 0 6px; }
+    .pannello label { display: grid; grid-template-columns: 82px 1fr; align-items: center; gap: 6px; margin: 4px 0; }
+    .pannello select, .pannello input[type=range] { width: 100%; font-size: 12px; }
+    .pulsanti { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+    .pulsanti button { font-size: 12px; padding: 4px 8px; border-radius: 8px; border: 1px solid #9bc89a; background: #eef9e8; cursor: pointer; }
+    #eventi { font: 11px ui-monospace, monospace; color: #2a5a34; min-height: 3em; white-space: pre-line; }
+    #fps { position: fixed; right: 12px; top: 10px; font: 12px ui-monospace, monospace; color: #1d3a24; background: rgba(255,255,255,.7); padding: 3px 8px; border-radius: 8px; }
+    .nascosto .pannello { display: none; }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/addons/" } }
+  </script>
+</head>
+<body>
+  <canvas id="giardino"></canvas>
+  <div class="pannello">
+    <h1>Giardino 3D · prova</h1>
+    <label>Modello <select id="modello"></select></label>
+    <label>Strada <select id="strada"><option value="">nessuna</option><option>filosofo</option><option>imprenditore</option><option>artista</option><option>sportivo</option><option>furfante</option><option>viaggiatore</option><option>poeta</option></select></label>
+    <label>Alberi <select id="quanti"><option>1</option><option>3</option><option>7</option></select></label>
+    <label>Umore <select id="umore"><option>curioso</option><option>allegro</option><option>pensieroso</option><option>assonnato</option><option>furbo</option><option>fiero</option><option>sognante</option><option>energico</option><option>malinconico</option></select></label>
+    <label>Azione <select id="azione"></select></label>
+    <label>Cielo <select id="cielo"><option>sole</option><option>nuvole</option><option>pioggia</option><option>temporale</option><option>neve</option><option>nebbia</option></select></label>
+    <label>Ora <select id="ora"><option>alba</option><option selected>giorno</option><option>tramonto</option><option>notte</option></select></label>
+    <label>Stagione <select id="stagione"><option>primavera</option><option selected>estate</option><option>autunno</option><option>inverno</option></select></label>
+    <label>Gradi <input id="temperatura" type="range" min="-5" max="38" value="18" /></label>
+    <label>Movimento <select id="ridotto"><option value="0">completo</option><option value="1">ridotto</option></select></label>
+    <div class="pulsanti">
+      <button data-r="saluta">saluta</button><button data-r="lettera">lettera</button><button data-r="festa">festa</button><button data-r="carezza">carezza</button>
+    </div>
+    <div id="eventi"></div>
+  </div>
+  <div id="fps"></div>
+  <script type="module">
+    import { creaGiardino, MODELLI } from "/src/lib/giardino3d/index.js";
+
+    const AZIONI = ["guardare-cielo", "leggere", "giornale-ombrello", "doccia", "prendere-sole", "passeggiata", "dormire", "sonnellino", "telefonata", "corsa", "allenarsi", "dipingere", "scrivere-poesia", "meditare", "pensare", "contare-ghiande", "vendere-ombra", "chiacchierare-scoiattolo", "fare-valigia", "studiare-mappa", "ballare", "annaffiarsi", "bere-tisana"];
+    const P = new URLSearchParams(location.search);
+    const $ = (id) => document.getElementById(id);
+    $("modello").innerHTML = `<option value="">dal seme</option>` + MODELLI.map((m) => `<option value="${m.id}">${m.nome}</option>`).join("");
+    $("azione").innerHTML = `<option value="">nessuna</option>` + AZIONI.map((a) => `<option>${a}</option>`).join("");
+    // i parametri dell'indirizzo preimpostano i comandi (per le schermate)
+    for (const k of ["modello", "strada", "quanti", "umore", "azione", "cielo", "ora", "stagione", "temperatura", "ridotto"]) if (P.has(k)) $(k).value = P.get(k);
+    if (P.has("nascondi")) document.body.classList.add("nascosto");
+
+    const log = (t) => { const e = $("eventi"); e.textContent = (t + "\n" + e.textContent).split("\n").slice(0, 5).join("\n"); };
+    let g = null;
+    function crea() {
+      g?.distruggi();
+      const canvas = $("giardino").cloneNode();
+      $("giardino").replaceWith(canvas);
+      const n = Number($("quanti").value);
+      const semi = ["A731", "B204", "C118", "D057", "E390", "F612", "G845"];
+      const strade = ["viaggiatore", "artista", "filosofo", "poeta", "sportivo", "furfante", "imprenditore"];
+      const alberi = Array.from({ length: n }, (_, i) => ({
+        id: `albero-${i}`, seme: i ? semi[i] : (P.get("seme") ?? "linfa"), nome: i ? `Amico ${i}` : "Linfa", giorni: 90, principale: i === 0,
+        modello: i ? undefined : $("modello").value || undefined,
+        strada: i ? strade[i] : $("strada").value || undefined,
+      }));
+      g = creaGiardino(canvas, {
+        alberi,
+        meteo: { cielo: $("cielo").value, temperatura: Number($("temperatura").value) },
+        ora: $("ora").value, stagione: $("stagione").value,
+        azione: $("azione").value, umore: $("umore").value,
+        movimentoRidotto: $("ridotto").value === "1",
+        _conservaFotogramma: P.has("foto"),
+      });
+      window.giardino = g;
+      for (const ev of ["pronto", "tocca-albero", "tocca-cassetta", "tocca-taccuino"]) g.su(ev, (d) => log(ev + (d ? " " + JSON.stringify(d) : "")));
+    }
+    crea();
+    for (const id of ["modello", "strada", "quanti", "ridotto"]) $(id).onchange = crea;
+    $("umore").onchange = () => g.imposta({ umore: $("umore").value });
+    $("azione").onchange = () => g.imposta({ azione: $("azione").value });
+    $("cielo").onchange = $("temperatura").oninput = () => g.imposta({ meteo: { cielo: $("cielo").value, temperatura: Number($("temperatura").value) } });
+    $("ora").onchange = () => g.imposta({ ora: $("ora").value });
+    $("stagione").onchange = () => g.imposta({ stagione: $("stagione").value });
+    document.querySelectorAll("[data-r]").forEach((b) => (b.onclick = () => g.reagisci(b.dataset.r)));
+
+    // fotogrammi al secondo
+    let n = 0, t0 = performance.now();
+    (function conta() { n++; const t = performance.now(); if (t - t0 > 500) { $("fps").textContent = `${Math.round((n * 1000) / (t - t0))} fps`; n = 0; t0 = t; } requestAnimationFrame(conta); })();
+
+    // per le prove: salva il fotogramma in screenshot/
+    window.salva = async (nome) => {
+      const pr = g._prove; pr.renderer.render(pr.scena, pr.camera);
+      const r = await fetch(`/salva?nome=${encodeURIComponent(nome)}`, { method: "POST", body: pr.renderer.domElement.toDataURL("image/jpeg", 0.9) });
+      return r.status;
+    };
+  </script>
+</body>
+</html>
