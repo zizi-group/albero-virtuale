@@ -61,7 +61,7 @@ export function Scena3D(p: PropsScena3D) {
     if (!webgl) return;
     let vivo = true;
     let pulisci = () => {};
-    import("./provvisorio")
+    import("@/lib/giardino3d")
       .then((m) => {
         const { creaGiardino } = m as unknown as MotoreGiardino;
         if (!vivo || !tela.current) return;
