@@ -75,6 +75,15 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   servono solo al cielo della `Scena`. Il disegno fermo del personaggio sta in
   `vivo/figura.tsx` (senza hook): lo animano `AlberoVivo` nel browser e
   `fermo.ts` lo trasforma in SVG per le immagini fatte sul server.
+- **Giardino in 3D** (0.1, default): `src/components/giardino3d/Scena3D.tsx`
+  carica nel browser il motore three.js di `src/lib/giardino3d/` (JavaScript
+  con JSDoc; API in `src/components/giardino3d/tipi.ts`: `creaGiardino`,
+  `imposta`, `reagisci`, `su`, `distruggi`) con modelli e texture in
+  `public/giardino3d/`. Senza WebGL, o se il motore si ferma, resta la scena
+  2D. Il pulsante «2D/3D» del giardino sceglie la vista (`localStorage`
+  `linfa-vista`). Le reazioni (buongiorno, messaggio, regalo) passano
+  dall'evento `linfa-reazione`; gli strumenti della demo provano umore e
+  azione con `linfa-prova`.
 - `src/lib/motore/`: `personaggio.ts` (prompt di sistema fisso, eventi),
   `vita.ts` (giornate: parte pura, gira anche in memoria), `scritture.ts`
   (lettere e risposte), `servizio.ts` (collegato a database ed email),
