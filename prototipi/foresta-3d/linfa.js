@@ -30,9 +30,13 @@ export const STRADE = {
   furfante: ["bandana"],
   "poeta-pigro": ["berretto-notte"],
 };
-export const OCCHI = ["tondi", "ovali", "mandorla"];
-export const SOPRACCIGLIA = ["arco", "dritte", "folte"];
-export const BOCCHE = ["sorriso", "aperta"];
+/** Tipi di viso. Alcune strade hanno il loro: il poeta pigro è assonnato, il furfante furbetto. */
+export const VISI = ["puntini", "felice", "ridente", "assonnato", "furbetto"];
+export const VISO_DELLA_STRADA = { "poeta-pigro": "assonnato", furfante: "furbetto" };
+export const SOPRACCIGLIA = ["piccole", "nessuna"];
+export const BOCCHE = ["sorriso", "aperta", "storto"];
+/** La bocca che va d'accordo con il viso. */
+const BOCCA_DEL_VISO = { ridente: "aperta", furbetto: "storto", assonnato: "sorriso" };
 
 /** Opzioni deterministiche dal seme dell'albero. */
 export function generaOpzioni(seme) {
@@ -43,10 +47,10 @@ export function generaOpzioni(seme) {
     specie: scegli(Object.keys(SPECIE)),
     altezza: 0.9 + r() * 0.24,
     larghezza: 0.88 + r() * 0.24,
-    occhi: scegli(OCCHI),
+    viso: scegli(["puntini", "puntini", "felice", "ridente"]),
     sopracciglia: scegli(SOPRACCIGLIA),
     lentiggini: r() < 0.35,
-    bocca: r() < 0.7 ? "sorriso" : "aperta",
+    bocca: scegli(["sorriso", "sorriso", "aperta", "storto"]),
     tono: r(),
     strada: scegli([...Object.keys(STRADE), "nessuna"]),
   };
@@ -249,7 +253,7 @@ function chioma(o, campioni, Y, r) {
   const strati = [{ tipo: sp.foglia, n: sp.foglie, dim: sp.dim, colori: toni }];
   if (sp.fiori) strati.push({ tipo: "fiore", n: sp.fiori, dim: [0.15, 0.15], colori: [new THREE.Color("#ffffff"), new THREE.Color("#ffe6ec")], fiore: true });
 
-  const yOcchi = Y(0.56) - yCima;
+  const yOcchi = Y(0.47) - yCima;
   const fronteLibera = ["sportivo", "furfante"].includes(o.strada) ? Y(0.95) - yCima : 0;
   const m4 = new THREE.Matrix4(), col = new THREE.Color();
   let yMax = 0, zFronte = 0;
@@ -303,88 +307,136 @@ function chioma(o, campioni, Y, r) {
 }
 
 // ------------------------------------------------------------------ Il viso
-const DIM_OCCHI = { tondi: [0.125, 0.14, 0], ovali: [0.105, 0.155, 0], mandorla: [0.138, 0.108, 0.16] };
+// Schema «cucciolo»: occhi piccoli, neri e lucidi, bassi e distanti sul tronco,
+// fronte alta, guance grandi, bocca piccola. Niente bianco intorno agli occhi,
+// niente ciglia lunghe: uno sguardo tenero, non fisso.
+const OCCHIO = { rx: 0.064, ry: 0.082 };
+const INCHIOSTRO = "#22160e";
 
-function occhio(campioni, x, y, forma, lato) {
-  const [rx, ry, inclina] = DIM_OCCHI[forma];
-  const g = posa(new THREE.Group(), campioni, x, y, -0.022);
-  const palpebra = new THREE.Group(); // si chiude scalando in altezza
-  palpebra.rotation.z = -lato * inclina;
-  palpebra.add(ovale(rx * 1.16, ry * 1.12, 0.05, mat("#fbf7ec", { roughness: 0.35 })));
-  const iride = ovale(rx, ry, 0.06, new THREE.MeshPhysicalMaterial({ color: "#3a2214", roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 }));
-  iride.position.z = 0.014;
-  const riflessoIride = ovale(rx * 0.7, ry * 0.42, 0.03, new THREE.MeshPhysicalMaterial({ color: "#8a5530", roughness: 0.3, clearcoat: 1 }));
-  riflessoIride.position.set(0, -ry * 0.42, 0.05);
-  const pupilla = ovale(rx * 0.48, ry * 0.5, 0.05, new THREE.MeshPhysicalMaterial({ color: "#120a06", roughness: 0.15, clearcoat: 1 }));
-  pupilla.position.set(0, ry * 0.05, 0.04);
-  const bianco = new THREE.MeshBasicMaterial({ color: "#ffffff" });
-  const luce1 = ovale(rx * 0.3, ry * 0.3, 0.02, bianco, 10);
-  luce1.position.set(rx * 0.32, ry * 0.36, 0.085);
-  const luce2 = ovale(rx * 0.14, ry * 0.14, 0.02, bianco, 8);
-  luce2.position.set(-rx * 0.3, -ry * 0.34, 0.085);
-  palpebra.add(iride, riflessoIride, pupilla, luce1, luce2);
-  g.add(palpebra);
-  // Ciglia: due ciuffetti verso l'esterno
-  const ciglia = new THREE.Group();
-  const inchiostro = mat("#23261d", { roughness: 0.5 });
-  for (const [a, l] of [[0.35, 0.07], [0.7, 0.06]]) {
-    const bx = lato * rx * Math.cos(a) * 1.1, by = ry * Math.sin(a) * 1.1;
-    ciglia.add(tubo([[bx, by, 0.035], [bx + lato * l * 0.7, by + l * 0.7, 0.03]], 0.011, 0.004, inchiostro, 6, 6));
-  }
-  ciglia.rotation.z = -lato * inclina;
-  g.add(ciglia);
-  return { gruppo: g, palpebra, ciglia, rx, ry };
+const nero = () => new THREE.MeshPhysicalMaterial({ color: "#1a110b", roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.04 });
+const bianco = () => new THREE.MeshBasicMaterial({ color: "#ffffff" });
+
+/** Linea sul tronco (arco, sopracciglio, bocca): punti [x, y] del viso proiettati sulla superficie. */
+function lineaSulTronco(campioni, punti, r0, r1, materiale) {
+  const pts = punti.map(([x, y]) => {
+    const s = superficie(campioni, x, y);
+    return [s.punto.x, s.punto.y, s.punto.z + 0.006];
+  });
+  return tubo(pts, r0, r1, materiale, 16, 8);
 }
 
-function sopracciglio(campioni, x, y, tipo, lato, materiale) {
+/** Occhio nero ovale e lucido, con un velo di marrone, un riflesso grande e uno piccolo. */
+function occhioPuntino(campioni, x, y, schiaccia = 1) {
+  const g = posa(new THREE.Group(), campioni, x, y, -0.012);
+  const palpebra = new THREE.Group(); // si chiude scalando in altezza
+  const { rx, ry } = OCCHIO;
+  palpebra.add(ovale(rx, ry * schiaccia, 0.04, nero()));
+  const velo = ovale(rx * 0.62, ry * 0.32 * schiaccia, 0.02, new THREE.MeshPhysicalMaterial({ color: "#4a2a18", roughness: 0.3, clearcoat: 1 }));
+  velo.position.set(0, -ry * 0.5 * schiaccia, 0.028);
+  const grande = ovale(0.021, 0.024, 0.01, bianco(), 10);
+  grande.position.set(rx * 0.3, ry * 0.32 * schiaccia, 0.04);
+  const piccolo = ovale(0.009, 0.009, 0.006, bianco(), 8);
+  piccolo.position.set(-rx * 0.34, -ry * 0.3 * schiaccia, 0.04);
+  palpebra.add(velo, grande, piccolo);
+  g.add(palpebra);
+  return { gruppo: g, palpebra, rx, ry, ancora: g };
+}
+
+/** Occhio chiuso ad arco felice (^): `apertura` 1 = arco pieno, 0.5 = più piatto (occhiolino). */
+function occhioArco(campioni, x, y, materiale, alto = 0.034) {
   const pts = [];
-  const n = 6;
-  for (let i = 0; i <= n; i++) {
-    const t = i / n - 0.5; // -0.5 .. 0.5, dall'interno all'esterno
-    let dy = 0;
-    if (tipo === "arco") dy = (0.25 - t * t) * 0.09;
-    if (tipo === "dritte") dy = t * 0.03;
-    if (tipo === "folte") dy = (0.25 - t * t) * 0.06;
-    const s = superficie(campioni, x + lato * t * 0.17, y + dy);
-    pts.push([s.punto.x, s.punto.y, s.punto.z + 0.008]);
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 4 - 1;
+    pts.push([x + t * 0.07, y - alto * t * t + alto * 0.4]);
   }
-  const r = tipo === "folte" ? [0.026, 0.016] : [0.016, 0.01];
-  return tubo(pts, r[0], r[1], materiale, 14, 8);
+  const gruppo = lineaSulTronco(campioni, pts, 0.02, 0.02, materiale);
+  return { gruppo, palpebra: null, rx: OCCHIO.rx, ry: OCCHIO.ry, ancora: posa(new THREE.Group(), campioni, x, y, -0.012) };
+}
+
+/** Occhio assonnato: mezzo puntino sotto una palpebra pesante e calante. */
+function occhioAssonnato(campioni, x, y, lato, materiale) {
+  const o = occhioPuntino(campioni, x, y - 0.018, 0.55);
+  const pts = [];
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 4 - 1;
+    pts.push([x + t * 0.068, y + 0.008 - 0.01 * t * t - lato * t * 0.008]);
+  }
+  const gruppo = new THREE.Group();
+  gruppo.add(o.gruppo, lineaSulTronco(campioni, pts, 0.016, 0.016, materiale));
+  return { gruppo, palpebra: o.palpebra, rx: OCCHIO.rx, ry: OCCHIO.ry, ancora: o.gruppo };
+}
+
+function sopracciglioPiccolo(campioni, x, y, materiale, alza = 0) {
+  const pts = [];
+  for (let i = 0; i <= 6; i++) {
+    const t = i / 3 - 1;
+    pts.push([x + t * 0.038, y + alza + (1 - t * t) * 0.014]);
+  }
+  return lineaSulTronco(campioni, pts, 0.013, 0.013, materiale);
 }
 
 function bocca(campioni, y, tipo) {
   const g = new THREE.Group();
   const scuro = mat("#4a1f1a", { roughness: 0.5 });
-  if (tipo === "sorriso") {
-    const pts = [];
-    for (let i = 0; i <= 10; i++) {
-      const t = i / 5 - 1;
-      const s = superficie(campioni, t * 0.1, y + 0.04 * t * t);
-      pts.push([s.punto.x, s.punto.y, s.punto.z + 0.004]);
-    }
-    g.add(tubo(pts, 0.016, 0.016, scuro, 20, 8));
-  } else {
+  if (tipo === "aperta") {
+    // bocca aperta piccola, con la lingua
     const forma = new THREE.Shape();
-    forma.moveTo(-0.1, 0.02);
-    forma.quadraticCurveTo(0, 0.0, 0.1, 0.02);
-    forma.quadraticCurveTo(0.09, -0.1, 0, -0.1);
-    forma.quadraticCurveTo(-0.09, -0.1, -0.1, 0.02);
+    forma.moveTo(-0.058, 0.012);
+    forma.quadraticCurveTo(0, 0.0, 0.058, 0.012);
+    forma.quadraticCurveTo(0.054, -0.062, 0, -0.064);
+    forma.quadraticCurveTo(-0.054, -0.062, -0.058, 0.012);
     const m = new THREE.Mesh(new THREE.ShapeGeometry(forma, 12), mat("#5a1c16", { roughness: 0.6 }));
-    const lingua = ovale(0.055, 0.03, 0.01, mat("#e07b78", { roughness: 0.5 }));
-    lingua.position.set(0, -0.072, 0.004);
-    const piano = posa(new THREE.Group(), campioni, 0, y + 0.01, 0.006);
+    const lingua = ovale(0.034, 0.02, 0.008, mat("#e8807c", { roughness: 0.5 }));
+    lingua.position.set(0, -0.046, 0.004);
+    const piano = posa(new THREE.Group(), campioni, 0, y + 0.012, 0.005);
     piano.add(m, lingua);
     g.add(piano);
+    return g;
   }
+  const pts = [];
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 4 - 1;
+    if (tipo === "storto") pts.push([0.018 + t * 0.052, y + 0.024 * t * t + 0.014 * t]); // un angolo più su
+    else pts.push([t * 0.05, y + 0.026 * t * t]);
+  }
+  g.add(lineaSulTronco(campioni, pts, 0.014, 0.014, scuro));
   return g;
 }
 
 function guancia(campioni, x, y, lentiggini) {
   const m = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.2, 0.15),
+    new THREE.PlaneGeometry(0.27, 0.2),
     new THREE.MeshStandardMaterial({ map: texGuancia(lentiggini), transparent: true, depthWrite: false, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -4 }),
   );
   return posa(m, campioni, x, y, 0.012);
+}
+
+/**
+ * Il viso intero secondo il tipo: puntini, felice (^ ^), ridente (^ ^ e bocca
+ * aperta), assonnato, furbetto (occhiolino e sorriso storto).
+ */
+function viso(o, campioni, Y, colori) {
+  const g = new THREE.Group();
+  const linea = mat(INCHIOSTRO, { roughness: 0.5 });
+  const sop = mat(o.specie === "betulla" ? "#4a3a2c" : colori.scuro, { roughness: 0.7 });
+  const y = Y(0.47); // bassi sul tronco: la fronte resta alta
+  const x = 0.215 * o.larghezza; // e ben distanti
+  let occhi;
+  if (o.viso === "felice" || o.viso === "ridente") occhi = [occhioArco(campioni, -x, y, linea), occhioArco(campioni, x, y, linea)];
+  else if (o.viso === "assonnato") occhi = [occhioAssonnato(campioni, -x, y, -1, linea), occhioAssonnato(campioni, x, y, 1, linea)];
+  else if (o.viso === "furbetto") occhi = [occhioPuntino(campioni, -x, y), occhioArco(campioni, x, y - 0.01, linea, 0.022)];
+  else occhi = [occhioPuntino(campioni, -x, y), occhioPuntino(campioni, x, y)];
+  occhi.forEach((oc) => g.add(oc.gruppo));
+
+  if (o.sopracciglia === "piccole") {
+    const yS = y + 0.155;
+    const alza = o.viso === "furbetto" ? 0.03 : 0;
+    g.add(sopracciglioPiccolo(campioni, -x - 0.005, yS + alza, sop), sopracciglioPiccolo(campioni, x + 0.005, yS - (o.viso === "furbetto" ? 0.01 : 0), sop));
+  }
+  const yG = y - 0.085;
+  g.add(guancia(campioni, -(x + 0.075), yG, o.lentiggini), guancia(campioni, x + 0.075, yG, o.lentiggini));
+  g.add(bocca(campioni, y - 0.135, o.bocca));
+  return { gruppo: g, occhi };
 }
 
 // ------------------------------------------------------------------ Corpo
@@ -449,12 +501,12 @@ function accessori(nomi, ctx) {
   for (const nome of nomi) {
     if (nome === "occhiali-tondi") {
       const tartaruga = mat("#4a2c1a", { roughness: 0.35 });
-      const R = Math.max(occhi[0].rx, occhi[0].ry) * 1.32;
+      const R = 0.105;
       const centri = [];
       for (const o of occhi) {
         const q = new THREE.Group();
-        q.position.copy(o.gruppo.position).addScaledVector(o.gruppo.getWorldDirection(v3()), 0.1);
-        q.quaternion.copy(o.gruppo.quaternion);
+        q.position.copy(o.ancora.position).addScaledVector(o.ancora.getWorldDirection(v3()), 0.075);
+        q.quaternion.copy(o.ancora.quaternion);
         q.add(new THREE.Mesh(new THREE.TorusGeometry(R, 0.014, 10, 32), tartaruga), new THREE.Mesh(new THREE.CircleGeometry(R, 32), vetro));
         g.add(q);
         centri.push(q.position.clone());
@@ -598,6 +650,8 @@ function accessori(nomi, ctx) {
  */
 export function creaLinfa(opzioni = {}) {
   const o = { ...generaOpzioni(opzioni.seme ?? "linfa"), ...opzioni };
+  if (!opzioni.viso && VISO_DELLA_STRADA[o.strada]) o.viso = VISO_DELLA_STRADA[o.strada];
+  if (!opzioni.bocca && BOCCA_DEL_VISO[o.viso]) o.bocca = BOCCA_DEL_VISO[o.viso];
   const r = generatore(hash(`foglie:${o.seme}:${o.specie}`));
   const { campioni, Y } = profiloTronco(o.larghezza, o.altezza);
 
@@ -623,16 +677,7 @@ export function creaLinfa(opzioni = {}) {
   corpo.add(ch.gruppo);
 
   // Viso
-  const faccia = new THREE.Group();
-  const yOcchi = Y(0.56);
-  const xOcchi = 0.19 * o.larghezza;
-  const occhi = [occhio(campioni, -xOcchi, yOcchi, o.occhi, -1), occhio(campioni, xOcchi, yOcchi, o.occhi, 1)];
-  occhi.forEach((oc) => faccia.add(oc.gruppo));
-  const sop = mat(o.specie === "betulla" ? "#4a3a2c" : colori.scuro, { roughness: 0.7 });
-  const ySop = yOcchi + DIM_OCCHI[o.occhi][1] + 0.075;
-  faccia.add(sopracciglio(campioni, -xOcchi - 0.01, ySop, o.sopracciglia, -1, sop), sopracciglio(campioni, xOcchi + 0.01, ySop, o.sopracciglia, 1, sop));
-  faccia.add(guancia(campioni, -0.29 * o.larghezza, Y(0.43), o.lentiggini), guancia(campioni, 0.29 * o.larghezza, Y(0.43), o.lentiggini));
-  faccia.add(bocca(campioni, Y(0.4), o.bocca));
+  const { gruppo: faccia, occhi } = viso(o, campioni, Y, colori);
   corpo.add(faccia);
 
   // Braccia, con le foglie della specie
@@ -694,10 +739,7 @@ export function creaLinfa(opzioni = {}) {
     bracci[1].rotation.y = avanti;
     bracci[0].rotation.z = sinistro;
     radice.position.y = radice.userData.terra + saltello;
-    for (const oc of occhi) {
-      oc.palpebra.scale.y = Math.max(0.08, apertura);
-      oc.ciglia.position.y = (apertura - 1) * oc.ry * 0.9;
-    }
+    for (const oc of occhi) if (oc.palpebra) oc.palpebra.scale.y = Math.max(0.08, apertura);
   }
 
   radice.userData.terra = 0;

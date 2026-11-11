@@ -13,6 +13,8 @@ build e senza dipendenze da installare.
 
 ![Sette alberi, sfondo trasparente](screenshot/4-sette-alberi-ritratti.png)
 
+![I sette visi a confronto](screenshot/7-visi-a-confronto.png)
+
 | Sette alberi nella radura | Da vicino |
 |---|---|
 | ![](screenshot/5-varianti-con-etichette.jpg) | ![](screenshot/6-varianti-da-vicino.jpg) |
@@ -54,8 +56,10 @@ Ritratti già pronti per la landing (PNG 1200×1500 con trasparenza):
 - **Chioma** fatta di foglie vere: 800–1.500 foglie per albero in una sola
   `InstancedMesh`, con texture dipinta, raccolte in ciuffi; una frangia ricade
   sulla fronte. Luce morbida a palla e un fruscio leggero nello shader.
-- **Viso**: occhi grandi lucidi (iride, pupilla, due riflessi, ciglia), guance
-  rosa, sopracciglia, bocca. Braccia-rami affusolate con mani di foglie, piedini
+- **Viso «cucciolo»**: occhi piccoli, neri e lucidi (un riflesso grande e uno
+  piccolo, un velo di marrone), bassi e distanti sul tronco con la fronte alta;
+  niente bianco intorno agli occhi e niente ciglia. Guance rosa grandi e morbide,
+  bocca piccola, sopracciglia piccole e alte oppure nessuna. Braccia-rami affusolate con mani di foglie, piedini
   con le dita-radici.
 - **Animazione**: respiro, ciglia che sbattono, saluto al clic.
 
@@ -66,14 +70,15 @@ seme dell'albero in modo deterministico (stesso seme, stesso albero):
 |---|---|
 | `specie` | `quercia`, `pino`, `ulivo`, `betulla`, `ciliegio` (forma della chioma, foglia, corteccia; il ciliegio ha anche i fiori) |
 | `altezza`, `larghezza` | proporzioni del tronco (0,9–1,14 e 0,88–1,12) |
-| `occhi` | `tondi`, `ovali`, `mandorla` |
-| `sopracciglia` | `arco`, `dritte`, `folte` |
-| `lentiggini`, `bocca` | sì/no; `sorriso` o `aperta` |
+| `viso` | `puntini` (occhi neri lucidi), `felice` (occhi chiusi ad arco ^ ^), `ridente` (^ ^ e bocca aperta), `assonnato` (palpebre pesanti), `furbetto` (occhiolino e sorriso storto). Il poeta pigro è sempre assonnato, il furfante sempre furbetto; per gli altri decide il seme fra puntini, felice e ridente |
+| `sopracciglia` | `piccole` o `nessuna` |
+| `lentiggini`, `bocca` | sì/no; `sorriso`, `aperta` (con la lingua) o `storto` (ridente, furbetto e assonnato hanno la loro) |
 | `tono` | 0–1, il tono delle foglie dentro la specie |
 | `strada` | `filosofo` (occhiali tondi), `artista` (basco e pennello), `sportivo` (fascia), `viaggiatore` (zaino e occhialoni), `imprenditore` (cravatta), `furfante` (bandana), `poeta-pigro` (berretto da notte), `nessuna` |
 
-Nella pagina delle varianti (`fila.js`) specie e strada sono fissate per
-mostrarle tutte; proporzioni, viso e tono vengono dal seme.
+Nella pagina delle varianti (`fila.js`) specie, strada e viso sono fissati per
+mostrarli tutti; proporzioni, sopracciglia, bocca e tono vengono dal seme.
+`ritratto.html?fila&visi` fa il foglio di confronto dei visi.
 
 ## Che cosa c'è
 

@@ -370,7 +370,7 @@ function raggi() {
 }
 
 // ---------- Avvio ----------
-const ALBERI = CFG.alberi ?? [{ seme: "linfa", x: 0, z: 0, scala: 1.3, specie: "quercia", strada: "nessuna", occhi: "tondi", sopracciglia: "arco", bocca: "sorriso", lentiggini: false, tono: 0.55, altezza: 1, larghezza: 1 }];
+const ALBERI = CFG.alberi ?? [{ seme: "linfa", x: 0, z: 0, scala: 1.3, specie: "quercia", strada: "nessuna", viso: "puntini", sopracciglia: "piccole", bocca: "sorriso", lentiggini: false, tono: 0.55, altezza: 1, larghezza: 1 }];
 const linfe = ALBERI.map(({ x, z, scala = 1.3, giro = 0, ...opzioni }) => {
   const l = creaLinfa(opzioni);
   l.gruppo.userData.terra = quota(x, z) - 0.02;

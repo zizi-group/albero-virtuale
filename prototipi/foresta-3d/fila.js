@@ -1,14 +1,14 @@
 // I sette alberi della pagina varianti.html (e della fila di ritratti).
-// Specie e strada sono scelte per mostrarle tutte; il resto (proporzioni,
-// occhi, sopracciglia, lentiggini, bocca, tono delle foglie) viene dal seme.
+// Specie, strada e viso sono scelti per mostrarli tutti; il resto (proporzioni,
+// sopracciglia, lentiggini, bocca, tono delle foglie) viene dal seme.
 export const FILA = [
-  { seme: "A731", specie: "quercia", strada: "viaggiatore" },
-  { seme: "B204", specie: "ulivo", strada: "artista" },
-  { seme: "C118", specie: "pino", strada: "filosofo" },
-  { seme: "D057", specie: "ciliegio", strada: "poeta-pigro" },
-  { seme: "E390", specie: "betulla", strada: "sportivo" },
-  { seme: "F612", specie: "quercia", strada: "furfante" },
-  { seme: "G845", specie: "pino", strada: "imprenditore" },
+  { seme: "A731", specie: "quercia", strada: "viaggiatore", viso: "felice" },
+  { seme: "B204", specie: "ulivo", strada: "artista", viso: "ridente" },
+  { seme: "C118", specie: "pino", strada: "filosofo", viso: "puntini" },
+  { seme: "D057", specie: "ciliegio", strada: "poeta-pigro", viso: "assonnato" },
+  { seme: "E390", specie: "betulla", strada: "sportivo", viso: "puntini" },
+  { seme: "F612", specie: "quercia", strada: "furfante", viso: "furbetto" },
+  { seme: "G845", specie: "pino", strada: "imprenditore", viso: "felice" },
 ];
 
 /** Posizione di ogni albero nella fila, in leggero arco. */

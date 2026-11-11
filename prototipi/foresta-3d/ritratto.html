@@ -26,7 +26,7 @@
 
     const P = new URLSearchParams(location.search);
     const FILA_MODO = P.has("fila");
-    const W = FILA_MODO ? 2800 : 1200, H = FILA_MODO ? 1000 : 1500;
+    const W = FILA_MODO ? 2800 : 1200, H = FILA_MODO ? (P.has("visi") ? 640 : 1000) : 1500;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(1);
     renderer.setSize(W, H);
@@ -49,7 +49,7 @@
 
     const opzioni = P.has("seme") || P.has("specie") || P.has("strada")
       ? Object.fromEntries([...P].filter(([k]) => ["seme", "specie", "strada"].includes(k)))
-      : { seme: "linfa", specie: "quercia", strada: "nessuna", occhi: "tondi", sopracciglia: "arco", bocca: "sorriso", lentiggini: false, tono: 0.55, altezza: 1, larghezza: 1 };
+      : { seme: "linfa", specie: "quercia", strada: "nessuna", viso: "puntini", sopracciglia: "piccole", bocca: "sorriso", lentiggini: false, tono: 0.55, altezza: 1, larghezza: 1 };
     const elenco = FILA_MODO ? FILA : [opzioni];
     const tutti = new THREE.Group();
     elenco.forEach((o, i) => {
@@ -65,10 +65,24 @@
     const box = new THREE.Box3().setFromObject(tutti);
     const centro = box.getCenter(new THREE.Vector3()), dim = box.getSize(new THREE.Vector3());
     const camera = new THREE.PerspectiveCamera(24, W / H, 0.1, 50);
+
     const dist = Math.max((dim.y * 0.56) / Math.tan(THREE.MathUtils.degToRad(12)), (dim.x * 0.53) / (Math.tan(THREE.MathUtils.degToRad(12)) * (W / H)));
     camera.position.set(centro.x + (FILA_MODO ? 0 : dist * 0.12), centro.y + dist * 0.18, centro.z + dist);
     camera.lookAt(centro.x, centro.y - dim.y * 0.02, centro.z);
-    renderer.render(scena, camera);
+    if (P.has("visi")) {
+      // ?fila&visi: un riquadro per albero, inquadrato sul viso
+      const n = elenco.length, w = W / n;
+      const cv = new THREE.PerspectiveCamera(24, w / H, 0.1, 50);
+      renderer.setScissorTest(true);
+      tutti.children.forEach((g, i) => {
+        cv.position.set(g.position.x, 1.35, 4.6);
+        cv.lookAt(g.position.x, 1.2, 0);
+        renderer.setViewport(i * w, 0, w, H);
+        renderer.setScissor(i * w, 0, w, H);
+        renderer.render(scena, cv);
+      });
+      renderer.setScissorTest(false);
+    } else renderer.render(scena, camera);
 
     const a = document.getElementById("scarica");
     a.href = renderer.domElement.toDataURL("image/png");
