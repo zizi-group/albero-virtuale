@@ -271,7 +271,7 @@ const GUSTI = {
 // ------------------------------------------------------------------ Il cervello
 /**
  * @param {ReturnType<typeof import("./albero.js").creaAlbero>} albero
- * @param {{ scena: THREE.Scene, casa: { x: number, z: number }, cassetta: THREE.Vector3, ridotto: boolean, mondo: { cielo: string, ora: string, temperatura: number, stagione: string } }} op
+ * @param {{ scena: THREE.Scene, casa: { x: number, z: number }, cassetta: THREE.Vector3, ridotto: boolean, mondo: { cielo: string, ora: string, temperatura: number, stagione: string }, camera: THREE.Vector3, limiti: { x0: number, x1: number, z0: number, z1: number } }} op
  */
 export function creaComportamento(albero, op) {
   const pos = new THREE.Vector2(op.casa.x, op.casa.z);
@@ -306,11 +306,12 @@ export function creaComportamento(albero, op) {
     inMano: (i, o) => { o.scale.multiplyScalar(1.5); albero.mani[i].add(o); oggetti.push(o); return o; },
     davanti: (o, y, z) => { o.position.set(0, y, 0.52 + z); albero.corpo.add(o); oggetti.push(o); return o; },
     aTerra: (o, dx, dz, g = 0) => {
-      const r = albero.radice;
-      const s = Math.sin(r.rotation.y), c = Math.cos(r.rotation.y);
+      // rispetto a dove guarda da fermo (verso la camera): gli oggetti stanno davanti o di lato
+      const r = albero.radice, ang = versoCamera();
+      const s = Math.sin(ang), c = Math.cos(ang);
       const x = r.position.x + dx * c + dz * s, z = r.position.z - dx * s + dz * c;
       o.position.set(x, quota(x, z), z);
-      o.rotation.y = r.rotation.y + g;
+      o.rotation.y = ang + g;
       op.scena.add(o);
       oggetti.push(o);
       return o;
@@ -327,6 +328,9 @@ export function creaComportamento(albero, op) {
     oggetti = [];
   };
 
+  /** L'angolo che lo gira verso la camera, da dove sta. */
+  const versoCamera = () => Math.atan2(op.camera.x - pos.x, op.camera.z - pos.y);
+
   /** @param {string} nome */
   function avvia(nome) {
     if (att) { att.a.fine?.(att.ctx); libera(); }
@@ -337,10 +341,10 @@ export function creaComportamento(albero, op) {
     if (a.cammina) {
       // un punto nella radura, lontano dalla cassetta e dal taccuino
       for (let k = 0; k < 20; k++) {
-        const ang = Math.random() * Math.PI * 2, r = 0.6 + Math.random() * 1.4;
+        const ang = Math.random() * Math.PI * 2, r = 0.5 + Math.random() * 1.1;
         const m = new THREE.Vector2(casa.x + Math.cos(ang) * r, casa.y + Math.sin(ang) * r * 0.7);
         if (m.length() > RAGGIO_RADURA - 1.5) continue;
-        if (Math.hypot(m.x - 2.7, m.y - 1.4) < 1 || Math.hypot(m.x + 2.6, m.y - 1.8) < 1) continue;
+        if (m.x < op.limiti.x0 || m.x > op.limiti.x1 || m.y < op.limiti.z0 || m.y > op.limiti.z1) continue;
         meta = m;
         break;
       }
@@ -374,12 +378,13 @@ export function creaComportamento(albero, op) {
     const ctx = contesto({});
     if (nome === "lettera") {
       const d = new THREE.Vector2(op.cassetta.x - pos.x, op.cassetta.z - pos.y);
-      ctx.dati.versoCassetta = THREE.MathUtils.clamp(Math.atan2(d.x, d.y), -0.6, 0.6); // si gira, ma il viso resta verso di noi
+      ctx.dati.versoCassetta = THREE.MathUtils.clamp(Math.atan2(d.x, d.y) - versoCamera(), -0.6, 0.6); // si gira, ma il viso resta verso di noi
     }
     // svegliarsi di soprassalto se dormiva
     if (att?.nome === "dormi") { att.a.fine?.(att.ctx); libera(); att = null; }
     reaz = { nome, r, t: 0, ctx };
     r.inizia(ctx);
+    if (nome === "saluta" || nome === "carezza") albero.viso.guarda(0, 0.15); // ci guarda negli occhi
   }
 
   return {
@@ -417,7 +422,7 @@ export function creaComportamento(albero, op) {
     lascia() {
       if (!preso) return;
       preso = false; caduta = true; vy = 0;
-      casa.set(pos.x, pos.y);
+      casa.set(THREE.MathUtils.clamp(pos.x, op.limiti.x0, op.limiti.x1), THREE.MathUtils.clamp(pos.y, op.limiti.z0, op.limiti.z1));
     },
     get preso() { return preso; },
     /** Posizione sul prato (x, z): si può spostare per non sovrapporsi agli altri. */
@@ -427,7 +432,6 @@ export function creaComportamento(albero, op) {
     /** @param {number} dt @param {number} t */
     aggiorna(dt, t) {
       const p = posaBase();
-      const radice = albero.radice;
       const terra = quota(pos.x, pos.y);
 
       if (op.ridotto) {
@@ -503,10 +507,10 @@ export function creaComportamento(albero, op) {
         }
         p.giro = giro;
       } else {
-        // da fermo guarda verso chi guarda (la camera), con un leggero giro
+        // da fermo si gira verso di noi (la camera): l'attività può aggiungere un piccolo giro
         velPasso = 1;
-        if (!att?.a.percorso) p.giro = p.giro || (att?.nome === "dormi" ? 0 : Math.sin(t * 0.23) * 0.15);
-        else p.giro = giro;
+        const dondolo = att?.nome === "dormi" ? 0 : Math.sin(t * 0.23) * 0.12;
+        p.giro = versoCamera() + (p.giro || dondolo);
       }
 
       // freddo: trema e si stringe (sopra tutto, tranne quando dorme)
@@ -524,9 +528,13 @@ export function creaComportamento(albero, op) {
       // reazione sopra a tutto
       if (reaz) {
         reaz.t += dt;
+        p.giro = 0;
         reaz.r.posa(p, reaz.t, reaz.ctx);
+        p.giro += versoCamera(); // le reazioni sono sempre rivolte a noi
         if (reaz.t >= reaz.r.durata) reaz = null;
       }
+      pos.x = THREE.MathUtils.clamp(pos.x, op.limiti.x0, op.limiti.x1);
+      pos.y = THREE.MathUtils.clamp(pos.y, op.limiti.z0, op.limiti.z1);
       applica(p, dt, t, terra, 0);
       raddrizza();
     },

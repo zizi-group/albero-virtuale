@@ -4,12 +4,15 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { generatore, verso } from "./casuale.js";
-import { mat, ovale, tubo } from "./forme.js";
+import { mat, tubo } from "./forme.js";
 import { UNIFORMI } from "./albero.js";
 import { texAlone, texFoglia, texNuvole } from "./texture.js";
 
 const CARTELLA = "/giardino3d/modelli/";
 export const RAGGIO_RADURA = 7;
+/** Dove stanno cassetta e taccuino (x, z): ai lati dell'albero principale, sempre in quadro. */
+export const CASSETTA = [2.05, 0.95];
+export const TACCUINO = [-2.0, 1.1];
 
 /** Altezza del terreno: lievi ondulazioni e il bosco che sale ai bordi. @param {number} x @param {number} z */
 export function quota(x, z) {
@@ -25,7 +28,7 @@ const ORE = {
   alba: { sole: [-1, 0.34, 0.25], coloreSole: "#ffc49c", forzaSole: 2.4, cielo: "#ffe0cc", terra: "#5a6a3a", forzaCielo: 1.0, nebbia: "#f6dccb", vicino: 20, lontano: 58, esposizione: 1.12, contro: "#ffd9a8", forzaContro: 0.8 },
   giorno: { sole: [-0.9, 0.8, 0.5], coloreSole: "#fff2cc", forzaSole: 3.0, cielo: "#d8f2ff", terra: "#5c8a3c", forzaCielo: 1.35, nebbia: "#d6efe2", vicino: 26, lontano: 64, esposizione: 1.12, contro: "#ffe7aa", forzaContro: 0.9 },
   tramonto: { sole: [1, 0.3, 0.3], coloreSole: "#ffa262", forzaSole: 2.5, cielo: "#ffd0aa", terra: "#4c4a2c", forzaCielo: 0.9, nebbia: "#f2c09a", vicino: 20, lontano: 56, esposizione: 1.1, contro: "#ffb070", forzaContro: 1.1 },
-  notte: { sole: [0.4, 0.85, 0.35], coloreSole: "#a8c0ff", forzaSole: 0.6, cielo: "#3a5488", terra: "#141c18", forzaCielo: 0.45, nebbia: "#17263a", vicino: 14, lontano: 46, esposizione: 1.0, contro: "#7f9fe0", forzaContro: 0.35 },
+  notte: { sole: [-0.5, 0.8, 0.6], coloreSole: "#b8ccff", forzaSole: 1.15, cielo: "#5674b0", terra: "#1c2a24", forzaCielo: 0.8, nebbia: "#1d3048", vicino: 16, lontano: 48, esposizione: 1.15, contro: "#ffd28a", forzaContro: 0.45 },
 };
 
 /** Come il meteo cambia la luce. @type {Record<string, { sole: number, cielo: number, nebbia: string, peso: number, vicino: number, lontano: number, vento: number }>} */
@@ -189,11 +192,11 @@ function creaPunti(n, tipo) {
   geo.setAttribute("fase", new THREE.BufferAttribute(fase, 1));
   const lucciola = tipo === "lucciole";
   const m = new THREE.PointsMaterial({
-    size: lucciola ? 0.16 : 0.09,
-    map: texAlone(lucciola ? "220,255,140" : "255,255,255", 1),
+    size: lucciola ? 0.26 : 0.09,
+    map: texAlone(lucciola ? "255,220,120" : "255,255,255", 1),
     transparent: true, depthWrite: false,
     blending: lucciola ? THREE.AdditiveBlending : THREE.NormalBlending,
-    color: lucciola ? "#e8ff9a" : "#ffffff",
+    color: lucciola ? "#ffe08a" : "#ffffff",
   });
   const u = { uT: { value: 0 } };
   m.onBeforeCompile = (s) => {
@@ -348,7 +351,7 @@ export function creaAmbiente(scena, renderer, op) {
   // Pozzanghere
   const pozze = new THREE.Group();
   const matPozza = new THREE.MeshStandardMaterial({ color: "#9fb8c8", roughness: 0.04, metalness: 0.35, transparent: true, opacity: 0, depthWrite: false });
-  for (const [x, z, s] of [[-1.4, 3.6, 0.9], [3.4, -1.6, 0.8], [0.9, 3.9, 0.6], [-4.2, -0.8, 0.9], [4.9, 3.4, 0.6]]) {
+  for (const [x, z, s] of [[-1.0, 2.6, 0.8], [3.4, -1.6, 0.8], [1.2, 2.8, 0.6], [-4.2, -0.8, 0.9], [4.2, 2.6, 0.6]]) {
     const p = new THREE.Mesh(new THREE.CircleGeometry(0.5, 24), matPozza);
     p.rotation.x = -Math.PI / 2;
     p.scale.set(s * 1.4, s, 1);
@@ -379,6 +382,8 @@ export function creaAmbiente(scena, renderer, op) {
   /** @type {{ mesh: THREE.InstancedMesh, nomeMat: string, modello: string, t: Float32Array }[]} */
   const ricolorabili = [];
   const occupati = op.alberi.map((a) => [a.x, a.z, 2.2]);
+  // anche cassetta e taccuino occupano il loro posto
+  occupati.push([CASSETTA[0], CASSETTA[1], 1.2], [TACCUINO[0], TACCUINO[1], 1.2]);
   const libero = (/** @type {number} */ x, /** @type {number} */ z, /** @type {number} */ d) => occupati.every(([ox, oz, od]) => Math.hypot(x - ox, z - oz) > Math.max(d, od));
   /** @param {number} n @param {number} rMin @param {number} rMax @param {number} d @param {(x: number, z: number) => boolean} [filtro] */
   const sparpaglia = (n, rMin, rMax, d, filtro = () => true) => {
@@ -469,16 +474,16 @@ export function creaAmbiente(scena, renderer, op) {
 
   // Cassetta e taccuino, ai lati del primo albero
   const cassetta = creaCassetta();
-  cassetta.gruppo.position.set(2.7, quota(2.7, 1.4), 1.4);
+  cassetta.gruppo.position.set(CASSETTA[0], quota(CASSETTA[0], CASSETTA[1]), CASSETTA[1]);
   cassetta.gruppo.rotation.y = -0.5;
   const taccuino = creaTaccuino();
-  taccuino.gruppo.position.set(-2.6, quota(-2.6, 1.8), 1.8);
+  taccuino.gruppo.position.set(TACCUINO[0], quota(TACCUINO[0], TACCUINO[1]), TACCUINO[1]);
   scena.add(cassetta.gruppo, taccuino.gruppo);
 
   // Meteo e notte
   const pioggia = creaPioggia(op.ridotto ? 0 : 1400);
   const neve = creaPunti(op.ridotto ? 0 : 1200, "neve");
-  const lucciole = creaPunti(op.ridotto ? 0 : 70, "lucciole");
+  const lucciole = creaPunti(op.ridotto ? 0 : 90, "lucciole");
   scena.add(pioggia.oggetto, neve.oggetto, lucciole.oggetto);
   const luna = new THREE.Group();
   const disco = new THREE.Sprite(new THREE.SpriteMaterial({ map: texAlone("245,248,255", 1), transparent: true, depthWrite: false, fog: false }));

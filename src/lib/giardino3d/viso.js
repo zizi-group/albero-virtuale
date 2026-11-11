@@ -52,7 +52,7 @@ export const BREVI = {
   trema: { sorpresa: 0.3, sorriso: 0.15, storta: -0.3, guance: 0.9 },
 };
 
-const OCCHIO = { rx: 0.064, ry: 0.082 };
+const OCCHIO = { rx: 0.072, ry: 0.092 };
 const INCHIOSTRO = "#22160e";
 
 /**
@@ -160,6 +160,7 @@ export function creaViso(tronco, m) {
   o.add(cerchio);
   o.position.y = -0.01;
   bocca.add(sorriso, aperta, o);
+  bocca.scale.setScalar(1.2);
   gruppo.add(bocca);
 
   // ---------------------------------------------------------------- Stato
