@@ -18,7 +18,7 @@
   <a id="scarica" download="linfa-ritratto.png">Scarica il PNG</a>
   <script type="module">
     // Ritratto di Linfa per la landing: PNG con sfondo trasparente.
-    // Parametri: ?seme=…&specie=…&strada=… (senza parametri: la Linfa della radura).
+    // Parametri: ?seme=…&specie=…&strada=…&viso=… (senza parametri: la Linfa della radura).
     // ?fila: i sette alberi di varianti.html uno accanto all'altro.
     import * as THREE from "three";
     import { creaLinfa } from "./linfa.js";
@@ -48,7 +48,7 @@
     scena.add(chiave, contro, riempi);
 
     const opzioni = P.has("seme") || P.has("specie") || P.has("strada")
-      ? Object.fromEntries([...P].filter(([k]) => ["seme", "specie", "strada"].includes(k)))
+      ? Object.fromEntries([...P].filter(([k]) => ["seme", "specie", "strada", "viso"].includes(k)))
       : { seme: "linfa", specie: "quercia", strada: "nessuna", viso: "puntini", sopracciglia: "piccole", bocca: "sorriso", lentiggini: false, tono: 0.55, altezza: 1, larghezza: 1 };
     const elenco = FILA_MODO ? FILA : [opzioni];
     const tutti = new THREE.Group();

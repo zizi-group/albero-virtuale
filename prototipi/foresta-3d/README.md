@@ -76,7 +76,7 @@ seme dell'albero in modo deterministico (stesso seme, stesso albero):
 | `sopracciglia` | `piccole` o `nessuna`; contano solo sul viso a puntini |
 | `lentiggini`, `bocca` | sì/no; `sorriso`, `aperta` (con la lingua) o `storto` (ridente, furbetto e assonnato hanno la loro) |
 | `tono` | 0–1, il tono delle foglie dentro la specie |
-| `strada` | `filosofo` (occhiali tondi), `artista` (basco e pennello), `sportivo` (fascia), `viaggiatore` (zaino e occhialoni), `imprenditore` (cravatta), `furfante` (bandana), `poeta-pigro` (berretto da notte), `nessuna` |
+| `strada` | `filosofo` (occhiali tondi), `artista` (basco e pennello), `sportivo` (fascia), `viaggiatore` (zaino e occhialoni tirati su sulla fronte, sotto la chioma, con lenti piccole a specchio), `imprenditore` (cravatta), `furfante` (bandana), `poeta-pigro` (berretto da notte), `nessuna` |
 
 Nella pagina delle varianti (`fila.js`) specie, strada e viso sono fissati per
 mostrarli tutti; proporzioni, sopracciglia, bocca e tono vengono dal seme.

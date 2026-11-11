@@ -254,7 +254,7 @@ function chioma(o, campioni, Y, r) {
   if (sp.fiori) strati.push({ tipo: "fiore", n: sp.fiori, dim: [0.15, 0.15], colori: [new THREE.Color("#ffffff"), new THREE.Color("#ffe6ec")], fiore: true });
 
   const yOcchi = Y(0.47) - yCima;
-  const fronteLibera = ["sportivo", "furfante"].includes(o.strada) ? Y(0.95) - yCima : 0;
+  const fronteLibera = ["sportivo", "furfante", "viaggiatore"].includes(o.strada) ? Y(0.95) - yCima : 0;
   const m4 = new THREE.Matrix4(), col = new THREE.Color();
   let yMax = 0, zFronte = 0;
   for (const strato of strati) {
@@ -524,31 +524,33 @@ function accessori(nomi, ctx) {
       }
     }
     if (nome === "occhialoni") {
-      // Occhialoni da viaggio poggiati sulla chioma, sopra la fronte
-      const q = new THREE.Group();
-      const y = Y(1) + 0.12;
-      q.position.set(0, y, ch.zFronte + 0.02);
-      q.rotation.x = -0.45;
+      // Occhialoni tirati su sulla fronte: sul tronco, sotto la chioma e sopra
+      // gli occhi. Lenti piccole e a specchio, così non sembrano pupille.
+      const yG = Y(0.77);
       const ottone = mat("#b98a3a", { metalness: 0.75, roughness: 0.28 });
-      const lente = new THREE.MeshPhysicalMaterial({ color: "#2e4a52", roughness: 0.05, clearcoat: 1, metalness: 0.2 });
+      const lente = new THREE.MeshPhysicalMaterial({ color: "#a9c9d4", metalness: 0.7, roughness: 0.08, clearcoat: 1 });
+      const centri = [];
       for (const s of [-1, 1]) {
-        const corpo = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.13, 0.09, 28), ottone);
+        const q = posa(new THREE.Group(), campioni, s * 0.12, yG, 0.012);
+        q.rotateX(-0.3); // un po' girati verso l'alto, come appoggiati
+        const corpo = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.08, 0.05, 24), ottone);
         corpo.rotation.x = Math.PI / 2;
-        corpo.position.set(s * 0.15, 0, 0);
-        const bordo = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.022, 10, 28), ottone);
-        bordo.position.set(s * 0.15, 0, 0.05);
-        const vetroL = new THREE.Mesh(new THREE.CircleGeometry(0.1, 28), lente);
-        vetroL.position.set(s * 0.15, 0, 0.048);
-        const riflesso = ovale(0.025, 0.04, 0.005, new THREE.MeshBasicMaterial({ color: "#ffffff" }), 8);
-        riflesso.position.set(s * 0.15 + 0.04, 0.03, 0.055);
+        corpo.position.z = 0.02;
+        const bordo = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.014, 8, 24), ottone);
+        bordo.position.z = 0.046;
+        const vetroL = new THREE.Mesh(new THREE.CircleGeometry(0.058, 24), lente);
+        vetroL.position.z = 0.047;
+        const riflesso = ovale(0.04, 0.012, 0.003, new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.75 }), 8);
+        riflesso.rotation.z = 0.6;
+        riflesso.position.set(0.012, 0.018, 0.05);
         q.add(corpo, bordo, vetroL, riflesso);
+        g.add(q);
+        centri.push(q.position.clone());
       }
-      q.add(tubo([[-0.04, 0, 0], [0.04, 0, 0]], 0.025, 0.025, mat("#5a3a22"), 4, 8));
-      g.add(q);
-      const cinghia = new THREE.Mesh(new THREE.TorusGeometry(ch.R[0] * 0.82, 0.03, 8, 48), mat("#5a3a22", { roughness: 0.6 }));
-      cinghia.rotation.x = Math.PI / 2 - 0.3;
-      cinghia.position.set(0, y + 0.08, -0.05);
-      g.add(cinghia);
+      const [a, b] = centri;
+      g.add(tubo([[a.x + 0.07, a.y, a.z + 0.02], [0, a.y + 0.01, a.z + 0.04], [b.x - 0.07, b.y, b.z + 0.02]], 0.014, 0.014, mat("#5a3a22"), 8, 6));
+      // cinghia intorno al tronco, alla stessa altezza
+      g.add(fascia(campioni, Y, 0.755, 0.785, mat("#5a3a22", { roughness: 0.6 }), 0.012));
     }
     if (nome === "zaino") {
       const tela = mat("#8a5a2a", { roughness: 0.8 });
@@ -694,7 +696,7 @@ export function creaLinfa(opzioni = {}) {
   // Accessori della strada; quelli in testa seguono la chioma quando respira
   const nomi = STRADE[o.strada] ?? [];
   corpo.updateMatrixWorld(true);
-  const inTesta = new Set(["basco", "berretto-notte", "occhialoni"]);
+  const inTesta = new Set(["basco", "berretto-notte"]);
   const testa = accessori(nomi.filter((n) => inTesta.has(n)), { campioni, Y, occhi, chioma: ch, bracci });
   testa.position.y = -ch.gruppo.position.y;
   ch.gruppo.add(testa);
