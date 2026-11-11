@@ -59,8 +59,14 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   regali e quando compaiono nella scena (`regali.ts`), collezione di trofei,
   oggetti, vestiti e stagioni con le sue regole (`collezione.ts`).
 - `src/lib/piani.ts`: i tre pacchetti (`albero`, `premium-annuale`,
-  `premium-mensile`) e `isPremium`. Prezzi e testi per il sito in
-  `src/components/landing/Pacchetti.tsx`.
+  `premium-mensile`) e `isPremium`, usati dalla demo; i loro prezzi e testi
+  per il giardino sono in `src/components/landing/Pacchetti.tsx`.
+- Pagina iniziale (vetrina, 0.1): `src/app/page.tsx`, stile in
+  `src/app/vetrina.css` (tutto sotto `.vetrina`), pezzi in
+  `src/components/vetrina/` e immagini in `public/vetrina/`. Mostra i pacchetti
+  nuovi Albero, Famiglia, Foresta (`PianiVetrina.tsx`), che la demo non ha
+  ancora: i bottoni portano alla semina. Bozza grafica di riferimento in
+  `docs/bozze/landing-foresta.html`. Il giardino resta in 2D.
 - `src/components/albero/`: `Albero.tsx` (l'albero nel suo SVG) e `Scena.tsx`
   (con il cielo) usano il pupazzo animato e interattivo di `vivo/`: scenette,
   strato di vita, clic, trascinamento, fumetti. Motore a fotogrammi senza
