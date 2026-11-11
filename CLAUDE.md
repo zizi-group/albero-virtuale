@@ -19,10 +19,13 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   è spento: modello di cache classico.
 - Supabase **in locale** con la CLI (Docker): Auth con link magico e codice a
   6 cifre, Postgres con RLS, Mailpit per le email.
-- Claude tramite `@anthropic-ai/sdk`: modello `claude-opus-5-5` (cambiabile con
-  `LINFA_AI_MODEL`), fallback lato server attivi
-  (`server-side-fallback-2026-07-01`, `fallbacks: "default"`), output
-  strutturati con zod (`client.beta.messages.parse` + `zodOutputFormat`).
+- Claude tramite `@anthropic-ai/sdk`, due modelli (Federico, 11/11/2026, per il
+  costo): le giornate dell'albero su `claude-haiku-5-5` (`LINFA_AI_MODEL_GIORNATE`),
+  lettere e risposte su `claude-opus-5-5` (`LINFA_AI_MODEL`). Fallback lato server
+  (`server-side-fallback-2026-07-01`, `fallbacks: "default"`) solo dove esistono:
+  Haiku 5.5 non li ha e il parametro non si manda. Output strutturati con zod
+  (`client.beta.messages.parse` + `zodOutputFormat`). Si sceglie con
+  `compito: "giornata" | "scrittura"` in `chiediStrutturato` (`src/lib/motore/ai.ts`).
 - Meteo da Open-Meteo, gratuito e senza chiave.
 
 ## Avvio in locale
@@ -44,7 +47,7 @@ Tutto in italiano: codice (nomi), testi, commit, report.
 | `npm run build` | Build di produzione |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Tipi delle route + `tsc` |
-| `npm run notte` | Motore notturno: un giorno per ogni albero, lettera ogni 30 giorni |
+| `npm run notte` | Motore notturno: un giorno per ogni albero, poi il calendario (collezione, cartolina della settimana, lettere, fine del mese) |
 | `npm run simula -- --giorni 7 [--lettera]` | Albero in memoria, senza database: per provare prompt e motore |
 | `supabase gen types typescript --local > src/lib/supabase/database.types.ts` | Tipi dopo una migrazione |
 
@@ -53,7 +56,8 @@ Tutto in italiano: codice (nomi), testi, commit, report.
 - `src/lib/albero/`: vocabolario visivo e crescita (`tipi.ts`), libreria delle
   23 azioni con la compatibilità col meteo (`azioni.ts`), tratti e strade
   (`strade.ts`), regole delle abitudini col meteo (`scena.ts`), catalogo dei
-  regali e quando compaiono nella scena (`regali.ts`).
+  regali e quando compaiono nella scena (`regali.ts`), collezione di trofei,
+  oggetti, vestiti e stagioni con le sue regole (`collezione.ts`).
 - `src/lib/piani.ts`: i tre pacchetti (`albero`, `premium-annuale`,
   `premium-mensile`) e `isPremium`. Prezzi e testi per il sito in
   `src/components/landing/Pacchetti.tsx`.
@@ -70,7 +74,12 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   (lettere e risposte), `servizio.ts` (collegato a database ed email),
   `email.ts` (SMTP di Mailpit), `ai.ts` (unico punto che chiama Claude),
   `extra.ts` (extra mensili del Premium: mesi dell'albero, regalo del mese,
-  riepilogo, cambio pacchetto della demo).
+  riepilogo, cambio pacchetto della demo), `calendario.ts` (quello che succede
+  dopo le giornate: `viviGiorni` = giornate + collezione, lettera di metà mese,
+  settimana, fine del mese).
+- `src/lib/cartolina/`: caratteri per `next/og` e la cartolina della settimana
+  (`settimana.tsx`, PNG 1200×900 allegato all'email). Il paesaggio delle
+  cartoline è `src/app/giardino/mese/[numero]/cartolina/scena.ts`.
 - `src/app/`: `/` landing, `/accedi`, `/auth/conferma`, `/auth/esci`,
   `/pianta`, `/giardino` (con gli strumenti della demo e `?meteo=`),
   `/giardino/lettere/[id]`, `/giardino/mese/[numero]` (riepilogo illustrato
@@ -95,6 +104,24 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   dell'albero dura 30 giorni vissuti (`tree_months`); nella demo «Inizio mese»
   lo chiude subito. L'albero decide da solo che cosa fare del regalo; i regali
   entrano nei prompt (`StatoAlbero.regali`) e non cambiano mai la strada.
+- **Il buongiorno** (tutti i piani): ogni mattina una domanda breve con 2-3
+  risposte da un tocco (`morning_questions`, una per il prossimo giorno da
+  vivere). La scrive la giornata precedente nella stessa chiamata ad Haiku
+  (`viviGiornate`), oppure `scriviBuongiorno` alla semina e con «Mattina» della
+  demo. La risposta arriva all'AI come consiglio: l'albero decide da solo.
+- **Il calendario** (`calendario.ts`, dopo ogni giornata): ogni 7 giorni la
+  cartolina della settimana per email a tutti (`tree_weeks`, Haiku per nota e
+  momento migliore, immagine con `next/og` allegata nell'email); lettera ogni
+  30 giorni per tutti a fine mese, e per il Premium anche quella di metà mese
+  al 15° giorno (`meta-mese`): una ogni 15 giorni. Lettere sempre su Opus.
+- **Collezione** (tutti i piani): trofei, oggetti, vestiti e album delle
+  stagioni si sbloccano vivendo, mai comprando (`unlocks`). Le regole sono nel
+  codice (`collezione.ts`), mai decise dall'AI; le novità entrano una volta nel
+  prompt delle giornate (`ContestoVita.novita`) perché l'albero possa nominarle
+  nel diario, poi `mentioned = true`.
+- **Script fuori da Next** (`npm run notte`): i file con JSX usati dal motore
+  (`src/lib/cartolina/settimana.tsx`) hanno il pragma `@jsxRuntime automatic`,
+  altrimenti tsx usa il JSX classico e `next/og` si ferma su «React is not defined».
 - **Crescita**: l'albero nasce germoglio e diventa adulto in
   `GIORNI_PER_CRESCERE` giorni (`tipi.ts`, oggi 90). Per l'albero vero si passa
   `giorni` ad `Albero`/`Scena`; senza `giorni` vale la grandezza tipica dello

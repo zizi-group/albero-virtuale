@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { ID_PACCHETTI, NOMI_PACCHETTO } from "@/lib/piani";
 import { azioneDemo, type Esito } from "./actions";
+import { EVENTO_TEMPO, type DettaglioTempo } from "./Immersivo";
 
 const METEO_DI_PROVA = [
   { id: "", nome: "Vero", simbolo: "◎" },
@@ -17,9 +18,23 @@ const METEO_DI_PROVA = [
 /** Gli strumenti della demo, in un cassetto discreto in basso a destra. */
 export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoScelto?: string; piano: string }) {
   const [esito, azione, inCorso] = useActionState<Esito, FormData>(azioneDemo, {});
-  const [cosa, setCosa] = useState<"giorni" | "lettera" | "mese" | "pacchetto">("giorni");
+  const [cosa, setCosa] = useState<"giorni" | "lettera" | "mese" | "pacchetto" | "mattina" | "settimana">("giorni");
   const [aperto, setAperto] = useState(false);
   const maniglia = useRef<HTMLButtonElement>(null);
+
+  // Il time-lapse del giardino: avvisa quando i giorni iniziano e finiscono di passare.
+  const tempoInCorso = useRef(false);
+  useEffect(() => {
+    if (inCorso && cosa === "giorni" && !tempoInCorso.current) {
+      tempoInCorso.current = true;
+      window.dispatchEvent(new CustomEvent<DettaglioTempo>(EVENTO_TEMPO, { detail: { fase: "inizio" } }));
+    }
+    if (!inCorso && tempoInCorso.current) {
+      tempoInCorso.current = false;
+      setAperto(false);
+      window.dispatchEvent(new CustomEvent<DettaglioTempo>(EVENTO_TEMPO, { detail: { fase: "fine", ok: !!esito.ok } }));
+    }
+  }, [inCorso, cosa, esito]);
 
   useEffect(() => {
     if (!aperto) return;
@@ -60,9 +75,16 @@ export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoSce
           <button name="cosa" value="mese" className="timbro timbro-carta timbro-piccolo" disabled={inCorso} onClick={() => setCosa("mese")}>
             Inizio mese
           </button>
+          <button name="cosa" value="mattina" className="timbro timbro-carta timbro-piccolo" disabled={inCorso} onClick={() => setCosa("mattina")}>
+            Mattina
+          </button>
+          <button name="cosa" value="settimana" className="timbro timbro-carta timbro-piccolo" disabled={inCorso} onClick={() => setCosa("settimana")}>
+            Fine settimana
+          </button>
         </form>
         <p className="mt-1.5 text-sm leading-snug text-matita">
           «Inizio mese» chiude il mese dell&apos;albero: arrivano il riepilogo, la cartolina e un regalo nuovo da fare.
+          «Mattina» fa arrivare la domanda del buongiorno. «Fine settimana» spedisce subito la cartolina della settimana.
         </p>
         <p className="mt-3 min-h-6 text-[0.95rem] leading-snug" aria-live="polite">
           {inCorso ? (
@@ -73,6 +95,8 @@ export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoSce
                   giorni: `${nome} sta vivendo le sue giornate…`,
                   mese: `${nome} sfoglia il diario del mese…`,
                   pacchetto: "Cambio il pacchetto…",
+                  mattina: `${nome} pensa a che cosa chiederti…`,
+                  settimana: `${nome} sceglie il momento migliore della settimana…`,
                 }[cosa]
               }
             </span>

@@ -822,45 +822,6 @@ html {
   }
 }
 
-/* Cartoline della storia */
-.cartolina {
-  background-image:
-    var(--grana),
-    repeating-linear-gradient(-45deg, transparent 0 10px, rgba(184, 50, 42, 0.07) 10px 20px, transparent 20px 30px, rgba(63, 90, 42, 0.07) 30px 40px);
-  background-size: auto, 100% 7px;
-  background-repeat: repeat, no-repeat;
-  background-position: 0 0, bottom;
-}
-.cartolina-francobollo {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  display: grid;
-  place-items: center;
-  width: 3.3rem;
-  height: 3.9rem;
-  padding: 4px;
-  background: var(--carta-chiara);
-  -webkit-mask:
-    radial-gradient(circle 3px, #0000 96%, #000) -3.5px -3.5px / 7px 7px round,
-    linear-gradient(#000 0 0) center / calc(100% - 7px) calc(100% - 7px) no-repeat;
-  mask:
-    radial-gradient(circle 3px, #0000 96%, #000) -3.5px -3.5px / 7px 7px round,
-    linear-gradient(#000 0 0) center / calc(100% - 7px) calc(100% - 7px) no-repeat;
-  rotate: 5deg;
-}
-.cartolina-francobollo span {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(#9dcfec, #f2e6c4 65%, #6f9a3c 65%);
-  font-family: var(--font-gochi), cursive;
-  font-size: 0.85rem;
-  color: var(--inchiostro);
-  text-transform: uppercase;
-}
-
 /* Carta a righe, per lettere e citazioni */
 .carta-righe {
   background-color: #fffaf0;
@@ -1282,50 +1243,50 @@ html {
 
 /* ——— Movimento ridotto: pioggia, neve, nuvole e particelle restano ferme ——— */
 @media (prefers-reduced-motion: reduce) {
-  html {
+  html:not([data-movimento="pieno"]) {
     scroll-behavior: auto;
   }
-  .ambiente {
+  :root:not([data-movimento="pieno"]) .ambiente {
     transition-duration: 0.6s;
   }
-  .amb-nuvola,
-  .amb-nebbia span,
-  .amb-strato,
-  .amb-lampo,
-  .amb-sole::before,
-  .amb-stelle span,
-  .amb-pozzanghere i,
-  .amb-lucciole span,
-  .amb-polline span,
-  .amb-foglie span,
-  .amb-foglie i,
-  .buste-in-volo svg,
-  .scorri svg,
-  .seme-chicco,
-  .scoppio i {
+  :root:not([data-movimento="pieno"]) .amb-nuvola,
+  :root:not([data-movimento="pieno"]) .amb-nebbia span,
+  :root:not([data-movimento="pieno"]) .amb-strato,
+  :root:not([data-movimento="pieno"]) .amb-lampo,
+  :root:not([data-movimento="pieno"]) .amb-sole::before,
+  :root:not([data-movimento="pieno"]) .amb-stelle span,
+  :root:not([data-movimento="pieno"]) .amb-pozzanghere i,
+  :root:not([data-movimento="pieno"]) .amb-lucciole span,
+  :root:not([data-movimento="pieno"]) .amb-polline span,
+  :root:not([data-movimento="pieno"]) .amb-foglie span,
+  :root:not([data-movimento="pieno"]) .amb-foglie i,
+  :root:not([data-movimento="pieno"]) .buste-in-volo svg,
+  :root:not([data-movimento="pieno"]) .scorri svg,
+  :root:not([data-movimento="pieno"]) .seme-chicco,
+  :root:not([data-movimento="pieno"]) .scoppio i {
     animation: none !important;
   }
-  .amb-foglie,
-  .amb-polline,
-  .buste-in-volo {
+  :root:not([data-movimento="pieno"]) .amb-foglie,
+  :root:not([data-movimento="pieno"]) .amb-polline,
+  :root:not([data-movimento="pieno"]) .buste-in-volo {
     display: none;
   }
-  .amb-albero,
-  .timbro-luogo,
-  .nota-albero,
-  .compare,
-  .affiora {
+  :root:not([data-movimento="pieno"]) .amb-albero,
+  :root:not([data-movimento="pieno"]) .timbro-luogo,
+  :root:not([data-movimento="pieno"]) .nota-albero,
+  :root:not([data-movimento="pieno"]) .compare,
+  :root:not([data-movimento="pieno"]) .affiora {
     animation: none !important;
   }
-  .bustina,
-  .bustina:hover,
-  .gettone:hover,
-  .timbro:hover,
-  .gemma:hover .gemma-bocciolo {
+  :root:not([data-movimento="pieno"]) .bustina,
+  :root:not([data-movimento="pieno"]) .bustina:hover,
+  :root:not([data-movimento="pieno"]) .gettone:hover,
+  :root:not([data-movimento="pieno"]) .timbro:hover,
+  :root:not([data-movimento="pieno"]) .gemma:hover .gemma-bocciolo {
     transform: none;
   }
-  .amb-cresce,
-  .amb-albero {
+  :root:not([data-movimento="pieno"]) .amb-cresce,
+  :root:not([data-movimento="pieno"]) .amb-albero {
     transition-duration: 0.01s;
   }
 }
@@ -1933,18 +1894,18 @@ html {
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .cassetta[data-piena] .cassetta-bandiera,
-    .cassetta-numero,
-    .busta-lista[data-da-leggere] .busta-lista-sigillo,
-    .biglietto,
-    .puntini i,
-    .clessidra-gira,
-    .nota-nuovo {
+    :root:not([data-movimento="pieno"]) .cassetta[data-piena] .cassetta-bandiera,
+    :root:not([data-movimento="pieno"]) .cassetta-numero,
+    :root:not([data-movimento="pieno"]) .busta-lista[data-da-leggere] .busta-lista-sigillo,
+    :root:not([data-movimento="pieno"]) .biglietto,
+    :root:not([data-movimento="pieno"]) .puntini i,
+    :root:not([data-movimento="pieno"]) .clessidra-gira,
+    :root:not([data-movimento="pieno"]) .nota-nuovo {
       animation: none !important;
     }
-    .oggetto-scena:hover,
-    .busta-lista:hover,
-    .segnalibri a:hover {
+    :root:not([data-movimento="pieno"]) .oggetto-scena:hover,
+    :root:not([data-movimento="pieno"]) .busta-lista:hover,
+    :root:not([data-movimento="pieno"]) .segnalibri a:hover {
       transform: none;
     }
   }
@@ -2119,10 +2080,10 @@ html {
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .busta-scena[data-apri] .busta {
+    :root:not([data-movimento="pieno"]) .busta-scena[data-apri] .busta {
       display: none;
     }
-    .busta-scena[data-apri] .lettera-foglio {
+    :root:not([data-movimento="pieno"]) .busta-scena[data-apri] .lettera-foglio {
       animation: none;
     }
   }
@@ -2344,11 +2305,11 @@ html {
 @layer components {
   /* Col movimento ridotto la pagina iniziale mostra subito l'albero, anche prima del JavaScript. */
   @media (prefers-reduced-motion: reduce) {
-    .viaggio-palco .ambiente[data-seme] .amb-cresce {
+    :root:not([data-movimento="pieno"]) .viaggio-palco .ambiente[data-seme] .amb-cresce {
       transform: none;
     }
-    .viaggio-palco .seme,
-    .viaggio-palco .seme-bottone {
+    :root:not([data-movimento="pieno"]) .viaggio-palco .seme,
+    :root:not([data-movimento="pieno"]) .viaggio-palco .seme-bottone {
       display: none;
     }
   }
@@ -2369,42 +2330,102 @@ html {
     line-height: 1.25;
     color: var(--matita);
   }
-  .bustina-premium {
-    z-index: 1;
+  .bustina-si-paga {
+    display: flex;
+    gap: 0.45rem;
+    margin-top: 0.6rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 0.45rem;
+    border: 1.5px solid color-mix(in srgb, var(--inchiostro) 30%, transparent);
+    background: color-mix(in srgb, var(--carta-chiara) 85%, transparent);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--inchiostro);
   }
-  @media (min-width: 768px) {
-    .bustina-premium {
-      margin-top: -1.5rem;
-    }
-    .bustina-premium .bustina-carta {
-      padding-inline: 1.7rem;
-    }
-  }
-  .bustina-premium .bustina-carta {
+  .bustina-evidenza .bustina-carta {
     outline: 3px solid var(--inchiostro);
     outline-offset: -3px;
   }
 
-  .interruttore {
-    display: inline-grid;
-    grid-auto-flow: column;
-    gap: 0.25rem;
-    padding: 0.25rem;
-    border-radius: 999px;
-    border: 2px solid var(--inchiostro);
-    background: var(--carta-chiara);
+  /* I riquadri dei piani: annuali insieme, mensile a parte */
+  .piani {
+    display: grid;
+    gap: 1.5rem;
   }
-  .interruttore button {
-    min-height: 2.4rem;
-    padding: 0.3rem 1.1rem;
-    border-radius: 999px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: background-color 0.2s ease, color 0.2s ease;
+  @media (min-width: 1024px) {
+    .piani {
+      grid-template-columns: 2.06fr 1fr;
+      align-items: stretch;
+    }
   }
-  .interruttore button[aria-checked="true"] {
-    background: var(--inchiostro);
+  .gruppo-piani {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.9rem 0.9rem 1.1rem;
+    border-radius: 1.4rem;
+  }
+  .gruppo-annuali {
+    background: #dfe8cf;
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--muschio) 45%, transparent);
+  }
+  .gruppo-mensile {
+    background: #ece4d0;
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--corteccia) 35%, transparent);
+  }
+  .gruppo-piani-titolo {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.45rem 1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--muschio);
     color: var(--carta-chiara);
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+  .gruppo-mensile .gruppo-piani-titolo {
+    background: var(--corteccia);
+  }
+  .gruppo-piani-griglia {
+    display: grid;
+    gap: 1.5rem;
+  }
+  @media (min-width: 640px) {
+    .gruppo-piani-griglia {
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+  }
+  .gruppo-piani .bustina {
+    height: 100%;
+  }
+  .gruppo-piani .bustina:hover {
+    transform: translateY(-4px);
+  }
+
+  /* Gli stessi riquadri, piccoli, nella scelta del piano alla semina */
+  .scelta-gruppo {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.6rem;
+    border-radius: 0.8rem;
+  }
+  .scelta-gruppo.gruppo-annuali .scelta-griglia {
+    display: grid;
+    gap: 0.5rem;
+  }
+  @media (min-width: 640px) {
+    .scelta-gruppo.gruppo-annuali .scelta-griglia {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .scelta-gruppo .gruppo-piani-titolo {
+    font-size: 0.85rem;
+    padding: 0.3rem 0.75rem 0.35rem;
   }
 
   .nota-piani {
@@ -2542,13 +2563,360 @@ html {
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .tessera::after {
+    :root:not([data-movimento="pieno"]) .tessera::after {
       animation: none;
       display: none;
     }
-    .tessere:hover .tessera-premium,
-    .tessere:hover .tessera-standard {
+    :root:not([data-movimento="pieno"]) .tessere:hover .tessera-premium,
+    :root:not([data-movimento="pieno"]) .tessere:hover .tessera-standard {
       transform: none;
+    }
+  }
+}
+
+/* ——— Il valore dell'offerta: diario, doni del mese, libro dell'anno ——— */
+@layer components {
+  .taccuino-grande {
+    font-size: 1.2rem;
+    line-height: 2rem;
+    padding: 1.6rem 1.1rem 0.8rem 1.3rem;
+    background-image: repeating-linear-gradient(to bottom, transparent 0 2rem, rgba(95, 143, 168, 0.22) 2rem calc(2rem + 1px));
+    background-position: 0 0.4rem;
+  }
+  .taccuino-traguardo {
+    position: relative;
+    padding-right: 2.2rem;
+  }
+  .taccuino-traguardo::after {
+    content: "★";
+    position: absolute;
+    right: 0;
+    top: 0.1rem;
+    display: grid;
+    place-items: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 50%;
+    background: var(--linfa);
+    color: var(--inchiostro);
+    font-family: var(--font-newsreader), serif;
+    font-size: 0.95rem;
+    rotate: 12deg;
+  }
+
+  /* I doni del mese */
+  .doni {
+    display: grid;
+    gap: 0.9rem;
+    margin-top: 1.1rem;
+  }
+  .dono {
+    display: grid;
+    grid-template-columns: 4.2rem 1fr;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .dono-figura {
+    width: 4.2rem;
+    height: 3.8rem;
+  }
+  .dono-riepilogo {
+    display: grid;
+    align-content: center;
+    gap: 0;
+    height: auto;
+    min-height: 3.8rem;
+    padding: 0.3rem 0.4rem;
+    border-radius: 0.3rem;
+    background: #fffdf6;
+    border: 1.5px solid var(--inchiostro);
+    box-shadow: 2px 2px 0 var(--inchiostro);
+    rotate: -4deg;
+  }
+  .dono-telefono {
+    width: 2.6rem;
+    height: 4.4rem;
+    margin-inline: auto;
+    padding: 0.22rem;
+    border-radius: 0.55rem;
+    background: var(--inchiostro);
+    rotate: 6deg;
+  }
+  .dono-schermo {
+    position: relative;
+    height: 100%;
+    border-radius: 0.38rem;
+    overflow: hidden;
+    background: linear-gradient(#35416f, #cf6f5a 55%, #f3b766 72%, #988337 72%);
+  }
+
+  /* Il libro da sfogliare */
+  .comandi-libro {
+    max-width: 30rem;
+  }
+  .libro {
+    perspective: 1200px;
+  }
+  .libro-pagina {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 23rem;
+    padding: 1.1rem 1.2rem 1.6rem 1.5rem;
+    border-radius: 0.2rem 0.6rem 0.6rem 0.2rem;
+    border: 1.5px solid color-mix(in srgb, var(--inchiostro) 30%, transparent);
+    box-shadow:
+      inset 10px 0 14px -10px rgba(35, 38, 29, 0.35),
+      4px 4px 0 -1px #f3ecdc,
+      4px 4px 0 0 color-mix(in srgb, var(--inchiostro) 25%, transparent),
+      0 18px 30px -20px rgba(35, 38, 29, 0.6);
+    line-height: 1.9rem;
+    transform-origin: 0 50%;
+  }
+  .libro-gira-avanti {
+    animation: pagina-avanti 0.6s var(--morbido) both;
+  }
+  .libro-gira-indietro {
+    animation: pagina-indietro 0.6s var(--morbido) both;
+  }
+  @keyframes pagina-avanti {
+    from { transform: rotateY(-70deg); opacity: 0.2; }
+    to { transform: none; opacity: 1; }
+  }
+  @keyframes pagina-indietro {
+    from { transform: rotateY(40deg) translateX(-6%); opacity: 0.2; }
+    to { transform: none; opacity: 1; }
+  }
+  .libro-copertina {
+    align-items: center;
+    justify-content: center;
+    gap: 0.9rem;
+    text-align: center;
+    background:
+      repeating-linear-gradient(45deg, transparent 0 3px, rgba(255, 255, 255, 0.04) 3px 6px),
+      linear-gradient(160deg, #4a6a31, #2f4720);
+    color: var(--carta-chiara);
+    border-color: var(--inchiostro);
+  }
+  .libro-copertina::before {
+    content: "";
+    position: absolute;
+    inset: 0.7rem;
+    border: 1.5px solid color-mix(in srgb, var(--linfa) 70%, transparent);
+    border-radius: 0.3rem;
+    pointer-events: none;
+  }
+  .libro-copertina-sopra {
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #e9d9a6;
+  }
+  .libro-ritratto {
+    width: 9rem;
+    height: 9rem;
+    border-radius: 50%;
+    border: 3px solid var(--linfa);
+    background: linear-gradient(#cfe6f2, #f2e6c4 70%, #8dbb55 70%);
+    overflow: hidden;
+    padding-top: 7%;
+  }
+  .libro-copertina-titolo {
+    font-family: var(--font-young-serif), serif;
+    font-size: 1.8rem;
+    line-height: 1.05;
+    color: #f7e2a3;
+  }
+  .libro-illustrazione {
+    align-self: center;
+    width: 7rem;
+    height: 7rem;
+    margin-block: 0.3rem 0.2rem;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 70%, #e8efd9 0 58%, transparent 60%);
+  }
+  .libro-data {
+    color: var(--corteccia);
+    font-size: 1.05rem;
+  }
+  .libro-testo {
+    font-size: 1.22rem;
+    color: #2c3348;
+  }
+  .libro-continua {
+    margin-top: auto;
+    align-self: flex-end;
+    font-size: 1.6rem;
+    color: var(--corteccia);
+    rotate: -4deg;
+  }
+  .libro-numero {
+    position: absolute;
+    bottom: 0.45rem;
+    left: 50%;
+    translate: -50% 0;
+    font-size: 0.75rem;
+    color: var(--matita);
+  }
+  .libro-copertina .libro-numero {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-movimento="pieno"]) .libro-gira-avanti,
+    :root:not([data-movimento="pieno"]) .libro-gira-indietro {
+      animation: none;
+    }
+  }
+}
+
+/* ——— L'interruttore «Animazioni complete» ——— */
+@layer components {
+  .interruttore-movimento {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.85rem 0.4rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(14, 17, 12, 0.85);
+    color: #fff;
+    font-family: var(--font-lp, var(--font-newsreader)), sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.7);
+  }
+  .interruttore-movimento-binario {
+    position: relative;
+    width: 2.2rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.25);
+    transition: background-color 0.2s ease;
+  }
+  .interruttore-movimento-binario span {
+    position: absolute;
+    top: 0.175rem;
+    left: 0.175rem;
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 50%;
+    background: #fff;
+    transition: translate 0.2s ease;
+  }
+  .interruttore-movimento[aria-checked="true"] .interruttore-movimento-binario {
+    background: #f2b630;
+  }
+  .interruttore-movimento[aria-checked="true"] .interruttore-movimento-binario span {
+    translate: 0.95rem 0;
+    background: #11140e;
+  }
+  .lp-interruttore {
+    position: fixed;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    z-index: 45;
+  }
+}
+
+/* ——— La lettera a tutto schermo, dalla busta ——— */
+@layer components {
+  .lettera-schermo {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background:
+      radial-gradient(70rem 40rem at 50% 18%, rgba(242, 182, 48, 0.16), transparent 60%),
+      linear-gradient(#1c2117, #0b0d09);
+  }
+  .lettera-barra {
+    display: flex;
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: max(1rem, env(safe-area-inset-top)) 0 1rem;
+  }
+  .lettera-indietro,
+  .lettera-rispondi {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.6rem;
+    padding: 0.45rem 1rem;
+    border-radius: 999px;
+    font-family: var(--font-lp), sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .lettera-indietro {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  }
+  .lettera-rispondi {
+    background: #f2b630;
+    color: #11140e;
+    min-height: 3rem;
+    padding-inline: 1.4rem;
+  }
+  .lettera-schermo .busta-scena[data-apri] .busta {
+    width: min(34rem, 96%);
+  }
+}
+
+/* Semina: che cosa comprende il piano scelto, in forma compatta */
+@layer components {
+  .elenco-compatto {
+    margin-top: 0.75rem;
+    padding: 0.75rem 0.85rem 0.8rem;
+    border-radius: 12px;
+    background: rgba(35, 38, 29, 0.05);
+    font-size: 0.86rem;
+    line-height: 1.38;
+  }
+  .elenco-compatto-titolo {
+    font-weight: 700;
+    color: var(--inchiostro);
+  }
+  .elenco-compatto-titolo span {
+    font-weight: 400;
+    color: var(--matita);
+  }
+  .elenco-compatto dl {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+  }
+  .elenco-compatto dl > div {
+    display: grid;
+    grid-template-columns: 6.6rem 1fr;
+    gap: 0.5rem;
+  }
+  .elenco-compatto dt {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--corteccia);
+    padding-top: 0.12rem;
+  }
+  .elenco-compatto .lp-in-arrivo {
+    display: inline-block;
+    margin-left: 0.3rem;
+    padding: 0 0.4rem;
+    border-radius: 999px;
+    background: rgba(35, 38, 29, 0.1);
+    color: var(--matita);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    vertical-align: 0.1em;
+  }
+  @media (max-width: 420px) {
+    .elenco-compatto dl > div {
+      grid-template-columns: 1fr;
+      gap: 0.05rem;
     }
   }
 }

@@ -2,11 +2,18 @@ import { z } from "zod";
 import { USI } from "../albero/regali";
 import { chiediStrutturato } from "./ai";
 import { BIBBIA } from "./personaggio";
-import { descriviStato, type ContestoVita, type StatoAlbero } from "./vita";
+import {
+  descriviStato,
+  pulisciBuongiorno,
+  regoleBuongiorno,
+  type Buongiorno,
+  type ContestoVita,
+  type StatoAlbero,
+} from "./vita";
 
 // Le cose che l'albero scrive di suo pugno: lettere e risposte.
 
-export type TipoLettera = "benvenuto" | "mensile" | "momento";
+export type TipoLettera = "benvenuto" | "mensile" | "meta-mese" | "momento";
 
 const SchemaLettera = z.object({
   oggetto: z.string(),
@@ -20,6 +27,10 @@ const ISTRUZIONI: Record<TipoLettera, (s: StatoAlbero, motivo?: string) => strin
     `È la lettera del mese. ${s.nome} racconta il periodo usando il diario: sceglie due o tre episodi (non elenca tutto), dice come si sente cambiato e ${
       s.strada ? "parla della strada che ha preso" : "lascia un indizio sulla strada che sta prendendo, senza dirla"
     }. Chiude con una domanda alla persona. Lunghezza: da 140 a 220 parole.`,
+  "meta-mese": (s) =>
+    `È la lettera di metà mese (con il Premium ${s.nome} scrive ogni 15 giorni). Racconta le ultime due settimane usando il diario: sceglie uno o due episodi concreti, non elenca tutto, e dice che cosa gli è rimasto in testa. ${
+      s.strada ? "Accenna a come va la sua strada." : "Lascia un piccolo indizio sulla strada che sta prendendo, senza dirla."
+    } Chiude con una domanda alla persona. Lunghezza: da 110 a 170 parole.`,
   momento: (s, motivo) =>
     `È successo qualcosa di importante: ${motivo ?? "una giornata speciale"}. ${s.nome} scrive subito alla persona per raccontarlo e dire come si sente. Lunghezza: da 90 a 160 parole.`,
 };
@@ -129,6 +140,68 @@ Restituisci:
 - fatto_da_ricordare: una frase breve per la sua biografia, che nomina il regalo.`;
 
   return chiediStrutturato({ sistema: BIBBIA, richiesta, schema: SchemaLetteraRegalo, effort: "medium" });
+}
+
+// ——— Il buongiorno (tutti i piani) ———
+
+const SchemaBuongiorno = z.object({ domanda: z.string(), risposte: z.array(z.string()) });
+
+/**
+ * La domanda del mattino da sola, quando non è arrivata con le giornate
+ * (alla semina, o con lo strumento «Mattina» della demo). Modello piccolo.
+ */
+export async function scriviBuongiorno(
+  stato: StatoAlbero,
+  ctx: ContestoVita,
+  giorno: number,
+  meteo?: string | null,
+): Promise<Buongiorno | null> {
+  const diario = ctx.diarioRecente.length
+    ? `\nIl suo diario recente:\n${ctx.diarioRecente.map((d) => `- giorno ${d.giorno}: «${d.testo}»`).join("\n")}`
+    : "";
+  const richiesta = `${descriviStato(stato)}${diario}
+
+Scrivi ${regoleBuongiorno(stato.nome, giorno, meteo)}
+
+Restituisci domanda e risposte.`;
+  const b = await chiediStrutturato({ sistema: BIBBIA, richiesta, schema: SchemaBuongiorno, effort: "low", compito: "giornata" });
+  return pulisciBuongiorno(b);
+}
+
+// ——— La cartolina della settimana (tutti i piani) ———
+
+const SchemaSettimana = z.object({
+  giorno_migliore: z.number().int(),
+  oggetto: z.string(),
+  nota: z.string(),
+  didascalia: z.string(),
+});
+
+export type NotaSettimana = z.infer<typeof SchemaSettimana>;
+
+/** La nota breve della settimana, scritta dall'albero, e il suo momento migliore. Modello piccolo. */
+export async function scriviNotaSettimana(
+  stato: StatoAlbero,
+  pagine: { giorno: number; azione: string; testo: string; meteo?: string | null; traguardo: boolean }[],
+): Promise<NotaSettimana> {
+  const elenco = pagine
+    .map(
+      (p) =>
+        `- giorno ${p.giorno}${p.meteo ? ` (${p.meteo})` : ""}${p.traguardo ? " [giorno importante]" : ""}, ${p.azione}: «${p.testo}»`,
+    )
+    .join("\n");
+  const richiesta = `${descriviStato(stato)}
+
+Il diario della settimana di ${stato.nome}:
+${elenco}
+
+${stato.nome} manda alla persona una nota breve sulla sua settimana, con la cartolina del momento migliore. Restituisci:
+- giorno_migliore: il numero del giorno più bello della settimana, scelto da queste pagine.
+- oggetto: l'oggetto dell'email, al massimo 50 caratteri, concreto, senza il nome dell'albero.
+- nota: due o tre righe in prima persona (al massimo 280 caratteri in tutto), con la sua voce. Parla di una cosa precisa della settimana, non la riassume tutta, e la dice con parole nuove: non ricopia le frasi del diario. Comincia con «${stato.nomePersona ? `Ciao ${stato.nomePersona},` : "Ciao,"}» e non mette la firma.
+- didascalia: una frase in terza persona che comincia con «${stato.nome}», al massimo 90 caratteri, per il momento migliore.
+Niente frasi fatte né saluti di circostanza.`;
+  return chiediStrutturato({ sistema: BIBBIA, richiesta, schema: SchemaSettimana, effort: "low", compito: "giornata" });
 }
 
 // ——— Il riepilogo del mese (Premium) ———

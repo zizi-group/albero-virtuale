@@ -58,3 +58,55 @@ export async function inviaLettera({
     html,
   });
 }
+
+/**
+ * La cartolina della settimana: due-tre righe e l'immagine del momento migliore,
+ * allegata dentro l'email (cid), così si vede anche senza aprire il sito.
+ */
+export async function inviaNotaSettimana({
+  a,
+  nomeAlbero,
+  oggetto,
+  nota,
+  numero,
+  immagine,
+}: {
+  a: string;
+  nomeAlbero: string;
+  oggetto: string;
+  nota: string;
+  numero: number;
+  immagine: Buffer | null;
+}) {
+  const link = `${SITO}/giardino`;
+  const righe = nota
+    .split(/\n\s*\n|\n/)
+    .map((p) => `<p style="margin:0 0 10px;">${esc(p)}</p>`)
+    .join("");
+  const figura = immagine
+    ? `<img src="cid:cartolina-settimana@linfa" width="520" alt="La cartolina della settimana di ${esc(nomeAlbero)}" style="display:block;width:100%;max-width:520px;height:auto;border-radius:10px;margin:0 0 20px;">`
+    : "";
+
+  const html = `<!doctype html><html lang="it"><body style="margin:0;background:#f3ecdc;font-family:Georgia,serif;color:#23261d;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:30px 14px;background:#f3ecdc;"><tr><td align="center">
+<table role="presentation" width="580" cellpadding="0" cellspacing="0" style="max-width:580px;background:#fffaf0;border:1px solid #e6dbc2;border-radius:14px;padding:30px;">
+<tr><td>
+<p style="margin:0 0 14px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#3f5a2a;">La settimana ${numero} di ${esc(nomeAlbero)}</p>
+${figura}
+<div style="font-size:17px;line-height:1.6;">${righe}</div>
+<p style="margin:18px 0 0;"><a href="${link}" style="display:inline-block;background:#3f5a2a;color:#fffaf0;text-decoration:none;padding:11px 20px;border-radius:999px;font-family:Arial,sans-serif;font-size:14px;">Vai nel giardino</a></p>
+</td></tr></table>
+<p style="font-family:Arial,sans-serif;font-size:12px;color:#8a846f;margin-top:16px;">Linfa · una nota ogni sette giorni</p>
+</td></tr></table></body></html>`;
+
+  await smtp().sendMail({
+    from: `"${nomeAlbero.replace(/"/g, "")} (Linfa)" <lettere@linfa.local>`,
+    to: a,
+    subject: oggetto,
+    text: `${nota}\n\nVai nel giardino: ${link}`,
+    html,
+    attachments: immagine
+      ? [{ filename: `settimana-${numero}.png`, content: immagine, cid: "cartolina-settimana@linfa", contentType: "image/png" }]
+      : [],
+  });
+}

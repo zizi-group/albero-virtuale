@@ -71,7 +71,8 @@ http://127.0.0.1:54324. Nessuna email esce davvero dal computer.
 
 - Ogni albero ha sette tratti (curiosità, ambizione, pigrizia, furbizia,
   creatività, socievolezza, energia), casuali alla nascita.
-- Ogni giorno l'AI (Claude, modello `claude-opus-5-5`) sceglie cosa fa l'albero da
+- Ogni giorno l'AI (Claude, modello `claude-haiku-5-5`; le lettere e le risposte
+  le scrive `claude-opus-5-5`) sceglie cosa fa l'albero da
   una libreria di 23 azioni già animate, in base al carattere, al meteo del giorno
   e a qualche evento a caso, e scrive il diario. Le giornate spingono l'albero
   verso una strada; quando una strada supera le altre, l'albero lo scopre e

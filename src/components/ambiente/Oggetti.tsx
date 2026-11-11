@@ -1,13 +1,36 @@
-// Gli oggetti del giardino, sul prato accanto all'albero: la cassetta delle
-// lettere e il taccuino del diario. Sono link: portano alle sezioni sotto la scena.
+import type { ReactNode } from "react";
 
-export function Cassetta({ daLeggere, totale }: { daLeggere: number; totale: number }) {
+// Gli oggetti del giardino, sul prato accanto all'albero: la cassetta delle
+// lettere e il taccuino del diario. Con `onApri` sono bottoni (aprono un
+// pannello), altrimenti link alle sezioni della pagina.
+
+function Elemento({
+  onApri,
+  href,
+  children,
+  ...resto
+}: { onApri?: () => void; href: string; children: ReactNode; className: string; "aria-label": string; "data-piena"?: string }) {
+  if (onApri) {
+    return (
+      <button type="button" onClick={onApri} {...resto}>
+        {children}
+      </button>
+    );
+  }
+  return (
+    <a href={href} {...resto}>
+      {children}
+    </a>
+  );
+}
+
+export function Cassetta({ daLeggere, totale, onApri }: { daLeggere: number; totale: number; onApri?: () => void }) {
   const etichetta =
     daLeggere > 0
       ? `La cassetta delle lettere: ${daLeggere} ${daLeggere === 1 ? "lettera da leggere" : "lettere da leggere"}`
       : `La cassetta delle lettere: ${totale} ${totale === 1 ? "lettera" : "lettere"}`;
   return (
-    <a href="#lettere" className="oggetto-scena cassetta" data-piena={daLeggere > 0 ? "1" : undefined} aria-label={etichetta}>
+    <Elemento onApri={onApri} href="#lettere" className="oggetto-scena cassetta" data-piena={daLeggere > 0 ? "1" : undefined} aria-label={etichetta}>
       <svg viewBox="0 0 64 124" aria-hidden>
         <rect x="27" y="52" width="10" height="70" rx="2" fill="#7a5236" stroke="#23261d" strokeWidth="2.5" />
         <path d="M22,122 h20" stroke="#23261d" strokeWidth="2.5" strokeLinecap="round" />
@@ -26,13 +49,13 @@ export function Cassetta({ daLeggere, totale }: { daLeggere: number; totale: num
         </g>
       </svg>
       {daLeggere > 0 && <span className="cassetta-numero">{daLeggere}</span>}
-    </a>
+    </Elemento>
   );
 }
 
-export function Taccuino({ righe }: { righe: number }) {
+export function Taccuino({ righe, onApri }: { righe: number; onApri?: () => void }) {
   return (
-    <a href="#diario" className="oggetto-scena taccuino-scena" aria-label={`Il diario: ${righe} ${righe === 1 ? "pagina" : "pagine"}`}>
+    <Elemento onApri={onApri} href="#diario" className="oggetto-scena taccuino-scena" aria-label={`Il diario: ${righe} ${righe === 1 ? "pagina" : "pagine"}`}>
       <svg viewBox="0 0 96 64" aria-hidden>
         <path d="M10,48 L54,60 L90,40 L46,30 Z" fill="#fbf7ec" stroke="#23261d" strokeWidth="2" strokeLinejoin="round" />
         <path d="M10,44 L54,56 L90,36 L46,26 Z" fill="#f3ecdc" stroke="#23261d" strokeWidth="2" strokeLinejoin="round" />
@@ -40,7 +63,7 @@ export function Taccuino({ righe }: { righe: number }) {
         <path d="M62,47.6 L35,25.6" stroke="#e0a526" strokeWidth="3.4" />
         <path d="M30,38 l18,5 M33,34 l14,4" stroke="#fbf7ec" strokeWidth="2" strokeLinecap="round" opacity=".8" />
       </svg>
-    </a>
+    </Elemento>
   );
 }
 

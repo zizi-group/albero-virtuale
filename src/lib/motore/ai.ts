@@ -3,12 +3,24 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 
 // Un solo punto per parlare con Claude.
-// - Modello: claude-opus-5-5, cambiabile con LINFA_AI_MODEL.
-// - Fallback lato server attivi: se una richiesta viene rifiutata dai filtri
-//   di sicurezza, l'API la ripete su un modello di riserva nella stessa chiamata.
+// - Due modelli, scelti da Federico l'11/11/2026 per tenere basso il costo:
+//   le giornate dell'albero (scegliere l'azione, due righe di diario) vanno sul
+//   modello piccolo, claude-haiku-5-5 (LINFA_AI_MODEL_GIORNATE); lettere e
+//   risposte, che la persona legge davvero, su claude-opus-5-5 (LINFA_AI_MODEL).
+// - Fallback lato server attivi dove esistono: se una richiesta viene rifiutata
+//   dai filtri di sicurezza, l'API la ripete su un modello di riserva nella
+//   stessa chiamata. Haiku 5.5 non li ha: lì il parametro non si manda.
 // - Output strutturati: la risposta arriva già validata con lo schema zod.
 
 export const MODELLO = process.env.LINFA_AI_MODEL || "claude-opus-5-5";
+export const MODELLO_GIORNATE = process.env.LINFA_AI_MODEL_GIORNATE || "claude-haiku-5-5";
+
+/** Che cosa si chiede: le giornate vanno sul modello piccolo, il resto sul grande. */
+export type Compito = "giornata" | "scrittura";
+
+function haFallback(modello: string) {
+  return !modello.startsWith("claude-haiku");
+}
 
 let client: Anthropic | null = null;
 function ai() {
@@ -27,20 +39,24 @@ export async function chiediStrutturato<S extends z.ZodType>({
   schema,
   effort = "low",
   maxTokens = 16000,
+  compito = "scrittura",
 }: {
   sistema: string;
   richiesta: string;
   schema: S;
   effort?: "low" | "medium" | "high";
   maxTokens?: number;
+  compito?: Compito;
 }): Promise<z.infer<S>> {
+  const modello = compito === "giornata" ? MODELLO_GIORNATE : MODELLO;
   let risposta;
   try {
     risposta = await ai().beta.messages.parse({
-      model: MODELLO,
+      model: modello,
       max_tokens: maxTokens,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
+      ...(haFallback(modello)
+        ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
+        : {}),
       // Il prompt di sistema è fisso: lo mettiamo in cache.
       system: [{ type: "text", text: sistema, cache_control: { type: "ephemeral" } }],
       output_config: { effort, format: zodOutputFormat(schema) },

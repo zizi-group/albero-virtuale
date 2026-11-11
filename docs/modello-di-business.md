@@ -16,10 +16,23 @@ appena ci sono.
 |---|---|---|---|
 | Prezzo | **29 € + IVA all'anno** | **49 € + IVA all'anno** | **6 € + IVA al mese** (72 € + IVA all'anno) |
 | Prezzo al pubblico, IVA inclusa | 35,38 € | 59,78 € | 7,32 € al mese |
-| Albero, lettere, giardino, risposte | ✓ | ✓ | ✓ |
-| Diario di fine anno | digitale (PDF illustrato) | **stampato** | **stampato**, al 12° mese, a chi completa l'anno |
-| Ogni mese: un regalo all'albero incluso, il riepilogo illustrato del mese, la cartolina digitale (storia e sfondo del telefono) | — | ✓ | ✓ |
-| Tessera del fan club | standard | **premium** | **premium**, spedita al 3° mese |
+| Albero con 7 tratti di carattere, giardino online a tutto schermo con meteo e ora reali | ✓ | ✓ | ✓ |
+| Ogni giorno: un'azione tra 23 e una pagina di diario (1-3 frasi) | ✓ | ✓ | ✓ |
+| Il buongiorno: ogni mattina una domanda a cui rispondi con un tocco *(in arrivo)* | ✓ | ✓ | ✓ |
+| Ogni settimana: una cartolina breve dal giardino *(in arrivo)* | ✓ | ✓ | ✓ |
+| Lettere via email, più una in ogni momento importante | ogni 30 giorni | **ogni 15 giorni** | **ogni 15 giorni** |
+| Le risposte: gli scrivi dal giardino e ti risponde | ✓ | ✓ | ✓ |
+| 7 strade possibili; quando ne prende una, te lo scrive | ✓ | ✓ | ✓ |
+| Collezione e trofei sbloccati vivendo, album delle stagioni *(in arrivo)* | ✓ | ✓ | ✓ |
+| Il bosco con gli amici e le gare di stagione *(in arrivo)* | ✓ | ✓ | ✓ |
+| Un messaggio vocale al mese con la voce dell'albero *(in arrivo)* | — | ✓ | ✓ |
+| L'albero ti scrive anche su WhatsApp *(in arrivo)* | — | ✓ | ✓ |
+| Ogni mese: un regalo all'albero, il riepilogo illustrato, la cartolina digitale (storia e sfondo del telefono) | — | ✓ | ✓ |
+| Diario dell'anno | PDF illustrato | PDF + **stampato** | PDF + **stampato**, al 12° mese, a chi completa l'anno |
+| A casa | tessera standard | **tessera premium + adesivi** | **tessera premium + adesivi**, al 3° mese |
+| Se non rinnovi: letargo, il diario resta | ✓ | ✓ | ✓ |
+
+Aggiunte approvate da Federico l'11/11/2026, perché i piani offrivano «troppo poco»: le voci *in arrivo* non sono ancora costruite. Sul sito i piani elencano tutte le voci, anche se la lista è lunga (Federico).
 
 - In pratica sono due piani: **Albero** (solo annuale) e **Premium**, che si
   paga all'anno o al mese. Il mensile costa di più in totale (72 € contro
@@ -114,11 +127,22 @@ soltanto. I soldi non comprano posizioni.
 | Tessera con spedizione (ipotesi) | −2,50 € | −6,00 € | −6,00 € |
 | **Margine** | **~23 €** | **~27 €** | **~47 €** |
 
-- AI: con Opus 5.5 su tutto (com'è oggi la demo) costerebbe circa 1 $ al mese
-  per albero; con Claude Haiku 5.5 per le giornate, in batch notturno a metà
-  prezzo, si scende a ~2,50 € all'anno.
+- AI: con Opus 5.5 su tutto costerebbe circa 1 $ al mese per albero (con 5.000
+  iscritti dimezzerebbe il margine finale). Dall'11/11/2026 la demo usa Claude
+  Haiku 5.5 per le giornate e Opus 5.5 per lettere e risposte: ~2,50 € all'anno
+  (meno ancora con le giornate in batch notturno a metà prezzo). Ogni euro
+  all'anno per albero vale 5.000 € su 5.000 iscritti.
 - Il margine del Premium mensile vale per chi resta 12 mesi; chi disdice prima
   rende meno ma non costa il libro.
+- **Costi delle aggiunte dell'11/11/2026, non ancora nella tabella:**
+  - buongiorno e cartolina della settimana, con il modello piccolo: pochi
+    centesimi l'anno;
+  - lettere ogni 15 giorni nel Premium: circa 1 € in più l'anno di AI;
+  - adesivi: ipotesi 1 € per iscritto Premium, spediti con la tessera;
+  - voce e WhatsApp: costi da verificare.
+
+  Il margine del Premium scende quindi di circa 2 € l'anno, più voce e
+  WhatsApp. Da ricalcolare quando ci sono i preventivi.
 
 ## Proiezione del primo anno
 
@@ -168,5 +192,5 @@ mesi: vanno tenuti da parte.
 - Prezzo finale, dopo il test.
 - Fornitori: stampa del libro, tessere, spedizioni.
 - Pagamenti (Stripe), hosting, dominio e servizio email.
-- Modello AI per le giornate (oggi la demo usa Opus 5.5 su tutto).
+- Giornate in batch notturno (oggi la demo le chiede una alla volta).
 - Prezzi dei regali all'albero e del libro per chi ha l'Albero.

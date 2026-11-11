@@ -109,6 +109,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"morning_questions": {
+                  Row: {
+                    "answer": string | null,"answered_at": string | null,"created_at": string,"day_number": number,"id": string,"options": NonNullable<Json>,"question": string,"tree_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "answer"?: string | null,"answered_at"?: string | null,"created_at"?: string,"day_number": number,"id"?: string,"options": NonNullable<Json>,"question": string,"tree_id": string
+                  }
+                  Update: {
+                    "answer"?: string | null,"answered_at"?: string | null,"created_at"?: string,"day_number"?: number,"id"?: string,"options"?: NonNullable<Json>,"question"?: string,"tree_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "morning_questions_tree_id_fkey"
+      columns: ["tree_id"]
+isOneToOne: false
+      referencedRelation: "trees"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"tree_months": {
                   Row: {
                     "closed_at": string | null,"first_day": number,"id": string,"number": number,"recap": Json | null,"started_at": string,"tree_id": string
@@ -129,6 +149,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"tree_weeks": {
+                  Row: {
+                    "best_day": number,"caption": string,"created_at": string,"emailed_at": string | null,"first_day": number,"id": string,"last_day": number,"note": string,"number": number,"subject": string,"tree_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "best_day": number,"caption": string,"created_at"?: string,"emailed_at"?: string | null,"first_day": number,"id"?: string,"last_day": number,"note": string,"number": number,"subject": string,"tree_id": string
+                  }
+                  Update: {
+                    "best_day"?: number,"caption"?: string,"created_at"?: string,"emailed_at"?: string | null,"first_day"?: number,"id"?: string,"last_day"?: number,"note"?: string,"number"?: number,"subject"?: string,"tree_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tree_weeks_tree_id_fkey"
+      columns: ["tree_id"]
+isOneToOne: false
+      referencedRelation: "trees"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"trees": {
                   Row: {
                     "biography": NonNullable<Json>,"city": string,"created_at": string,"day_count": number,"id": string,"last_weather": Json | null,"latitude": number,"longitude": number,"mood": string,"name": string,"owner_id": string,"owner_name": string | null,"path": string | null,"path_scores": NonNullable<Json>,"plan": string,"planted_at": string,"timezone": string,"today_action": string,"today_caption": string | null,"traits": NonNullable<Json>,"updated_at": string
@@ -142,6 +182,26 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"unlocks": {
+                  Row: {
+                    "day_number": number,"id": string,"item": string,"mentioned": boolean,"tree_id": string,"unlocked_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "day_number": number,"id"?: string,"item": string,"mentioned"?: boolean,"tree_id": string,"unlocked_at"?: string
+                  }
+                  Update: {
+                    "day_number"?: number,"id"?: string,"item"?: string,"mentioned"?: boolean,"tree_id"?: string,"unlocked_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "unlocks_tree_id_fkey"
+      columns: ["tree_id"]
+isOneToOne: false
+      referencedRelation: "trees"
+      referencedColumns: ["id"]
+    }
                   ]
                 }
           }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Intestazione } from "@/components/Intestazione";
+import { fontModerna } from "@/components/fontModerna";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getUtente } from "@/lib/supabase/server";
 
@@ -34,12 +34,12 @@ export default async function Lettera({ params }: PageProps<"/giardino/lettere/[
 
   return (
     <>
-      <Intestazione>
-        <Link href="/giardino#lettere" className="pillola">
-          <span aria-hidden>←</span> Torna al giardino
-        </Link>
-      </Intestazione>
-      <main id="contenuto" className="scrittoio flex-1 px-4 pb-20 sm:px-8">
+      <main id="contenuto" className={`lettera-schermo flex-1 px-4 pb-20 sm:px-8 ${fontModerna.variable}`}>
+        <div className="lettera-barra">
+          <Link href="/giardino?pannello=lettere" className="lettera-indietro">
+            <span aria-hidden>←</span> Torna al giardino
+          </Link>
+        </div>
         {/* La busta si apre una volta sola, alla prima lettura; poi la lettera è subito lì. */}
         <div className="busta-scena" data-apri={primaVolta ? "1" : undefined}>
           <div className="busta" aria-hidden>
@@ -78,8 +78,8 @@ export default async function Lettera({ params }: PageProps<"/giardino/lettere/[
         </div>
 
         <p className="mt-10 text-center">
-          <Link href="/giardino#scrivigli" className="timbro">
-            Rispondi a {albero.name}
+          <Link href="/giardino?pannello=scrivi" className="lettera-rispondi">
+            Rispondi a {albero.name} dal giardino
           </Link>
         </p>
       </main>

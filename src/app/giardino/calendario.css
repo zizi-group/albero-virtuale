@@ -1,0 +1,199 @@
+/* I pannelli Buongiorno e Collezione del giardino immersivo (prefisso cal-).
+   Stanno dentro .gi-pannello-corpo: carta chiara, larghezza 31rem al massimo. */
+
+@layer components {
+  .cal-occhiello {
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muschio);
+  }
+  .cal-vuoto,
+  .cal-nota {
+    margin-top: 0.6rem;
+    color: var(--matita);
+    line-height: 1.45;
+  }
+  .cal-errore {
+    margin-top: 0.6rem;
+    color: var(--rosso);
+  }
+
+  /* ——— Buongiorno ——— */
+  .cal-buongiorno {
+    padding: 0.2rem 0 0.5rem;
+  }
+  .cal-domanda {
+    margin-top: 0.5rem;
+    font-family: var(--font-gochi), cursive;
+    font-size: 1.9rem;
+    line-height: 1.2;
+    color: #2c3348;
+  }
+  .cal-risposte {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 1.1rem;
+  }
+  .cal-risposta {
+    min-height: 2.9rem;
+    padding: 0.45rem 1.15rem;
+    border: 2px solid var(--inchiostro);
+    border-radius: 999px;
+    background: #fffdf6;
+    font-size: 1.05rem;
+    box-shadow: 2px 2px 0 var(--linfa);
+    transition: transform 0.18s ease, background-color 0.15s ease;
+  }
+  .cal-risposta:hover {
+    transform: translateY(-2px);
+    background: #fff;
+  }
+  .cal-risposta:focus-visible {
+    outline: 3px solid var(--linfa);
+    outline-offset: 2px;
+  }
+  .cal-risposta:disabled {
+    opacity: 0.55;
+    cursor: progress;
+  }
+  .cal-risposta-data {
+    margin-top: 1rem;
+    padding: 0.8rem 1rem;
+    border-radius: 0.8rem;
+    background: color-mix(in srgb, var(--carta-scura) 55%, transparent);
+    line-height: 1.45;
+  }
+
+  /* ——— Collezione ——— */
+  .cal-conto {
+    color: var(--matita);
+  }
+  .cal-conto b {
+    color: var(--inchiostro);
+  }
+  .cal-gruppo {
+    margin-top: 1.3rem;
+  }
+  .cal-gruppo-titolo {
+    font-family: var(--font-young-serif), serif;
+    font-size: 1.2rem;
+    margin-bottom: 0.6rem;
+  }
+  .cal-griglia {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.5rem;
+  }
+  .cal-voce {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 0.55rem;
+    align-items: center;
+    padding: 0.55rem 0.6rem;
+    border: 2px dashed color-mix(in srgb, var(--inchiostro) 20%, transparent);
+    border-radius: 0.8rem;
+    color: var(--matita);
+  }
+  .cal-voce[data-preso] {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--inchiostro) 70%, transparent);
+    background: #fffdf6;
+    color: var(--inchiostro);
+    box-shadow: 2px 2px 0 color-mix(in srgb, var(--linfa) 80%, transparent);
+  }
+  .cal-icona {
+    grid-row: span 2;
+    display: grid;
+    place-items: center;
+    width: 2.3rem;
+    height: 2.3rem;
+  }
+  .cal-voce:not([data-preso]) .cal-icona {
+    opacity: 0.35;
+    filter: grayscale(1);
+  }
+  .cal-icona-disegno {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+  .cal-icona-simbolo {
+    display: grid;
+    place-items: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 999px;
+    background: var(--linfa);
+    color: var(--inchiostro);
+    font-family: var(--font-young-serif), serif;
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .cal-voce-nome {
+    font-size: 0.92rem;
+    line-height: 1.15;
+    font-weight: 600;
+  }
+  .cal-voce-nota {
+    font-size: 0.78rem;
+    line-height: 1.25;
+    color: var(--matita);
+  }
+
+  .cal-album {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+  }
+  .cal-stagione {
+    padding: 0.5rem 0.5rem 0.7rem;
+    background: #fffdf6;
+    box-shadow:
+      0 1px 2px rgba(35, 38, 29, 0.15),
+      0 12px 20px -16px rgba(35, 38, 29, 0.6);
+  }
+  .cal-stagione:nth-child(odd) {
+    rotate: -0.8deg;
+  }
+  .cal-stagione:nth-child(even) {
+    rotate: 0.7deg;
+  }
+  .cal-stagione-figura {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 4 / 3;
+    margin-bottom: 0.45rem;
+    overflow: hidden;
+    background: linear-gradient(#cfe6f3, #f2ead6 70%, #b9cf8a 70%);
+  }
+  .cal-stagione[data-stagione="estate"] .cal-stagione-figura {
+    background: linear-gradient(#9dcfec, #f6e7bd 70%, #9bba62 70%);
+  }
+  .cal-stagione[data-stagione="autunno"] .cal-stagione-figura {
+    background: linear-gradient(#c9d2d8, #f0dfc0 70%, #ccae6b 70%);
+  }
+  .cal-stagione[data-stagione="inverno"] .cal-stagione-figura {
+    background: linear-gradient(#cdd8e2, #f3f3ee 70%, #e2e8ed 70%);
+  }
+  .cal-stagione:not([data-preso]) .cal-stagione-figura {
+    background: color-mix(in srgb, var(--carta-scura) 60%, transparent);
+  }
+  .cal-stagione-chiusa {
+    font-family: var(--font-young-serif), serif;
+    font-size: 2rem;
+    color: color-mix(in srgb, var(--inchiostro) 35%, transparent);
+  }
+  .cal-stagione-testo {
+    margin-top: 0.3rem;
+    font-family: var(--font-gochi), cursive;
+    font-size: 1rem;
+    line-height: 1.2;
+    color: #2c3348;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

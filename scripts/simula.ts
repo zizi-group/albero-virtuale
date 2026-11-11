@@ -4,7 +4,7 @@ import "./_env";
 import { trattiCasuali, INFO_STRADE, NOMI_TRATTI, TRATTI, classifica } from "../src/lib/albero/strade";
 import { azione } from "../src/lib/albero/azioni";
 import { cercaCitta, oggiNelFuso, previsioni } from "../src/lib/meteo";
-import { MODELLO } from "../src/lib/motore/ai";
+import { MODELLO, MODELLO_GIORNATE } from "../src/lib/motore/ai";
 import { scriviTestoLettera } from "../src/lib/motore/scritture";
 import { applicaEsiti, pianificaGiorni, preparaGiorni, type PaginaDiario, type StatoAlbero } from "../src/lib/motore/vita";
 
@@ -29,7 +29,7 @@ async function main() {
     umore: "curioso",
     biografia: [],
   };
-  console.log(`Modello: ${MODELLO}. ${stato.nome} spunta a ${stato.citta}.`);
+  console.log(`Modelli: giornate ${MODELLO_GIORNATE}, lettere ${MODELLO}. ${stato.nome} spunta a ${stato.citta}.`);
   console.log(`Tratti: ${TRATTI.map((t) => `${NOMI_TRATTI[t]} ${stato.tratti[t]}`).join(", ")}\n`);
 
   const prev = await previsioni(luogo.latitudine, luogo.longitudine);

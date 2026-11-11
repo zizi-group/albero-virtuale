@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, type CSSPropert
 import { Albero } from "@/components/albero/Albero";
 import { Ambiente } from "@/components/ambiente/Ambiente";
 import { Seme } from "@/components/ambiente/Oggetti";
+import { movimentoRidotto } from "@/components/Movimento";
 import type { Ora } from "@/components/ambiente/atmosfera";
 import { azione } from "@/lib/albero/azioni";
 import { FRASI_ROUTINE, risolviScena } from "@/lib/albero/scena";
@@ -52,7 +53,7 @@ function fotogramma(
   stadio: Stadio,
   idAzione: string,
   timbro: [string, string, string],
-  extra: { indossa?: Indumento[]; nota?: string; buste?: boolean } = {},
+  extra: { indossa?: Indumento[]; nota?: string; buste?: boolean; posa?: Partial<Posa> } = {},
 ): Fotogramma {
   const a = azione(idAzione);
   return {
@@ -60,7 +61,7 @@ function fotogramma(
     ora,
     stagione,
     stadio,
-    posa: { ...a.posa, indossa: [...a.posa.indossa, ...(extra.indossa ?? [])] },
+    posa: { ...a.posa, ...extra.posa, indossa: [...a.posa.indossa, ...(extra.indossa ?? [])] },
     chiave: `${chiave}-${idAzione}`,
     timbro,
     nota: extra.nota,
@@ -73,23 +74,17 @@ const FISSI: Record<string, Fotogramma> = {
     nota: "Cara Giulia…",
     buste: true,
   }),
-  gennaio: fotogramma("gennaio", meteo("neve", -1), "giorno", "inverno", "piantina", "guardare-cielo", ["Gennaio", "10:05", "-1°"], {
-    indossa: ["cappello", "sciarpa"],
-    nota: "Fa freddo. Guardo il cielo lo stesso.",
+  diario: fotogramma("diario", meteo("sole", 19), "giorno", "estate", "alberello", "scrivere-poesia", ["Pescara", "18:10", "19°"], {
+    nota: "Caro diario, oggi ho contato le formiche.",
   }),
-  marzo: fotogramma("marzo", meteo("pioggia", 11), "giorno", "primavera", "alberello", "giornale-ombrello", ["Marzo", "8:30", "11°"], {
-    nota: "Le ghiande sono in rialzo.",
+  premium: fotogramma("premium", meteo("sole", 16), "giorno", "autunno", "albero", "guardare-cielo", ["Pescara", "11:00", "16°"], {
+    indossa: ["cappello"],
+    posa: { occhi: "felici", bocca: "grande", effetti: ["cuori"] },
+    nota: "Un cappello nuovo! Lo metto. Forse.",
   }),
-  giugno: fotogramma("giugno", meteo("sole", 27), "giorno", "estate", "alberello", "vendere-ombra", ["Giugno", "15:10", "27°"], {
-    indossa: ["occhiali-sole"],
-    nota: "Ombra fresca! Due ghiande l'ora.",
-  }),
-  luglio: fotogramma("luglio", meteo("sole", 29), "tramonto", "estate", "albero", "telefonata", ["Luglio", "20:40", "29°"], {
-    nota: "Hai ragione. A metà.",
-  }),
-  diario: fotogramma("diario", meteo("sole", 14, false), "notte", "autunno", "albero", "leggere", ["Pescara", "22:15", "14°"], {
+  libro: fotogramma("libro", meteo("sole", 9, false), "notte", "autunno", "albero", "leggere", ["Pescara", "22:15", "9°"], {
     indossa: ["berretto-notte"],
-    nota: "Caro diario, oggi…",
+    nota: "Che anno. Lo rileggo tutto.",
   }),
   letargo: fotogramma("letargo", meteo("neve", -2, false), "notte", "inverno", "albero", "dormire", ["Pescara", "2:10", "-2°"]),
 };
@@ -149,6 +144,8 @@ interface StatoViaggio {
   scegliMeteo: (m: ProvaMeteo) => void;
   strada: Strada;
   scegliStrada: (s: Strada) => void;
+  pagina: number;
+  scegliPagina: (n: number) => void;
 }
 
 const Contesto = createContext<StatoViaggio | null>(null);
@@ -158,40 +155,65 @@ const useViaggio = () => {
   return c;
 };
 
+/** La pagina del libro dell'anno: la sfoglia lo scroll, oppure la persona. */
+export function usePaginaLibro() {
+  const { pagina, scegliPagina } = useViaggio();
+  return { pagina, scegliPagina };
+}
+
+const ORDINE_METEO: ProvaMeteo[] = ["sole", "pioggia", "freddo", "notte"];
+export const PAGINE_LIBRO = 4;
+
+const fra = (v: number) => Math.min(1, Math.max(0, v));
+
 export function Viaggio({ children }: { children: ReactNode }) {
   const radice = useRef<HTMLDivElement>(null);
   const palco = useRef<HTMLDivElement>(null);
   const [attivo, setAttivo] = useState("eroe");
   const [piantato, setPiantato] = useState(false);
-  const [provaMeteo, setProvaMeteo] = useState<ProvaMeteo>("pioggia");
+  const [provaMeteo, setProvaMeteo] = useState<ProvaMeteo>("sole");
   const [strada, setStrada] = useState<Strada>("filosofo");
-  const [stradaScelta, setStradaScelta] = useState(false);
+  const [pagina, setPagina] = useState(0);
+  // Una scelta fatta a mano vale finché si resta nel capitolo; poi torna lo scroll.
+  const manuale = useRef({ meteo: false, strada: false, pagina: false });
 
   // Il seme germoglia da solo poco dopo l'arrivo (subito con il movimento ridotto).
   useEffect(() => {
-    const ridotto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const t = setTimeout(() => setPiantato(true), ridotto ? 0 : 1500);
+    const t = setTimeout(() => setPiantato(true), movimentoRidotto() ? 0 : 1500);
     return () => clearTimeout(t);
   }, []);
 
-  // Il capitolo attivo: l'ultimo la cui scheda è salita oltre il 62% dello schermo.
+  // Lo scroll guida tutto: capitolo attivo, zoom d'ingresso, avanzamento di ogni capitolo.
   useEffect(() => {
     const el = radice.current;
     if (!el) return;
     let raf = 0;
     const misura = () => {
       raf = 0;
-      const soglia = window.innerHeight * 0.62;
+      const alto = window.innerHeight;
       let id = "eroe";
       el.querySelectorAll<HTMLElement>("[data-capitolo]").forEach((s) => {
-        const scheda = s.querySelector<HTMLElement>("[data-scheda]") ?? s;
-        if (scheda.getBoundingClientRect().top < soglia) id = s.dataset.capitolo ?? id;
+        const lungo = s.classList.contains("capitolo-lungo");
+        const r = s.getBoundingClientRect();
+        const rif = lungo ? r.top : (s.querySelector<HTMLElement>("[data-scheda]") ?? s).getBoundingClientRect().top;
+        if (rif < alto * (lungo ? 0.6 : 0.62)) id = s.dataset.capitolo ?? id;
+        // Avanzamento 0-1 dentro il capitolo (solo per quelli vicini allo schermo).
+        if (r.bottom > -alto && r.top < alto * 2) {
+          const p = fra(-r.top / Math.max(1, r.height - alto));
+          s.style.setProperty("--p", p.toFixed(3));
+          const cap = s.dataset.capitolo;
+          if (cap === "meteo" && !manuale.current.meteo) setProvaMeteo(ORDINE_METEO[Math.min(3, Math.floor(p * 4))]);
+          if (cap === "strade" && !manuale.current.strada) setStrada(STRADE[Math.min(STRADE.length - 1, Math.floor(p * STRADE.length))]);
+          if (cap === "libro" && !manuale.current.pagina) setPagina(Math.min(PAGINE_LIBRO - 1, Math.floor(p * PAGINE_LIBRO)));
+        }
       });
       setAttivo(id);
       if (window.scrollY > 40) setPiantato(true);
+      // Zoom d'ingresso: 0 in cima, 1 quando l'eroe è passato.
+      el.style.setProperty("--intro", fra(window.scrollY / (alto * 0.85)).toFixed(3));
       // Parallasse leggera: quanto del viaggio è già passato (0-1).
-      const corsa = Math.max(1, el.offsetHeight - window.innerHeight);
-      palco.current?.style.setProperty("--scorri", Math.min(1, Math.max(0, window.scrollY / corsa)).toFixed(3));
+      const corsa = Math.max(1, el.offsetHeight - alto);
+      palco.current?.style.setProperty("--scorri", fra(window.scrollY / corsa).toFixed(3));
     };
     const pianifica = () => {
       if (!raf) raf = requestAnimationFrame(misura);
@@ -206,13 +228,12 @@ export function Viaggio({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Le strade si provano da sole, finché la persona non ne sceglie una.
+  // Uscendo da un capitolo, le scelte a mano si dimenticano.
   useEffect(() => {
-    if (attivo !== "strade" || stradaScelta) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const t = setInterval(() => setStrada((s) => STRADE[(STRADE.indexOf(s) + 1) % STRADE.length]), 2600);
-    return () => clearInterval(t);
-  }, [attivo, stradaScelta]);
+    if (attivo !== "meteo") manuale.current.meteo = false;
+    if (attivo !== "strade") manuale.current.strada = false;
+    if (attivo !== "libro") manuale.current.pagina = false;
+  }, [attivo]);
 
   const f: Fotogramma =
     attivo === "eroe"
@@ -220,7 +241,7 @@ export function Viaggio({ children }: { children: ReactNode }) {
           meteo: meteo("sole", 11),
           ora: "alba",
           stagione: "primavera",
-          stadio: "piantina",
+          stadio: "alberello",
           posa: SALUTO,
           chiave: "eroe",
           timbro: ["Pescara", "6:48", "11°"],
@@ -234,11 +255,19 @@ export function Viaggio({ children }: { children: ReactNode }) {
   const stato: StatoViaggio = {
     attivo,
     provaMeteo,
-    scegliMeteo: setProvaMeteo,
+    scegliMeteo: (m) => {
+      manuale.current.meteo = true;
+      setProvaMeteo(m);
+    },
     strada,
     scegliStrada: (s) => {
+      manuale.current.strada = true;
       setStrada(s);
-      setStradaScelta(true);
+    },
+    pagina,
+    scegliPagina: (n) => {
+      manuale.current.pagina = true;
+      setPagina(Math.min(PAGINE_LIBRO - 1, Math.max(0, n)));
     },
   };
 
@@ -246,6 +275,7 @@ export function Viaggio({ children }: { children: ReactNode }) {
     <Contesto.Provider value={stato}>
       <div className="viaggio" ref={radice}>
         <div className="viaggio-palco" ref={palco}>
+          <div className="viaggio-camera" data-camera={attivo}>
           <Ambiente
             meteo={f.meteo}
             ora={f.ora}
@@ -284,24 +314,25 @@ export function Viaggio({ children }: { children: ReactNode }) {
             }
           >
             {!piantato && (
-              <button type="button" className="seme-bottone timbro timbro-linfa timbro-piccolo" onClick={() => setPiantato(true)}>
+              <button type="button" className="seme-bottone lp-btn lp-btn-primario lp-btn-piccolo" onClick={() => setPiantato(true)}>
                 Pianta il seme
               </button>
             )}
             {f.buste && <BusteInVolo />}
-            <p className={`timbro-luogo ${attivo === "eroe" ? "max-lg:hidden" : ""}`} aria-hidden key={`t-${f.timbro.join()}`}>
-              <span>
-                <span className="block">{f.timbro[0]}</span>
-                <b>{f.timbro[1]}</b>
-                <span className="block">{f.timbro[2]}</span>
-              </span>
-            </p>
-            {f.nota && (
-              <p key={`n-${f.chiave}`} className="nota-albero" aria-hidden>
-                <span>Ottavio:</span> {f.nota}
-              </p>
-            )}
           </Ambiente>
+          </div>
+          <p className={`lp-hud ${attivo === "eroe" ? "lp-hud-nascosto" : ""}`} aria-hidden key={`t-${f.timbro.join()}`}>
+            <span>{f.timbro[0]}</span>
+            <i>·</i>
+            <b>{f.timbro[1]}</b>
+            <i>·</i>
+            <span>{f.timbro[2]}</span>
+          </p>
+          {f.nota && attivo !== "eroe" && (
+            <p key={`n-${f.chiave}`} className="nota-albero" aria-hidden>
+              <span>Ottavio:</span> {f.nota}
+            </p>
+          )}
         </div>
         <div className="viaggio-capitoli">{children}</div>
       </div>
@@ -348,9 +379,9 @@ export function ProvaIlMeteo() {
   const { provaMeteo, scegliMeteo } = useViaggio();
   const s = risolviScena(meteoDiProva(provaMeteo)!, "guardare-cielo", null);
   return (
-    <div data-comandi className="comandi-capitolo pagina">
-      <p className="etichetta-mano" id="prova-meteo">
-        Prova tu: che tempo fa a Pescara?
+    <div data-comandi className="comandi-capitolo">
+      <p className="lp-etichetta" id="prova-meteo">
+        Cambia il tempo a Pescara
       </p>
       <div className="gettoni mt-2" role="group" aria-labelledby="prova-meteo">
         {SCELTE_METEO.map((m) => (
@@ -366,26 +397,43 @@ export function ProvaIlMeteo() {
   );
 }
 
-/** Le strade possibili: si provano una alla volta sull'albero della scena. */
+/** Le strade possibili come carte: scorrono con lo scroll, o si toccano. */
 export function ProvaLeStrade() {
   const { strada, scegliStrada } = useViaggio();
+  const indice = STRADE.indexOf(strada);
   return (
-    <div data-comandi className="comandi-capitolo pagina">
-      <p className="etichetta-mano" id="prova-strade">
-        Tocca una strada e guardalo provarla
+    <div data-comandi className="comandi-capitolo">
+      <p className="lp-etichetta" id="prova-strade">
+        Le sue vite possibili · {indice + 1} di {STRADE.length}
       </p>
-      <div className="gettoni mt-2" role="group" aria-labelledby="prova-strade">
-        {STRADE.map((s) => (
-          <button key={s} type="button" className="gettone" aria-pressed={strada === s} onClick={() => scegliStrada(s)}>
-            {nomeCorto(s)}
-          </button>
-        ))}
-        <span className="gettone border-dashed opacity-80">…e chissà</span>
+      <div className="lp-carte mt-3" role="group" aria-labelledby="prova-strade">
+        <div className="lp-carte-binario" style={{ "--indice": indice } as CSSProperties}>
+          {STRADE.map((s) => {
+            const a = azione(AZIONE_STRADA[s]);
+            return (
+              <button
+                key={s}
+                type="button"
+                className="lp-carta-strada"
+                aria-pressed={strada === s}
+                onClick={() => scegliStrada(s)}
+              >
+                <span className="lp-carta-ritratto" aria-hidden>
+                  <Albero
+                    posa={{ ...a.posa, indossa: [...a.posa.indossa, INFO_STRADE[s].accessorio] }}
+                    stadio="albero"
+                    stagione="autunno"
+                    className="h-full w-full"
+                    titolo=""
+                  />
+                </span>
+                <span className="lp-carta-nome">{nomeCorto(s)}</span>
+                <span className="lp-carta-testo">{INFO_STRADE[s].descrizione}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <p className="mt-2.5 min-h-[2.6em] text-[0.98rem] leading-snug" aria-live="polite">
-        <span className="font-titolo">{INFO_STRADE[strada].nome}.</span>{" "}
-        <span className="text-matita">{INFO_STRADE[strada].descrizione}</span>
-      </p>
     </div>
   );
 }

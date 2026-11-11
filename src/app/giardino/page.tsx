@@ -2,20 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Albero } from "@/components/albero/Albero";
-import { Ambiente } from "@/components/ambiente/Ambiente";
 import { oraDelGiorno, type Ora } from "@/components/ambiente/atmosfera";
-import { Cassetta, Taccuino } from "@/components/ambiente/Oggetti";
-import { Intestazione } from "@/components/Intestazione";
+import { fontModerna } from "@/components/fontModerna";
 import { azione } from "@/lib/albero/azioni";
+import { sblocco } from "@/lib/albero/collezione";
 import { vestiConRegali } from "@/lib/albero/regali";
 import { FRASI_ROUTINE, risolviScena } from "@/lib/albero/scena";
 import { classifica, INFO_STRADE, isStrada, NOMI_TRATTI, TRATTI, type PunteggiStrade, type Tratti } from "@/lib/albero/strade";
-import { stadioDa, stagioneDa, type Cielo, type Meteo } from "@/lib/albero/tipi";
+import { stadioDa, stagioneDa, type Cielo, type Meteo, type Stagione } from "@/lib/albero/tipi";
 import { meteoAttuale, meteoDiProva, oggiNelFuso } from "@/lib/meteo";
 import type { RecapMese } from "@/lib/motore/extra";
+import { isPremium } from "@/lib/piani";
 import { createClient, getUtente } from "@/lib/supabase/server";
+import { Buongiorno } from "./Buongiorno";
+import { Collezione, type PaginaStagione } from "./Collezione";
 import { Conversazione } from "./Conversazione";
 import { ExtraDelMese } from "./Extra";
+import { Immersivo } from "./Immersivo";
+import "./immersivo.css";
 import { Strumenti } from "./Strumenti";
 
 export const metadata: Metadata = { title: "Il giardino — Linfa" };
@@ -32,6 +36,7 @@ const SIMBOLI: Record<Cielo, string> = {
 const TIPI_LETTERA: Record<string, string> = {
   benvenuto: "Benvenuto",
   mensile: "Lettera del mese",
+  "meta-mese": "Lettera di metà mese",
   momento: "Un momento importante",
   regalo: "Grazie per il regalo",
 };
@@ -51,15 +56,52 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
   const parametri = await searchParams;
   const sceltaMeteo = typeof parametri.meteo === "string" ? parametri.meteo : undefined;
   const nuovo = parametri.nuovo === "1";
+  const pannelloIniziale = (["buongiorno", "lettere", "diario", "scrivi", "mese", "collezione", "carattere"] as const).find(
+    (x) => x === parametri.pannello,
+  );
 
-  const [diario, lettere, messaggi, meteoVero, mesi, regali] = await Promise.all([
+  const [diario, lettere, messaggi, meteoVero, mesi, regali, domanda, sbloccati] = await Promise.all([
     supabase.from("diary_entries").select("*").eq("tree_id", albero.id).order("day_number", { ascending: false }).limit(12),
     supabase.from("letters").select("id, kind, subject, created_at, read_at, day_number").eq("tree_id", albero.id).order("created_at", { ascending: false }),
     supabase.from("messages").select("id, author, body").eq("tree_id", albero.id).order("created_at", { ascending: true }).limit(40),
     meteoDiProva(sceltaMeteo) ? Promise.resolve(null) : meteoAttuale(albero.latitude, albero.longitude),
     supabase.from("tree_months").select("number, first_day, closed_at, recap").eq("tree_id", albero.id).order("number", { ascending: false }),
     supabase.from("gifts").select("gift, use, how, month_number, letter_id, included").eq("tree_id", albero.id).order("created_at", { ascending: true }),
+    // La domanda del mattino vale per il prossimo giorno da vivere.
+    supabase
+      .from("morning_questions")
+      .select("day_number, question, options, answer")
+      .eq("tree_id", albero.id)
+      .eq("day_number", albero.day_count + 1)
+      .maybeSingle(),
+    supabase.from("unlocks").select("item, day_number").eq("tree_id", albero.id).order("unlocked_at", { ascending: true }),
   ]);
+  const elencoSbloccati = sbloccati.data ?? [];
+  // L'album delle stagioni: la prima pagina di diario di ogni stagione vissuta.
+  const giorniStagione = elencoSbloccati.filter((u) => sblocco(u.item)?.tipo === "stagione");
+  const { data: pagineStagione } = giorniStagione.length
+    ? await supabase
+        .from("diary_entries")
+        .select("day_number, lived_on, action, body")
+        .eq("tree_id", albero.id)
+        .in(
+          "day_number",
+          giorniStagione.map((u) => u.day_number),
+        )
+    : { data: [] };
+  const stagioni: Partial<Record<Stagione, PaginaStagione>> = {};
+  for (const u of giorniStagione) {
+    const p = (pagineStagione ?? []).find((x) => x.day_number === u.day_number);
+    if (p) stagioni[u.item as Stagione] = { giorno: p.day_number, data: p.lived_on, azione: p.action, testo: p.body };
+  }
+  const domandaDelMattino = domanda.data
+    ? {
+        giorno: domanda.data.day_number,
+        domanda: domanda.data.question,
+        risposte: Array.isArray(domanda.data.options) ? (domanda.data.options as string[]) : [],
+        risposta: domanda.data.answer,
+      }
+    : null;
   const elencoMesi = mesi.data ?? [];
   const meseCorrente = elencoMesi[0] ?? { number: 1, first_day: 0, closed_at: null, recap: null };
   const ultimoChiuso = elencoMesi.find((m) => m.closed_at);
@@ -92,232 +134,219 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
   const orario = new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit", timeZone: albero.timezone }).format(adesso);
   const ora: Ora = prova ? (meteo.giorno ? "giorno" : "notte") : oraDelGiorno(meteo, oraLocale, stagione);
 
-  return (
-    <>
-      <Intestazione sopra="assoluta">
-        <Link href="/catalogo" className="pillola max-sm:hidden">
-          Catalogo delle azioni
-        </Link>
-        <form action="/auth/esci" method="post">
-          <button className="pillola">Esci</button>
-        </form>
-      </Intestazione>
-
-      <main id="contenuto" className="flex-1">
-        <section className="giardino-scena bordo-strappato" aria-labelledby="nome-albero">
-          <Ambiente
-            meteo={meteo}
-            ora={ora}
+  const scheda = (
+    <section aria-labelledby="titolo-scheda" className="scheda-albero pagina">
+      <div className="scheda-ritratto" aria-hidden={!strada}>
+        {strada ? (
+          <Albero
+            className="h-full w-full"
+            posa={{ ...azione("guardare-cielo").posa, occhi: "felici", indossa: [INFO_STRADE[strada].accessorio] }}
+            giorni={albero.day_count}
+            stadio={stadio}
             stagione={stagione}
-            className="h-full"
-            chiaveAlbero={`${scena.azione.id}-${stadio}`}
-            albero={
-              <Albero
-                posa={posa}
-                giorni={albero.day_count}
-                stadio={stadio}
-                stagione={stagione}
-                innevato={meteo.cielo === "neve"}
-                titolo={`${albero.name} ${scena.azione.etichetta}`}
-              />
-            }
-            palco={
-              <>
-                <Cassetta daLeggere={nonLette} totale={elencoLettere.length} />
-                <Taccuino righe={pagine.length} />
-              </>
-            }
-          >
-            <div className="cartello-giardino pagina compare">
-              <p className="occhiello text-[0.68rem]">Il giardino di</p>
-              <h1 id="nome-albero" className="font-titolo text-[2.1rem] leading-none sm:text-5xl">
-                {albero.name}
-              </h1>
-              <p className="mt-2 flex flex-wrap gap-1.5 text-[0.85rem]">
-                <span className="etichetta-chip">Giorno {albero.day_count}</span>
-                <span className="etichetta-chip">{NOMI_STADIO[stadio]}</span>
-                {strada && <span className="etichetta-chip">{INFO_STRADE[strada].nome}</span>}
-              </p>
-            </div>
-
-            <p className="timbro-luogo timbro-meteo" key={`${meteo.cielo}-${ora}`}>
-              <span>
-                <span className="block">{albero.city}</span>
-                <b>{orario}</b>
-                <span className="block">
-                  <span aria-hidden>{SIMBOLI[meteo.cielo]}</span> {meteo.temperatura}°
-                </span>
-              </span>
-              <span className="sr-only">
-                A {albero.city} sono le {orario}: {meteo.descrizione}.
-              </span>
-            </p>
-
-            {nuovo && (
-              <div className="nota-nuovo pagina nastro" role="status">
-                <p className="font-titolo text-xl leading-tight">{albero.name} è spuntato.</p>
-                <p className="mt-1 leading-snug">Ti ha già scritto la prima lettera: è nella cassetta, e anche nella tua email.</p>
-                <Link href="/giardino" scroll={false} className="etichetta-mano mt-1 inline-block underline decoration-linfa decoration-2 underline-offset-4">
-                  Ho capito
-                </Link>
-              </div>
-            )}
-
-            <div className="giardino-piede">
-              <p className="didascalia-scena" aria-live="polite">
-                {didascalia}
-              </p>
-              <nav className="segnalibri" aria-label="Nel giardino">
-                <a href="#lettere">
-                  Lettere{nonLette > 0 && <span className="segnalibro-numero">{nonLette}</span>}
-                </a>
-                <a href="#extra">Il mese</a>
-                <a href="#diario">Diario</a>
-                <a href="#scrivigli">Scrivigli</a>
-              </nav>
-            </div>
-          </Ambiente>
-        </section>
-
-        <Strumenti nome={albero.name} meteoScelto={sceltaMeteo} piano={albero.plan} />
-
-        <div className="mx-auto w-full max-w-6xl px-4 pt-10 pb-24 sm:px-8">
-          {/* La scheda del personaggio */}
-          <section id="scheda" aria-labelledby="titolo-scheda" className="scheda-albero pagina affiora">
-            <div className="scheda-ritratto" aria-hidden={!strada}>
-              {strada ? (
-                <Albero
-                  className="h-full w-full"
-                  posa={{ ...azione("guardare-cielo").posa, occhi: "felici", indossa: [INFO_STRADE[strada].accessorio] }}
-                  giorni={albero.day_count}
-                  stadio={stadio}
-                  stagione={stagione}
-                  titolo={`${albero.name}, ${INFO_STRADE[strada].nome.toLowerCase()}`}
-                  interattivo={false}
-                />
-              ) : (
-                <span className="scheda-mistero">?</span>
-              )}
-            </div>
-            <div>
-              <p className="occhiello">Chi sta diventando?</p>
-              {strada ? (
-                <>
-                  <h2 id="titolo-scheda" className="font-titolo mt-1 text-3xl leading-tight">
-                    {INFO_STRADE[strada].nome}
-                  </h2>
-                  <p className="mt-1 text-lg text-matita">{INFO_STRADE[strada].descrizione}</p>
-                </>
-              ) : (
-                <>
-                  <h2 id="titolo-scheda" className="font-titolo mt-1 text-3xl leading-tight">
-                    Ancora non si sa.
-                  </h2>
-                  <p className="mt-1 text-lg">
-                    {primoPunteggio >= 6 ? (
-                      <>
-                        Ultimamente <span className="font-mano text-xl text-corteccia">{INFO_STRADE[primaStrada].indizio}</span>.
-                      </>
-                    ) : (
-                      <span className="text-matita">È troppo presto per dirlo: lascialo vivere qualche giorno.</span>
-                    )}
-                  </p>
-                </>
-              )}
-              <p className="mt-2 text-sm text-matita">
-                Piantato a {albero.city}
-                {albero.owner_name ? ` da ${albero.owner_name}` : ""} · giorno {albero.day_count} · umore: {albero.mood}
-              </p>
-            </div>
-            <dl className="tratti">
-              {TRATTI.map((t) => (
-                <div key={t}>
-                  <dt>{NOMI_TRATTI[t]}</dt>
-                  <dd>
-                    <span className="tratto-barra" style={{ width: `${tratti[t]}%` }} />
-                    <span className="sr-only">{tratti[t]} su 100</span>
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-
-          <ExtraDelMese
-            nome={albero.name}
-            piano={albero.plan}
-            mese={meseCorrente}
-            regaloDelMese={regaloDelMese}
-            ultimoChiuso={ultimoChiuso ? { number: ultimoChiuso.number, recap: ultimoChiuso.recap as RecapMese | null } : null}
+            titolo={`${albero.name}, ${INFO_STRADE[strada].nome.toLowerCase()}`}
+            interattivo={false}
           />
-
-          <div className="mt-14 grid gap-12 lg:grid-cols-3 lg:gap-8">
-            {/* Le lettere */}
-            <section id="lettere" aria-labelledby="titolo-lettere" className="scroll-mt-6">
-              <h2 id="titolo-lettere" className="font-titolo mb-5 flex items-baseline gap-3 text-3xl">
-                Le lettere
-                {nonLette > 0 && <span className="etichetta-mano text-rosso">{nonLette} da aprire</span>}
-              </h2>
-              <ul className="space-y-4">
-                {elencoLettere.map((l, i) => (
-                  <li key={l.id} className="affiora" style={{ rotate: `${[-0.8, 0.6, -0.3, 0.9][i % 4]}deg` }}>
-                    <Link href={`/giardino/lettere/${l.id}`} className="busta-lista" data-da-leggere={!l.read_at ? "1" : undefined}>
-                      <span className="busta-lista-francobollo" aria-hidden>
-                        <span>g. {l.day_number}</span>
-                      </span>
-                      <span className="occhiello block pr-12 text-[0.66rem] text-corteccia">
-                        {TIPI_LETTERA[l.kind] ?? "Lettera"} · giorno {l.day_number}
-                        {!l.read_at && <span className="text-rosso"> · da aprire</span>}
-                      </span>
-                      <span className="mt-1 block pr-12 font-mano text-[1.35rem] leading-tight text-[#2c3348]">{l.subject}</span>
-                      <span className="busta-lista-sigillo" aria-hidden />
-                    </Link>
-                  </li>
-                ))}
-                {elencoLettere.length === 0 && <li className="text-matita">La cassetta è vuota, per ora.</li>}
-              </ul>
-            </section>
-
-            {/* Il diario */}
-            <section id="diario" aria-labelledby="titolo-diario" className="scroll-mt-6">
-              <h2 id="titolo-diario" className="font-titolo mb-5 text-3xl">
-                Il diario
-              </h2>
-              <div className="taccuino affiora">
-                {pagine.length === 0 ? (
-                  <p className="text-matita">Le prime pagine arrivano con i primi giorni.</p>
-                ) : (
-                  <ol>
-                    {pagine.map((p) => {
-                      const m = p.weather as { cielo?: Cielo } | null;
-                      return (
-                        <li key={p.id} data-traguardo={p.milestone ? "1" : undefined}>
-                          <p className="taccuino-data">
-                            <span aria-hidden>{p.milestone ? "★" : m?.cielo ? SIMBOLI[m.cielo] : "·"}</span> Giorno {p.day_number} ·{" "}
-                            {data(p.lived_on)}
-                            {p.milestone && <span className="sr-only"> (un giorno importante)</span>}
-                          </p>
-                          <p className="taccuino-testo">{p.body}</p>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                )}
-              </div>
-            </section>
-
-            {/* I biglietti */}
-            <section id="scrivigli" aria-labelledby="titolo-scrivigli" className="scroll-mt-6">
-              <h2 id="titolo-scrivigli" className="font-titolo mb-5 text-3xl">
-                Scrivigli
-              </h2>
-              <Conversazione
-                nome={albero.name}
-                messaggi={(messaggi.data ?? []).map((m) => ({ id: m.id, autore: m.author as "persona" | "albero", testo: m.body }))}
-              />
-            </section>
+        ) : (
+          <span className="scheda-mistero">?</span>
+        )}
+      </div>
+      <div>
+        <p className="occhiello">La sua strada</p>
+        {strada ? (
+          <>
+            <h2 id="titolo-scheda" className="font-titolo mt-1 text-3xl leading-tight">
+              {INFO_STRADE[strada].nome}
+            </h2>
+            <p className="mt-1 text-lg text-matita">{INFO_STRADE[strada].descrizione}</p>
+          </>
+        ) : (
+          <>
+            <h2 id="titolo-scheda" className="font-titolo mt-1 text-3xl leading-tight">
+              Non l&apos;ha ancora presa.
+            </h2>
+            <p className="mt-1 text-lg">
+              {primoPunteggio >= 6 ? (
+                <>
+                  Per ora la più vicina è: <span className="font-mano text-xl text-corteccia">{INFO_STRADE[primaStrada].nome.toLowerCase()}</span>.
+                </>
+              ) : (
+                <span className="text-matita">Le sue giornate non lo spingono ancora verso una strada precisa.</span>
+              )}
+            </p>
+          </>
+        )}
+        <p className="mt-2 text-sm text-matita">
+          Piantato a {albero.city}
+          {albero.owner_name ? ` da ${albero.owner_name}` : ""} · giorno {albero.day_count} · umore: {albero.mood}
+        </p>
+      </div>
+      <dl className="tratti">
+        {TRATTI.map((t) => (
+          <div key={t}>
+            <dt>{NOMI_TRATTI[t]}</dt>
+            <dd>
+              <span className="tratto-barra" style={{ width: `${tratti[t]}%` }} />
+              <span className="sr-only">{tratti[t]} su 100</span>
+            </dd>
           </div>
-        </div>
-      </main>
-    </>
+        ))}
+      </dl>
+    </section>
+  );
+
+  const pannelloLettere = (
+    <div>
+      <p className="gi-nota">
+        {elencoLettere.length} {elencoLettere.length === 1 ? "lettera" : "lettere"}
+        {nonLette > 0 ? `, ${nonLette} da aprire` : ""}.{" "}
+        {isPremium(albero.plan)
+          ? "Con il Premium ne arriva una ogni 15 giorni, più una nei momenti importanti."
+          : "Ne arriva una ogni 30 giorni, più una nei momenti importanti."}
+      </p>
+      <ul className="mt-4 space-y-4">
+        {elencoLettere.map((l) => (
+          <li key={l.id}>
+            <Link href={`/giardino/lettere/${l.id}`} className="busta-lista" data-da-leggere={!l.read_at ? "1" : undefined}>
+              <span className="busta-lista-francobollo" aria-hidden>
+                <span>g. {l.day_number}</span>
+              </span>
+              <span className="occhiello block pr-12 text-[0.66rem] text-corteccia">
+                {TIPI_LETTERA[l.kind] ?? "Lettera"} · giorno {l.day_number}
+                {!l.read_at && <span className="text-rosso"> · da aprire</span>}
+              </span>
+              <span className="mt-1 block pr-12 font-mano text-[1.35rem] leading-tight text-[#2c3348]">{l.subject}</span>
+              <span className="busta-lista-sigillo" aria-hidden />
+            </Link>
+          </li>
+        ))}
+        {elencoLettere.length === 0 && <li className="text-matita">Nessuna lettera, per ora.</li>}
+      </ul>
+    </div>
+  );
+
+  const pannelloDiario = (
+    <div>
+      <p className="gi-nota">Una pagina al giorno, scritta da {albero.name}: da una a tre frasi. Qui le ultime 12.</p>
+      <div className="taccuino mt-4">
+        {pagine.length === 0 ? (
+          <p className="text-matita">La prima pagina arriva con il primo giorno.</p>
+        ) : (
+          <ol>
+            {pagine.map((p) => {
+              const m = p.weather as { cielo?: Cielo } | null;
+              return (
+                <li key={p.id} data-traguardo={p.milestone ? "1" : undefined}>
+                  <p className="taccuino-data">
+                    <span aria-hidden>{p.milestone ? "★" : m?.cielo ? SIMBOLI[m.cielo] : "·"}</span> Giorno {p.day_number} ·{" "}
+                    {data(p.lived_on)}
+                    {p.milestone && <span className="sr-only"> (un giorno importante)</span>}
+                  </p>
+                  <p className="taccuino-testo">{p.body}</p>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
+    </div>
+  );
+
+  const pannelloScrivi = (
+    <div>
+      <p className="gi-nota">Scrivi un messaggio: {albero.name} lo legge e ti risponde per iscritto. I consigli li considera, ma decide da solo.</p>
+      <div className="mt-4">
+        <Conversazione
+          nome={albero.name}
+          messaggi={(messaggi.data ?? []).map((m) => ({ id: m.id, autore: m.author as "persona" | "albero", testo: m.body }))}
+        />
+      </div>
+    </div>
+  );
+
+  const pannelloMese = (
+    <ExtraDelMese
+      nome={albero.name}
+      piano={albero.plan}
+      mese={meseCorrente}
+      regaloDelMese={regaloDelMese}
+      ultimoChiuso={ultimoChiuso ? { number: ultimoChiuso.number, recap: ultimoChiuso.recap as RecapMese | null } : null}
+    />
+  );
+
+  const pannelloBuongiorno = (
+    <div>
+      <p className="gi-nota">
+        Ogni mattina {albero.name} ti fa una domanda sulla sua giornata. La tua risposta gli arriva come consiglio prima
+        del giorno {albero.day_count + 1}.
+      </p>
+      <div className="mt-4">
+        <Buongiorno nome={albero.name} domanda={domandaDelMattino} />
+      </div>
+    </div>
+  );
+
+  const pannelloCollezione = (
+    <div>
+      <p className="gi-nota">
+        Trofei, oggetti, vestiti e stagioni arrivano vivendo: la prima pioggia, i 30 giorni di diario, la strada presa.
+        Non si comprano.
+      </p>
+      <div className="mt-4">
+        <Collezione nome={albero.name} sbloccati={elencoSbloccati} stagioni={stagioni} />
+      </div>
+    </div>
+  );
+
+  return (
+    <main id="contenuto" className={`flex-1 ${fontModerna.variable}`}>
+      <Immersivo
+        pannelloIniziale={pannelloIniziale}
+        nome={albero.name}
+        citta={albero.city}
+        orario={orario}
+        descrizioneMeteo={meteo.descrizione}
+        simbolo={SIMBOLI[meteo.cielo]}
+        giorno={albero.day_count}
+        stadioNome={NOMI_STADIO[stadio]}
+        strada={strada ? INFO_STRADE[strada].nome : null}
+        umore={albero.mood}
+        meteo={meteo}
+        ora={ora}
+        stagione={stagione}
+        stadio={stadio}
+        posa={posa}
+        chiave={`${scena.azione.id}-${stadio}`}
+        titoloAlbero={`${albero.name} ${scena.azione.etichetta}`}
+        nonLette={nonLette}
+        totaleLettere={elencoLettere.length}
+        righeDiario={pagine.length}
+        didascalia={didascalia}
+        domandaAperta={!!domandaDelMattino && !domandaDelMattino.risposta}
+        pannelli={{
+          buongiorno: pannelloBuongiorno,
+          lettere: pannelloLettere,
+          diario: pannelloDiario,
+          scrivi: pannelloScrivi,
+          mese: pannelloMese,
+          collezione: pannelloCollezione,
+          carattere: scheda,
+        }}
+        avviso={
+          nuovo ? (
+            <div className="gi-avviso" role="status">
+              <p className="font-bold">
+                {albero.name} è nato oggi a {albero.city}.
+              </p>
+              <p className="mt-1">La lettera di benvenuto è nella cassetta delle lettere e nella tua email.</p>
+              <Link href="/giardino" scroll={false} className="mt-2 inline-block font-semibold underline underline-offset-4">
+                Ok
+              </Link>
+            </div>
+          ) : undefined
+        }
+        strumenti={<Strumenti nome={albero.name} meteoScelto={sceltaMeteo} piano={albero.plan} />}
+      />
+    </main>
   );
 }

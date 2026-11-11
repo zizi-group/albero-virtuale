@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { sblocco } from "@/lib/albero/collezione";
 import { NOMI_USO } from "@/lib/albero/regali";
 import { INFO_STRADE } from "@/lib/albero/strade";
 import { apriNuovoMese, cambiaPacchetto, faiRegaloDelMese } from "@/lib/motore/extra";
-import { faiPassareGiorni, rispondiAllaPersona, scriviEInviaLettera } from "@/lib/motore/servizio";
+import { chiudiSettimana, controllaSblocchi, viviGiorni } from "@/lib/motore/calendario";
+import { nuovoBuongiorno, rispondiAllaPersona, scriviEInviaLettera } from "@/lib/motore/servizio";
 import { NOMI_PACCHETTO } from "@/lib/piani";
 import { createClient, getUtente } from "@/lib/supabase/server";
 
@@ -31,7 +33,9 @@ const errore = (e: unknown): Esito => ({
   messaggio: e instanceof Error ? e.message : "Qualcosa è andato storto.",
 });
 
-/** Strumenti della demo: giorni, lettera del mese, inizio mese, pacchetto. */
+const MAILPIT = process.env.NEXT_PUBLIC_MAILPIT_URL || "http://127.0.0.1:54324";
+
+/** Strumenti della demo: giorni, lettera del mese, inizio mese, mattina, fine settimana, pacchetto. */
 export async function azioneDemo(_prima: Esito, form: FormData): Promise<Esito> {
   const albero = await alberoDellaPersona();
   try {
@@ -49,12 +53,27 @@ export async function azioneDemo(_prima: Esito, form: FormData): Promise<Esito> 
         link: { href: `/giardino/mese/${m.chiuso}`, testo: `Apri il riepilogo del mese ${m.chiuso}` },
       };
     }
+    if (form.get("cosa") === "mattina") {
+      const b = await nuovoBuongiorno(albero.id);
+      revalidatePath("/giardino");
+      return { ok: true, messaggio: `${albero.name} ti chiede: «${b.domanda}» Rispondi nel pannello Buongiorno (B).` };
+    }
+    if (form.get("cosa") === "settimana") {
+      const s = await chiudiSettimana(albero.id);
+      revalidatePath("/giardino");
+      return {
+        ok: true,
+        messaggio: `Settimana ${s.numero} chiusa (giorni ${s.primo}–${s.ultimo}): la cartolina «${s.oggetto}» è partita per email.`,
+        link: { href: MAILPIT, testo: "Apri la casella di prova" },
+      };
+    }
     if (form.get("cosa") === "lettera") {
       const l = await scriviEInviaLettera(albero.id, "mensile");
       revalidatePath("/giardino");
       return { ok: true, messaggio: `${albero.name} ti ha scritto: «${l.subject}». La trovi qui sotto e nella casella di prova.` };
     }
-    const r = await faiPassareGiorni(albero.id, Number(form.get("giorni") ?? 1));
+    // I giorni passano dal calendario: collezione, cartolina della settimana, lettere, fine del mese.
+    const r = await viviGiorni(albero.id, Number(form.get("giorni") ?? 1));
     revalidatePath("/giardino");
     let messaggio =
       r.vissuti === 1
@@ -62,6 +81,14 @@ export async function azioneDemo(_prima: Esito, form: FormData): Promise<Esito> 
         : `Sono passati ${r.vissuti} giorni: ${albero.name} è al giorno ${r.giorni}.`;
     if (r.rivelata) messaggio += ` Ha capito chi è: ${INFO_STRADE[r.rivelata].nome.toLowerCase()}!`;
     if (r.lettera) messaggio += " Ti ha scritto una lettera.";
+    const nuovi = r.eventi.sbloccati.map((id) => sblocco(id)?.nome).filter(Boolean);
+    if (nuovi.length) messaggio += ` Nella collezione: ${nuovi.join(", ")}.`;
+    if (r.eventi.letteraMetaMese) messaggio += " È arrivata la lettera di metà mese.";
+    if (r.eventi.mese) messaggio += ` Finito il mese ${r.eventi.mese.chiuso}: c'è la lettera del mese.`;
+    if (r.eventi.settimana) {
+      messaggio += ` La cartolina della settimana ${r.eventi.settimana.numero} è partita per email.`;
+      return { ok: true, messaggio, link: { href: MAILPIT, testo: "Apri la casella di prova" } };
+    }
     return { ok: true, messaggio };
   } catch (e) {
     return errore(e);
@@ -74,6 +101,8 @@ export async function inviaMessaggio(_prima: Esito, form: FormData): Promise<Esi
   if (!testo) return { ok: false, messaggio: "Scrivi qualcosa prima di spedire." };
   try {
     await rispondiAllaPersona(albero.id, testo);
+    // «La prima chiacchierata» entra nella collezione.
+    await controllaSblocchi(albero.id);
     revalidatePath("/giardino");
     return { ok: true };
   } catch (e) {
@@ -87,6 +116,8 @@ export async function faiRegalo(_prima: Esito, form: FormData): Promise<Esito> {
   const albero = await alberoDellaPersona();
   try {
     const r = await faiRegaloDelMese(albero.id, String(form.get("regalo") ?? ""));
+    // «Il primo regalo» entra nella collezione.
+    await controllaSblocchi(albero.id);
     revalidatePath("/giardino", "layout");
     return {
       ok: true,

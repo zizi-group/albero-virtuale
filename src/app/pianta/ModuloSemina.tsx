@@ -4,14 +4,29 @@ import { useActionState, useState, type CSSProperties } from "react";
 import { Albero } from "@/components/albero/Albero";
 import { Ambiente } from "@/components/ambiente/Ambiente";
 import { Cartello, Seme } from "@/components/ambiente/Oggetti";
-import { NOTA_MENSILE, PIANI, type IdPiano } from "@/components/landing/Pacchetti";
+import { ElencoCompatto, PIANI, type IdPiano } from "@/components/landing/Pacchetti";
 import { azione } from "@/lib/albero/azioni";
 import type { Meteo, Posa } from "@/lib/albero/tipi";
 import { azioneSemina, type StatoSemina } from "./actions";
 
 const VALORE_PIANO: Record<IdPiano, string> = { albero: "albero", "premium-annuale": "premium-annuale", "premium-mensile": "premium-mensile" };
-const ORDINE: IdPiano[] = ["albero", "premium-annuale", "premium-mensile"];
-const FONDI: Record<IdPiano, string> = { albero: "#e7eed6", "premium-annuale": "#f7e3b0", "premium-mensile": "#f4e7cb" };
+const FONDI: Record<IdPiano, string> = { albero: "#f4f7ec", "premium-annuale": "#f7e3b0", "premium-mensile": "#f6efe0" };
+
+/** Un piano da scegliere: prezzo al mese IVA esclusa, sotto quanto e quando si paga. */
+function SceltaPiano({ id, scelto }: { id: IdPiano; scelto: IdPiano }) {
+  const p = PIANI[id];
+  return (
+    <label className="pacchetto-scelta" style={{ "--fondo": FONDI[id] } as CSSProperties}>
+      <input type="radio" name="piano" value={VALORE_PIANO[id]} defaultChecked={id === scelto} className="sr-only" />
+      <span className="block font-titolo text-[1.02rem] leading-tight">{p.nome}</span>
+      <span className="mt-1 flex items-baseline gap-1.5">
+        <span className="font-titolo text-[1.5rem] leading-none">{p.alMese}</span>
+        <span className="text-[0.8rem] text-matita">+ IVA al mese</span>
+      </span>
+      <span className="mt-1 block text-[0.84rem] leading-snug font-semibold text-inchiostro">{p.siPaga}</span>
+    </label>
+  );
+}
 
 const ALBA: Meteo = { cielo: "sole", temperatura: 12, giorno: true, descrizione: "sereno, 12°" };
 const SALUTO: Posa = {
@@ -25,6 +40,7 @@ export function ModuloSemina({ pacchetto = "albero" }: { pacchetto?: IdPiano }) 
   const [stato, azione, inCorso] = useActionState<StatoSemina, FormData>(azioneSemina, {});
   const [nome, setNome] = useState("");
   const [citta, setCitta] = useState("");
+  const [scelto, setScelto] = useState<IdPiano>(pacchetto);
 
   return (
     <div className="semina">
@@ -86,24 +102,28 @@ export function ModuloSemina({ pacchetto = "albero" }: { pacchetto?: IdPiano }) 
             <span className="mt-1.5 block text-sm text-matita">Vivrà con il meteo vero di questa città, ora per ora.</span>
           </label>
 
-          <fieldset>
-            <legend className="occhiello mb-2">Il piano</legend>
-            <div className="grid gap-2.5 sm:grid-cols-3">
-              {ORDINE.map((id) => {
-                const p = PIANI[id];
-                return (
-                  <label key={id} className="pacchetto-scelta" style={{ "--fondo": FONDI[id] } as CSSProperties}>
-                    <input type="radio" name="piano" value={VALORE_PIANO[id]} defaultChecked={id === pacchetto} className="sr-only" />
-                    <span className="block font-titolo text-[1.02rem] leading-tight">{p.nome}</span>
-                    <span className="mt-1 block font-titolo text-[1.5rem] leading-none">{p.pubblico}</span>
-                    <span className="mt-0.5 block text-[0.78rem] leading-snug text-matita">
-                      {p.periodo}, IVA inclusa · {p.netto} + IVA
-                    </span>
-                  </label>
-                );
-              })}
+          <fieldset
+            onChange={(e) => {
+              const campo = e.target;
+              if (campo instanceof HTMLInputElement && campo.name === "piano" && campo.value in PIANI) setScelto(campo.value as IdPiano);
+            }}
+          >
+            <legend className="occhiello mb-2">Il piano · prezzi al mese, IVA esclusa</legend>
+            <div className="grid gap-2.5">
+              <div className="scelta-gruppo gruppo-annuali">
+                <p className="gruppo-piani-titolo">Piani annuali · si paga una volta all&apos;anno</p>
+                <div className="scelta-griglia">
+                  {(["albero", "premium-annuale"] as const).map((id) => (
+                    <SceltaPiano key={id} id={id} scelto={pacchetto} />
+                  ))}
+                </div>
+              </div>
+              <div className="scelta-gruppo gruppo-mensile">
+                <p className="gruppo-piani-titolo">Si paga ogni mese</p>
+                <SceltaPiano id="premium-mensile" scelto={pacchetto} />
+              </div>
             </div>
-            <p className="mt-2 text-sm leading-snug text-matita">{NOTA_MENSILE}</p>
+            <ElencoCompatto piano={PIANI[scelto]} />
             <p className="mt-1 text-sm leading-snug text-matita">Demo: nessun pagamento, il piano serve solo a provare il percorso.</p>
           </fieldset>
 

@@ -130,13 +130,47 @@ const SchemaVita = z.object({
       fatto_da_ricordare: z.string().nullable(),
     }),
   ),
+  buongiorno: z.object({
+    domanda: z.string(),
+    risposte: z.array(z.string()),
+  }),
 });
 
 export type EsitoGiorno = z.infer<typeof SchemaVita>["giorni"][number];
 
+/** La domanda del mattino: breve, con 2-3 risposte da un tocco. */
+export interface Buongiorno {
+  domanda: string;
+  risposte: string[];
+}
+
+/** Ripulisce la domanda dell'AI: 2 o 3 risposte corte e diverse, altrimenti niente. */
+export function pulisciBuongiorno(b: { domanda: string; risposte: string[] } | null | undefined): Buongiorno | null {
+  if (!b) return null;
+  const domanda = b.domanda.trim().replace(/\s+/g, " ").slice(0, 160);
+  const viste = new Set<string>();
+  const risposte: string[] = [];
+  for (const r of b.risposte) {
+    const pulita = r.trim().replace(/[.!]+$/, "").slice(0, 32);
+    if (!pulita || viste.has(pulita.toLowerCase())) continue;
+    viste.add(pulita.toLowerCase());
+    risposte.push(pulita);
+  }
+  return domanda.length >= 5 && risposte.length >= 2 ? { domanda, risposte: risposte.slice(0, 3) } : null;
+}
+
+/** Le istruzioni per la domanda del mattino, uguali per la giornata e per la domanda da sola. */
+export function regoleBuongiorno(nome: string, giorno: number, meteo?: string | null) {
+  return `la domanda che ${nome} fa alla persona la mattina del giorno ${giorno}${meteo ? ` (previsto: ${meteo})` : ""}, prima di cominciare la giornata. Una sola domanda breve (al massimo 80 caratteri) e concreta su che cosa fare quel giorno, legata al meteo previsto, a quello che sta facendo o a una cosa successa di recente, in prima persona e con il suo carattere. Da 2 a 3 risposte da un tocco, di 1-4 parole l'una, tutte buone. Esempio: «Domani piove: ombrello o doccia sotto la pioggia?» con «Ombrello», «Doccia», «Un po' e un po'». Niente domande sulla vita della persona, niente frasi fatte.`;
+}
+
 export interface ContestoVita {
   diarioRecente: { giorno: number; azione: string; testo: string; meteo?: string | null }[];
   messaggiPersona: string[];
+  /** Le risposte della persona alle domande del mattino, per i giorni da vivere. */
+  buongiorno?: { giorno: number; domanda: string; risposta: string }[];
+  /** Trofei e oggetti della collezione appena sbloccati, di cui non ha ancora parlato. */
+  novita?: string[];
 }
 
 export function descriviStato(stato: StatoAlbero): string {
@@ -185,6 +219,17 @@ function descriviContesto(ctx: ContestoVita): string {
       ...ctx.messaggiPersona.map((m) => `- «${m}»`),
     );
   }
+  if (ctx.buongiorno?.length) {
+    righe.push(
+      "Le risposte della persona alle sue domande del mattino. Sono consigli: decide lui se seguirli, a metà o per niente, secondo il suo carattere, e il diario di quel giorno lo racconta:",
+      ...ctx.buongiorno.map((b) => `- mattina del giorno ${b.giorno}: «${b.domanda}» La persona ha risposto: «${b.risposta}».`),
+    );
+  }
+  if (ctx.novita?.length) {
+    righe.push(
+      `Novità della sua collezione, ottenute vivendo: ${ctx.novita.map((n) => `«${n}»`).join(", ")}. Se gli va, ne parla in una frase del diario di uno dei giorni, a modo suo.`,
+    );
+  }
   return righe.join("\n");
 }
 
@@ -194,6 +239,20 @@ export async function pianificaGiorni(
   giorni: GiornoDaVivere[],
   ctx: ContestoVita,
 ): Promise<EsitoGiorno[]> {
+  return (await viviGiornate(stato, giorni, ctx)).esiti;
+}
+
+/**
+ * Come pianificaGiorni, e nella stessa chiamata la domanda del mattino dopo
+ * l'ultimo giorno vissuto (il buongiorno): nessuna chiamata in più all'AI.
+ */
+export async function viviGiornate(
+  stato: StatoAlbero,
+  giorni: GiornoDaVivere[],
+  ctx: ContestoVita,
+  domani?: { meteo?: string | null },
+): Promise<{ esiti: EsitoGiorno[]; buongiorno: Buongiorno | null }> {
+  const giornoDomani = (giorni[giorni.length - 1]?.giorno ?? stato.giorni) + 1;
   const elenco = giorni
     .map(
       (g) =>
@@ -220,16 +279,22 @@ Restituisci un elemento per ogni giorno, nello stesso ordine, con:
 - tratti_rafforzati: da 0 a 2 tratti che la giornata ha rafforzato.
 - momento_importante: true solo per qualcosa di davvero notevole, al massimo una volta ogni sette giorni.
 - fatto_da_ricordare: una frase breve se il giorno merita di entrare nella sua biografia, altrimenti null.
+
+Poi, a parte:
+- buongiorno: ${regoleBuongiorno(stato.nome, giornoDomani, domani?.meteo)}
 ${
   stato.strada
     ? "La strada è già rivelata: la segue, ma resta capace di sorprendere."
     : "La strada non è ancora rivelata: lascia indizi sempre più chiari di quella che sta prendendo, senza nominarla come una scelta fatta."
 }`;
 
-  const esito = await chiediStrutturato({ sistema: BIBBIA, richiesta, schema: SchemaVita, effort: "low" });
+  // Le giornate vanno sul modello piccolo (Haiku): costa una frazione e basta
+  // per scegliere l'azione e scrivere due righe. Effort medio per la qualità
+  // dell'italiano, che su Haiku costa pochissimo.
+  const esito = await chiediStrutturato({ sistema: BIBBIA, richiesta, schema: SchemaVita, effort: "medium", compito: "giornata" });
 
   // L'AI potrebbe restituire un numero diverso di giorni o un'azione non ammessa.
-  return giorni.map((g, i) => {
+  const esiti = giorni.map((g, i) => {
     const e = esito.giorni[i] ?? esito.giorni[esito.giorni.length - 1];
     if (!e) throw new Error("L'AI non ha restituito nessun giorno.");
     const ammessa = g.ammesse.includes(e.azione)
@@ -239,6 +304,7 @@ ${
         : g.ammesse[0];
     return { ...e, giorno: g.giorno, azione: ammessa };
   });
+  return { esiti, buongiorno: pulisciBuongiorno(esito.buongiorno) };
 }
 
 const limita = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
