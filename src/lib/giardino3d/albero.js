@@ -504,13 +504,14 @@ function accessori(strada, /** @type {any} */ ctx) {
     const t = texStoffa("righe", "#3a5aa8", "#f2eee2").clone();
     t.repeat.set(1, 6); t.rotation = Math.PI / 2; t.needsUpdate = true;
     const stoffa = mat("#ffffff", { map: t, roughness: 0.9 });
-    const base = v3(-0.05, ch.yMax - 0.22, -0.06);
-    const pts = [[0, 0, 0], [0.02, 0.32, 0], [0.16, 0.52, 0.02], [0.4, 0.48, 0.06], [0.54, 0.28, 0.1]].map(([x, y, z]) => [x + base.x, y + base.y, z + base.z]);
+    // calato all'indietro e di sbieco sulla chioma, con la punta che ricade dietro
+    const base = v3(0.08, ch.yMax - 0.34, -0.22);
+    const pts = [[0, 0, 0], [0.04, 0.26, -0.06], [0.2, 0.4, -0.2], [0.42, 0.3, -0.34], [0.52, 0.08, -0.4]].map(([x, y, z]) => [x + base.x, y + base.y, z + base.z]);
     inTesta.add(tubo(pts, 0.36, 0.035, stoffa, 28, 16));
     const pon = ovale(0.085, 0.085, 0.085, mat("#f7f4ec", { roughness: 1 }), true);
     pon.position.set(pts[4][0], pts[4][1] - 0.06, pts[4][2]);
     const risvolto = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.06, 10, 36), mat("#f2eee2", { roughness: 1 }));
-    risvolto.rotation.x = Math.PI / 2;
+    risvolto.rotation.set(Math.PI / 2 - 0.35, 0.2, 0);
     risvolto.position.copy(base).add(v3(0, 0.02, 0));
     inTesta.add(pon, risvolto);
   }

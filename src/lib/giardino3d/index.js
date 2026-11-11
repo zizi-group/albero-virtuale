@@ -7,7 +7,7 @@
 // di prova con l'importmap. Modelli e licenze in /giardino3d/.
 import * as THREE from "three";
 import { creaAlbero, UNIFORMI } from "./albero.js";
-import { creaAmbiente, quota } from "./ambiente.js";
+import { CASSETTA, creaAmbiente, quota, TACCUINO } from "./ambiente.js";
 import { creaComportamento } from "./comportamento.js";
 import { MODELLI, MODELLI_PER_ID, modelloDalSeme } from "./modelli.js";
 import { texAlone } from "./texture.js";
@@ -85,14 +85,15 @@ export function creaGiardino(canvas, opzioni) {
     const albero = creaAlbero(mod, { seme: a.seme, strada: a.strada, giorni: a.giorni });
     if (i > 0) albero.scala.scale.multiplyScalar(0.82);
     scena.add(albero.radice);
-    const comp = creaComportamento(albero, { scena, casa: dove[i], cassetta: ambiente.cassetta.gruppo.position, ridotto, mondo });
+    // ogni albero resta in una zona che la camera vede
+    const limiti = i === 0 ? { x0: -1.0, x1: 1.0, z0: -1.3, z1: 0.8 } : { x0: dove[i].x - 1, x1: dove[i].x + 1, z0: dove[i].z - 0.8, z1: dove[i].z + 0.6 };
+    const comp = creaComportamento(albero, { scena, casa: dove[i], cassetta: ambiente.cassetta.gruppo.position, ridotto, mondo, camera: camera.position, limiti });
     const ombra = new THREE.Mesh(geoOmbra, alone);
     ombra.rotation.x = -Math.PI / 2;
     scena.add(ombra);
     albero.stagione(mondo.stagione);
     return { dati: a, albero, comp, ombra };
   });
-  ambiente.cassetta.gruppo.position.set(2.7, quota(2.7, 1.4), 1.4);
 
   // ---------------------------------------------------------------- Eventi
   /** @type {Record<string, ((dati?: any) => void)[]>} */
@@ -132,10 +133,14 @@ export function creaGiardino(canvas, opzioni) {
     renderer.setSize(w, h, false);
     camera.aspect = w / Math.max(1, h);
     camera.updateProjectionMatrix();
-    // più alberi o schermo stretto: la camera si allontana
-    const larghezza = lista.length > 1 ? 11 : 6.2;
-    const dist = Math.max(8.5, (larghezza / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / camera.aspect * 1.1);
-    POSIZIONE.set(0.6, BERSAGLIO.y + dist * 0.48, BERSAGLIO.z + dist * 0.9);
+    // l'albero principale occupa circa il 43% dell'altezza dello schermo, visto poco
+    // dall'alto; con più alberi la camera si allontana quanto basta per vederli tutti
+    const tg = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const alto = alberi[0].albero.altezza * alberi[0].albero.scala.scale.x;
+    let dist = alto / 0.43 / (2 * tg);
+    if (lista.length > 1) dist = Math.max(dist, 5.4 / (tg * camera.aspect), 12);
+    BERSAGLIO.set(0, alto * 0.42, 0.3);
+    POSIZIONE.set(0, BERSAGLIO.y + dist * 0.24, BERSAGLIO.z + dist);
     camera.position.copy(POSIZIONE);
     camera.lookAt(BERSAGLIO);
   }
@@ -235,7 +240,7 @@ export function creaGiardino(canvas, opzioni) {
       a.ombra.scale.set(1.15 * s * (1 - alto * 0.25), 0.85 * s * (1 - alto * 0.25), 1);
     }
     // gli alberi non si sovrappongono fra loro né alla cassetta e al taccuino
-    const ostacoli = [[2.7, 1.4, 0.9], [-2.6, 1.8, 0.9]];
+    const ostacoli = [[CASSETTA[0], CASSETTA[1], 1.0], [TACCUINO[0], TACCUINO[1], 1.0]];
     for (let i = 0; i < alberi.length; i++) {
       const pi = alberi[i].comp.posizione;
       for (let j = i + 1; j < alberi.length; j++) {

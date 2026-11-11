@@ -156,7 +156,7 @@ export const AZIONI = {
     inizia: (c) => { c.viso.parla(3, true); c.emetti("nota", 2); },
     percorso: (t) => {
       const a = (t / 14) * Math.PI * 2;
-      return { x: Math.sin(a) * 1.8, z: (1 - Math.cos(a)) * -0.9, vel: 0.75 };
+      return { x: Math.sin(a) * 1.2, z: (1 - Math.cos(a)) * -0.6, vel: 0.6 };
     },
     posa: (p) => {
       // mani dietro la schiena
@@ -215,7 +215,7 @@ export const AZIONI = {
     inizia: (c) => c.viso.breve({ sorpresa: 0.2, aperta: 0.55, sorriso: 1.1, guance: 1.2 }, 11.5),
     percorso: (t) => {
       const a = (t / 6) * Math.PI * 2;
-      return { x: Math.sin(a) * 2.2, z: (Math.cos(a) - 1) * 1.1, vel: 2.1 };
+      return { x: Math.sin(a) * 1.3, z: (Math.cos(a) - 1) * 0.7, vel: 1.5 };
     },
     posa: (p, t, c) => {
       p.bracci[0].alza = p.bracci[1].alza = 0.2;
@@ -244,7 +244,7 @@ export const AZIONI = {
   dipingere: {
     durata: 14,
     inizia: (c) => {
-      c.dati.cav = c.aTerra(O.cavalletto(), 0.85, 0.75, -0.9);
+      c.dati.cav = c.aTerra(O.cavalletto(), 0.85, 0.75, -0.9); // davanti a lui, di lato
       c.dati.p = c.inMano(1, O.pennello());
       c.viso.breve({ sorriso: 0.75, storta: 0.25, sguardoX: 0.8, sguardoY: 0.2, guance: 0.8 }, 13.5);
     },
@@ -337,7 +337,7 @@ export const AZIONI = {
   "vendere-ombra": {
     durata: 12,
     inizia: (c) => {
-      c.dati.c = c.aTerra(O.cartello(), 1.15, 0.6, -0.3);
+      c.dati.c = c.aTerra(O.cartello(), -1.05, 0.75, 0.35); // davanti, alla sua destra: sempre in vista
       c.viso.breve({ palpebra: 0.25, sorriso: 0.95, storta: 0.6, guance: 0.8 }, 11.5);
     },
     posa: (p, t, c) => {
