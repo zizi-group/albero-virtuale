@@ -2,7 +2,7 @@
 // che si fonde in modo morbido, routine che si alternano all'azione del giorno,
 // sonno di notte, reazioni al clic e al trascinamento.
 import * as THREE from "three";
-import { verso } from "./casuale.js";
+import { busta, verso } from "./casuale.js";
 import { quota, RAGGIO_RADURA } from "./ambiente.js";
 import { AZIONI } from "./azioni.js";
 import * as O from "./oggetti.js";
@@ -19,14 +19,14 @@ const posaBase = () => ({
   gambe: [0, 0],
 });
 
-/** Una curva che sale, resta e scende dentro un'attività di durata d. */
-export const busta = (/** @type {number} */ t, /** @type {number} */ d, su = 0.4, giu = 0.5) => Math.min(1, t / su) * Math.min(1, Math.max(0, (d - t) / giu));
+export { busta };
 
 /**
  * @typedef {Object} Contesto
  * @property {ReturnType<typeof import("./albero.js").creaAlbero>} albero
  * @property {(i: number, o: THREE.Object3D) => THREE.Object3D} inMano mette un oggetto in mano (0 sinistra, 1 destra)
  * @property {(o: THREE.Object3D, dx: number, dz: number, giro?: number) => THREE.Object3D} aTerra mette un oggetto a terra vicino all'albero
+ * @property {(o: THREE.Object3D, y: number, z: number) => THREE.Object3D} davanti mette un oggetto davanti al tronco (segue il corpo)
  * @property {(tipo: string, n?: number) => void} emetti
  * @property {ReturnType<typeof import("./viso.js").creaViso>} viso
  * @property {Record<string, any>} dati memoria dell'attività
@@ -39,7 +39,8 @@ export const busta = (/** @type {number} */ t, /** @type {number} */ d, su = 0.4
  * @property {(ctx: Contesto) => void} [inizia]
  * @property {(p: Posa, t: number, ctx: Contesto) => void} posa
  * @property {(ctx: Contesto) => void} [fine]
- * @property {boolean} [cammina] l'attività sposta l'albero
+ * @property {boolean} [cammina] l'attività sposta l'albero verso un punto a caso
+ * @property {(t: number) => { x: number, z: number, vel?: number }} [percorso] l'attività segue un percorso (rispetto a casa)
  */
 
 // ------------------------------------------------------------------ Routine
@@ -150,7 +151,7 @@ export const ROUTINE = {
   // ---- meteo
   ripara: {
     durata: 9,
-    inizia: (c) => { c.dati.o = c.inMano(1, O.ombrelloFoglia(Math.max(0.9, c.albero.altezza - 1.2))); c.dati.o.rotation.set(0, 0, 0.35); c.viso.breve({ sorriso: 0.9, sguardoY: 0.7 }, 3); },
+    inizia: (c) => { c.dati.o = c.inMano(1, O.ombrelloFoglia(Math.max(0.6, (c.albero.altezza - 1.2) / 1.5))); c.dati.o.userData.diritto = [0, 0, 0.1]; c.viso.breve({ sorriso: 0.9, sguardoY: 0.7 }, 3); },
     posa: (p, t) => {
       const k = busta(t, 9, 0.6, 0.6);
       p.bracci[1].alza = 1.25 * k; p.bracci[1].avanti = 0.45 * k;
@@ -286,7 +287,7 @@ export function creaComportamento(albero, op) {
   let giro = 0;
   /** @type {THREE.Vector2 | null} */
   let meta = null;
-  let fasePasso = 0;
+  let fasePasso = 0, velPasso = 1;
   // trascinamento
   let preso = false, caduta = false, vy = 0, altezza = 0;
   const presa = new THREE.Vector3();
@@ -300,7 +301,8 @@ export function creaComportamento(albero, op) {
     dati,
     meteo: op.mondo,
     emetti: (tipo, n) => { if (!op.ridotto) albero.effetti.emetti(tipo, n); },
-    inMano: (i, o) => { albero.mani[i].add(o); oggetti.push(o); return o; },
+    inMano: (i, o) => { o.scale.multiplyScalar(1.5); albero.mani[i].add(o); oggetti.push(o); return o; },
+    davanti: (o, y, z) => { o.position.set(0, y, 0.52 + z); albero.corpo.add(o); oggetti.push(o); return o; },
     aTerra: (o, dx, dz, g = 0) => {
       const r = albero.radice;
       const s = Math.sin(r.rotation.y), c = Math.cos(r.rotation.y);
@@ -380,6 +382,8 @@ export function creaComportamento(albero, op) {
 
   return {
     reagisci,
+    /** Solo per le prove: avvia subito un'attività. @param {string} nome */
+    avvia(nome) { reaz = null; avvia(nome); },
     /** @param {string} u */
     umore(u) { umore = u; albero.viso.umore(u); },
     /** @param {string} a */
@@ -458,6 +462,17 @@ export function creaComportamento(albero, op) {
       if (att) {
         att.t += dt;
         att.a.posa(p, att.t, att.ctx);
+        if (att.a.percorso && !reaz) {
+          const q = att.a.percorso(att.t);
+          const d = new THREE.Vector2(casa.x + q.x - pos.x, casa.y + q.z - pos.y);
+          const dist = d.length();
+          if (dist > 0.04) {
+            camminando = true;
+            pos.addScaledVector(d.normalize(), Math.min(dist, (q.vel ?? 0.9) * dt));
+            giro = Math.atan2(d.x, d.y);
+            velPasso = (q.vel ?? 0.9) / 0.9;
+          }
+        }
         if (att.a.cammina && meta) {
           const d = meta.clone().sub(pos);
           const dist = d.length();
@@ -475,16 +490,20 @@ export function creaComportamento(albero, op) {
         }
       }
       if (camminando) {
-        fasePasso += dt * 9;
+        fasePasso += dt * 9 * velPasso;
         p.gambe = [Math.sin(fasePasso) * 0.55, -Math.sin(fasePasso) * 0.55];
         p.salto = Math.abs(Math.sin(fasePasso)) * 0.05;
         p.piega = Math.sin(fasePasso) * 0.05;
-        p.bracci[0].avanti = -Math.sin(fasePasso) * 0.35;
-        p.bracci[1].avanti = Math.sin(fasePasso) * 0.35;
+        if (!att?.a.percorso) {
+          p.bracci[0].avanti = -Math.sin(fasePasso) * 0.35;
+          p.bracci[1].avanti = Math.sin(fasePasso) * 0.35;
+        }
         p.giro = giro;
       } else {
         // da fermo guarda verso chi guarda (la camera), con un leggero giro
-        p.giro = att?.nome === "dormi" ? 0 : Math.sin(t * 0.23) * 0.15;
+        velPasso = 1;
+        if (!att?.a.percorso) p.giro = p.giro || (att?.nome === "dormi" ? 0 : Math.sin(t * 0.23) * 0.15);
+        else p.giro = giro;
       }
 
       // freddo: trema e si stringe (sopra tutto, tranne quando dorme)
@@ -506,9 +525,23 @@ export function creaComportamento(albero, op) {
         if (reaz.t >= reaz.r.durata) reaz = null;
       }
       applica(p, dt, t, terra, 0);
+      raddrizza();
     },
     distruggi() { if (att) att.a.fine?.(att.ctx); libera(); },
   };
+
+  /** Gli oggetti segnati con userData.diritto restano dritti (ombrelli, tazze), qualunque sia il braccio. */
+  function raddrizza() {
+    const qPadre = new THREE.Quaternion(), qVoluto = new THREE.Quaternion(), e = new THREE.Euler();
+    albero.radice.updateMatrixWorld(true);
+    for (const o of oggetti) {
+      if (!o.userData.diritto || !o.parent) continue;
+      o.parent.getWorldQuaternion(qPadre);
+      const [x, y, z] = o.userData.diritto;
+      qVoluto.setFromEuler(e.set(x, albero.radice.rotation.y + y, z));
+      o.quaternion.copy(qPadre.invert().multiply(qVoluto));
+    }
+  }
 
   /**
    * Fonde la posa bersaglio con quella attuale e la mette sulle ossa.
@@ -522,6 +555,7 @@ export function creaComportamento(albero, op) {
     ora.inchino = verso(ora.inchino, p.inchino, v, dt);
     ora.piega = verso(ora.piega, p.piega, v, dt);
     ora.allunga = verso(ora.allunga, p.allunga, v, dt);
+    ora.divarica = verso(ora.divarica, p.divarica, v, dt);
     for (let i = 0; i < 2; i++) {
       ora.bracci[i].alza = verso(ora.bracci[i].alza, p.bracci[i].alza, vb, dt);
       ora.bracci[i].avanti = verso(ora.bracci[i].avanti, p.bracci[i].avanti, vb, dt);
@@ -544,6 +578,9 @@ export function creaComportamento(albero, op) {
     // braccia: alza positivo = in su (per entrambi), avanti positivo = verso chi guarda
     a.bracci[1].rotation.set(ora.bracci[1].giro, -ora.bracci[1].avanti, ora.bracci[1].alza);
     a.bracci[0].rotation.set(ora.bracci[0].giro, ora.bracci[0].avanti, -ora.bracci[0].alza);
-    for (let i = 0; i < 2; i++) a.gambe[i].rotation.x = ora.gambe[i] - 1.35 * ora.seduto;
+    for (let i = 0; i < 2; i++) {
+      a.gambe[i].rotation.x = ora.gambe[i] - 1.35 * ora.seduto;
+      a.gambe[i].rotation.z = (i ? 1 : -1) * ora.divarica;
+    }
   }
 }
