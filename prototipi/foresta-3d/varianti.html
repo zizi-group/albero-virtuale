@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Linfa — sette alberi, sette caratteri</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #1d3024; overflow: hidden; font-family: system-ui, sans-serif; }
+    canvas { display: block; }
+    /* Vignettatura: chiude i bordi verso il bosco scuro */
+    .velo { position: fixed; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse 75% 70% at 52% 48%, transparent 55%, rgba(10, 22, 12, .55) 100%); }
+    .etichetta { position: fixed; left: 18px; bottom: 16px; color: #f3ead2; font-size: 13px; line-height: 1.45;
+      text-shadow: 0 1px 3px rgba(0,0,0,.6); pointer-events: none; }
+    .etichetta b { font-size: 15px; }
+    #fps { position: fixed; right: 14px; top: 12px; color: #f3ead2; font: 12px ui-monospace, monospace; opacity: .7; }
+    .targhetta { position: fixed; transform: translateX(-50%); color: #f6efd9; font-size: 12px; text-align: center; line-height: 1.3;
+      background: rgba(20,34,22,.55); padding: 3px 8px; border-radius: 8px; pointer-events: none; white-space: nowrap; }
+    .targhetta span { opacity: .7; font-size: 11px; }
+    #carico { position: fixed; inset: 0; display: grid; place-items: center; color: #f3ead2; font-size: 14px; }
+  </style>
+  <script type="importmap">
+    { "imports": {
+        "three": "./vendor/three/build/three.module.js",
+        "three/addons/": "./vendor/three/addons/"
+    } }
+  </script>
+</head>
+<body>
+  <div id="carico">Il bosco si sta svegliando…</div>
+  <div class="velo"></div>
+  <div class="etichetta"><b>Sette alberi</b> · varianti dal seme<br />Clicca su un albero: ti saluta.</div>
+  <div id="fps"></div>
+  <script type="module">
+    // Sette alberi in fila (fila.js); poi parte la radura (scena.js)
+    import { inFila } from "./fila.js";
+    window.RADURA = {
+      raggio: 9,
+      etichette: true,
+      camera: { da: [0, 8.6, 16.8], a: [0, 1.2, 0] },
+      cameraVicina: { da: [0, 3.6, 9.4], a: [0, 1.5, 0] },
+      alberi: inFila(),
+    };
+    await import("./scena.js");
+  </script>
+</body>
+</html>
