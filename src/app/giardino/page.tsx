@@ -303,6 +303,7 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
       <Immersivo
         pannelloIniziale={pannelloIniziale}
         idAlbero={albero.id}
+        appenaNato={nuovo}
         idStrada={strada}
         idAzione={scena.azione.id}
         nome={albero.name}

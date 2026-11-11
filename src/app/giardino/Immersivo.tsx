@@ -99,6 +99,8 @@ export interface PropsImmersivo {
   pannelli: Record<IdPannello, ReactNode>;
   avviso?: ReactNode;
   strumenti: ReactNode;
+  /** È appena stato piantato: nel 3D fa festa all'arrivo. */
+  appenaNato?: boolean;
   /** Il pannello già aperto all'arrivo (per esempio tornando da una lettera). */
   pannelloIniziale?: IdPannello;
 }
@@ -156,7 +158,9 @@ export function Immersivo(p: PropsImmersivo) {
   }, []);
 
   // All'arrivo, se c'è una lettera da aprire, l'albero lo fa notare.
-  const [reazione] = useState(() => (p.nonLette > 0 ? { tipo: "lettera" as const, n: 1 } : null));
+  const [reazione] = useState(() =>
+    p.appenaNato ? { tipo: "festa" as const, n: 1 } : p.nonLette > 0 ? { tipo: "lettera" as const, n: 1 } : null,
+  );
   const vista = useSyncExternalStore(iscriviVista, leggiVista, () => "3d" as const);
   const cambiaVista = () => {
     try {
