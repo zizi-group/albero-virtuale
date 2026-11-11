@@ -44,7 +44,8 @@ export async function proxy(request: NextRequest) {
     if (accessoDemoAttivo()) {
       // Demo senza login: entra con l'account di prova e torna qui.
       url.pathname = "/entra";
-      url.searchParams.set("poi", percorso);
+      // Si torna alla stessa pagina con gli stessi parametri (per esempio ?meteo=pioggia).
+      url.searchParams.set("poi", percorso + request.nextUrl.search);
     } else {
       url.pathname = "/accedi";
     }
