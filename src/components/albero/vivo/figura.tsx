@@ -88,6 +88,10 @@ export interface FiguraAlberoProps {
    * (crescitaDa, da germoglio ad adulto); se manca, quella tipica dello stadio.
    */
   giorni?: number;
+  /** Arredi del mestiere dietro all'albero (vivo/arredi.tsx). */
+  dietro?: ReactNode;
+  /** Arredi davanti all'albero e attrezzi in mano. */
+  davanti?: ReactNode;
 }
 
 /** Grandezza, chioma e dettagli dell'età: la crescita continua o, senza età, lo stadio. */
@@ -123,6 +127,8 @@ export function FiguraAlbero({
   radice,
   nParticelle = 0,
   giorni,
+  dietro = null,
+  davanti = null,
 }: FiguraAlberoProps) {
   const [scuro, medio, chiaro] = PALETTE[stagione];
   const at = (k: string) => A[k] ?? {};
@@ -163,6 +169,8 @@ export function FiguraAlbero({
       )}
 
       {oggetti("terra").map((o) => presenza(`ogg-${o}`, PERNI_OGGETTI[o], pres, disegnaOggetto(o), zonaOggetto(o)))}
+
+      {dietro}
 
       <g data-n="corpo" data-zona="corpo" {...at("corpo")}>
         {/* Gambe-radici */}
@@ -384,6 +392,8 @@ export function FiguraAlbero({
           })}
         </g>
       </g>
+
+      {davanti}
 
       <g className="lv-particelle" aria-hidden>
         {Array.from({ length: nParticelle }, (_, i) => (

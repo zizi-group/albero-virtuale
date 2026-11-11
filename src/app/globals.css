@@ -248,27 +248,27 @@ body {
   to { opacity: 1; transform: none; }
 }
 
-/* Movimento ridotto (impostazione del sistema): pioggia, neve, nuvole ed entrate
+/* Movimento ridotto (impostazione del sistema), salvo «Animazioni complete» (<html data-movimento="pieno">): pioggia, neve, nuvole ed entrate
    restano ferme; il personaggio tiene solo i movimenti lievi, rallentati. */
 @media (prefers-reduced-motion: reduce) {
-  .l-pioggia,
-  .l-neve,
-  .l-nuvola,
-  .l-lampo,
-  .l-pulsa,
-  .entra {
+  :root:not([data-movimento="pieno"]) .l-pioggia,
+  :root:not([data-movimento="pieno"]) .l-neve,
+  :root:not([data-movimento="pieno"]) .l-nuvola,
+  :root:not([data-movimento="pieno"]) .l-lampo,
+  :root:not([data-movimento="pieno"]) .l-pulsa,
+  :root:not([data-movimento="pieno"]) .entra {
     animation: none !important;
   }
-  .l-corpo-saltella,
-  .l-corpo-corsa,
-  .l-corpo-balla,
-  .l-corpo-cammina,
-  .l-gamba-cammina-a,
-  .l-gamba-cammina-b,
-  .l-gamba-corsa-a,
-  .l-gamba-corsa-b,
-  .l-braccio-oscilla,
-  .l-braccio-strofina {
+  :root:not([data-movimento="pieno"]) .l-corpo-saltella,
+  :root:not([data-movimento="pieno"]) .l-corpo-corsa,
+  :root:not([data-movimento="pieno"]) .l-corpo-balla,
+  :root:not([data-movimento="pieno"]) .l-corpo-cammina,
+  :root:not([data-movimento="pieno"]) .l-gamba-cammina-a,
+  :root:not([data-movimento="pieno"]) .l-gamba-cammina-b,
+  :root:not([data-movimento="pieno"]) .l-gamba-corsa-a,
+  :root:not([data-movimento="pieno"]) .l-gamba-corsa-b,
+  :root:not([data-movimento="pieno"]) .l-braccio-oscilla,
+  :root:not([data-movimento="pieno"]) .l-braccio-strofina {
     animation-duration: 1.8s !important;
   }
 }

@@ -102,7 +102,8 @@ Tutto in italiano: codice (nomi), testi, commit, report.
 - Il sistema con «movimento ridotto» ferma pioggia, neve e nuvole; il
   personaggio tiene solo i movimenti lievi (niente salti, scosse né corse).
   Sul PC di sviluppo Windows ha gli effetti di animazione spenti: il browser
-  chiede movimento ridotto e l'albero si muove poco.
+  chiede movimento ridotto. L'interruttore «Animazioni complete» del sito
+  (`<html data-movimento="pieno">`) lo scavalca, albero compreso.
 
 ## Branch e versioni
 

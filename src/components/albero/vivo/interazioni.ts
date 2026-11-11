@@ -1,4 +1,4 @@
-import { NOMI_CANALI, verso, type Canali, type Lato } from "./canali";
+import { DISCRETI, NOMI_CANALI, verso, type Canali, type Lato } from "./canali";
 import { Copione, type Clip, type Regia } from "./copione";
 import type { Palco } from "./scenette";
 
@@ -197,7 +197,14 @@ export function vaiAlPosto(s: Canali, p: Palco, da: number): Clip {
 export function cambio(s: Canali, b: Canali, p: Palco): Clip {
   const c = new Copione(s);
   const bersagli: Partial<Canali> = {};
-  for (const k of NOMI_CANALI) if (Math.abs(s[k] - b[k]) > 1e-3 && !(["y", "sx", "sy"] as string[]).includes(k)) bersagli[k] = b[k];
+  const scatti: Partial<Canali> = {};
+  for (const k of NOMI_CANALI) {
+    if (Math.abs(s[k] - b[k]) <= 1e-3) continue;
+    if (DISCRETI.has(k)) scatti[k] = b[k];
+    else if (!(["y", "sx", "sy"] as string[]).includes(k)) bersagli[k] = b[k];
+  }
+  c.vai(0.01, scatti, "scatto");
+  c.a(0);
   if (p.ridotto) {
     c.vai(0.6, { ...bersagli, y: b.y, sx: b.sx, sy: b.sy });
     return c.chiudi();

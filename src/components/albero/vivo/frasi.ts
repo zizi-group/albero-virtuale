@@ -60,9 +60,21 @@ const SITUAZIONI: Record<string, string[]> = {
   corsa: ["Uff… fiatone…", "Record personale! Credo."],
   freddo: ["Brr! Le mani!", "Fff… così va meglio."],
   sole: ["Aaah, che bello.", "Troppa luce! Occhiali, presto."],
+  // Il mestiere dell'imprenditore
+  pubblicita: ["Ghiande fresche! Ombra in offerta!", "Venghino, venghino: due ghiande, una gratis!", "Oggi sconti sull'ombra del pomeriggio!"],
+  contratta: ["Due ghiande? Facciamo tre.", "Per te, prezzo da amico. Da amico ricco.", "Affare fatto, e niente sconti al tuo cugino."],
+  incasso: ["Sette ghiande. No, otto. No, sette.", "Giornata d'oro. Di ghianda, ma d'oro."],
+  caffe: ["Prima il caffè, poi l'impero.", "Un caffè di rugiada e sono pronto."],
+  telefono: ["Certo, certo! Ghiande a volontà.", "Pronto? Sì, sono io il capo.", "Le richiamo appena finisco di essere importante."],
+  contratti: ["Timbrato, firmato, ghiandato.", "Un altro contratto. Non so per cosa, ma è firmato."],
+  riunione: ["Come vedi, il grafico va su. Sempre su.", "Punto primo: ghiande. Punto secondo: più ghiande."],
+  notteUfficio: ["…aumento di capitale… zzz…", "…ancora una riunione… zzz…"],
+  ahia: ["Ahia! Il dito!", "Il terzo chiodo era il mio dito."],
+  inaugura: ["Dichiaro aperto l'ufficio!", "Un applauso per la scrivania!"],
+  combinazione: ["Com'era la combinazione?", "L'ho scritta su una foglia. Quale foglia?"],
 };
 
-const OGGETTI: Partial<Record<Oggetto, string>> = {
+const OGGETTI: Partial<Record<Oggetto | string, string>> = {
   libro: "Te lo presto quando ho finito. Tra un anno.",
   tazza: "Tisana di corteccia. Vuoi un sorso?",
   telefono: "Scusa, ti richiamo io!",
@@ -79,6 +91,11 @@ const OGGETTI: Partial<Record<Oggetto, string>> = {
   quaderno: "Non sbirciare, è una poesia segreta.",
   penna: "Questa piuma scrive da sola. Quasi.",
   cavalletto: "Il quadro è quasi finito. Mancano i colori.",
+  // Gli arredi del mestiere
+  bancarella: "La bancarella apre all'alba. Più o meno.",
+  scrivania: "L'ho costruita io. Una gamba è corta, non ditelo.",
+  insegna: "Ghiande & Co. La «Co.» sono io, due volte.",
+  cassaforte: "Dentro? Niente. Cioè, ghiande. Non guardare.",
 };
 
 const ACCESSORI_STRADA: Partial<Record<Indumento, Strada>> = {
@@ -143,7 +160,7 @@ export class Repertorio {
     return this.pesca(GENERALI);
   }
 
-  oggetto(o: Oggetto): string {
+  oggetto(o: Oggetto | string): string {
     return OGGETTI[o] ?? this.saluto();
   }
 

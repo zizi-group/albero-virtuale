@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Albero } from "@/components/albero/Albero";
 import { Scena } from "@/components/albero/Scena";
+import { VetrinaMestiere } from "@/components/albero/VetrinaMestiere";
 import { Intestazione } from "@/components/Intestazione";
 import { AZIONI } from "@/lib/albero/azioni";
 import { FRASI_ROUTINE, risolviScena } from "@/lib/albero/scena";
@@ -122,6 +123,17 @@ export default function Catalogo() {
               </li>
             ))}
           </ul>
+        </section>
+
+        <section aria-labelledby="titolo-mestiere" className="mt-20">
+          <h2 id="titolo-mestiere" className="font-titolo mb-2 text-3xl sm:text-4xl">
+            Il mestiere dell&apos;imprenditore
+          </h2>
+          <p className="mb-6 max-w-2xl text-matita">
+            Prova pilota delle routine di strada: costruisce la scrivania, l&apos;insegna e la cassaforte, poi le usa ogni
+            giorno con i suoi orari. Sposta il giorno e l&apos;ora per vedere che cosa fa.
+          </p>
+          <VetrinaMestiere />
         </section>
 
         <section aria-labelledby="titolo-crescita" className="mt-20">

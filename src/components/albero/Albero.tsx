@@ -1,5 +1,6 @@
 import type { Posa, Stadio, Stagione } from "@/lib/albero/tipi";
 import { AlberoVivo } from "./vivo/AlberoVivo";
+import type { StatoMestiere } from "./vivo/mestiere";
 
 // L'albero di Linfa: un pupazzo snodato e vivo (cartella vivo/).
 // Il server disegna la posa ferma, nel browser parte l'animazione: scenette,
@@ -19,6 +20,11 @@ export interface AlberoProps {
    * adulto in GIORNI_PER_CRESCERE). Senza, la grandezza tipica dello stadio.
    */
   giorni?: number;
+  /**
+   * Il mestiere della sua strada: arredi costruiti e cosa fa adesso (attività
+   * o passo di cantiere, vedi docs/routine-strade.md). Senza, fa quello che dice la posa.
+   */
+  mestiere?: StatoMestiere | null;
 }
 
 /** Il personaggio come gruppo SVG, da mettere dentro una scena. */

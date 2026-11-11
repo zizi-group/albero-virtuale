@@ -61,11 +61,12 @@
   }
 }
 
+/* Movimento ridotto, salvo l'interruttore «Animazioni complete» (<html data-movimento="pieno">). */
 @media (prefers-reduced-motion: reduce) {
-  .lv-cielo {
+  :root:not([data-movimento="pieno"]) .lv-cielo {
     transition: none;
   }
-  .lv-compare {
+  :root:not([data-movimento="pieno"]) .lv-compare {
     animation: none;
   }
 }

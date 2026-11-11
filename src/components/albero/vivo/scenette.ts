@@ -17,6 +17,8 @@ export interface Palco {
   spazioSx: number;
   spazioDx: number;
   figura: Figura;
+  /** Il suo posto (spostamento dal punto di partenza, se l'hai trascinato altrove). */
+  casa?: number;
 }
 
 export type NomeScenetta = "sole" | "pioggia" | "freddo" | "passeggiata" | "notte" | "leggere" | "correre" | "generica";

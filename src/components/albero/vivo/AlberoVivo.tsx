@@ -2,8 +2,12 @@
 
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import type { Posa, Stadio, Stagione } from "@/lib/albero/tipi";
+import { ArrediDavanti, ArrediDietro, fotogrammaArredi } from "./arredi";
+import { canaliDaPosa } from "./canali";
 import { PALETTE } from "./disegni";
 import { FiguraAlbero, primoFotogramma } from "./figura";
+import type { Attributi } from "./fotogramma";
+import { canaliDelMestiere, statoLavoro, type StatoMestiere } from "./mestiere";
 import { Motore, N_PARTICELLE } from "./motore";
 import "./vivo.css";
 
@@ -35,6 +39,8 @@ export interface AlberoVivoProps {
   onCiclo?: () => void;
   /** L'età in giorni: la grandezza segue la crescita continua (vedi crescitaDa). */
   giorni?: number;
+  /** Il mestiere: arredi costruiti e cosa fa adesso (vivo/mestiere.ts). Senza, fa quello che dice la posa. */
+  mestiere?: StatoMestiere | null;
 }
 
 const VENTO: Record<string, number> = { temporale: 1, pioggia: 0.6, neve: 0.45, nuvole: 0.35, sole: 0.25, nebbia: 0.15 };
@@ -45,6 +51,7 @@ interface Opzioni {
   freddo?: boolean;
   foglia: string;
   onCiclo?: () => void;
+  mestiere?: StatoMestiere | null;
 }
 
 /** Vento e freddo: dalle props se ci sono, altrimenti dal cielo del paesaggio o dagli accessori. */
@@ -70,6 +77,7 @@ export function AlberoVivo({
   focusabile = true,
   onCiclo,
   giorni,
+  mestiere = null,
 }: AlberoVivoProps) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const radice = useRef<SVGGElement>(null);
@@ -82,10 +90,11 @@ export function AlberoVivo({
 
   const medio = PALETTE[stagione][1];
   const chiavePosa = JSON.stringify(posa);
-  const opzioni = useRef<Opzioni>({ posa, vento, freddo, foglia: medio, onCiclo });
+  const chiaveMestiere = JSON.stringify(mestiere);
+  const opzioni = useRef<Opzioni>({ posa, vento, freddo, foglia: medio, onCiclo, mestiere });
 
   useLayoutEffect(() => {
-    opzioni.current = { posa, vento, freddo, foglia: medio, onCiclo };
+    opzioni.current = { posa, vento, freddo, foglia: medio, onCiclo, mestiere };
     motore.current?.aggiornaOpzioni(conCielo(opzioni.current, cielo.current));
   });
 
@@ -102,6 +111,7 @@ export function AlberoVivo({
       interattivo,
       chiave: tieni ? `linfa:albero:${window.location.pathname}:${id}` : null,
       onFumetto: setFumetto,
+      mestiere: opzioni.current.mestiere,
       ...conCielo(opzioni.current, cielo.current),
     });
     motore.current = m;
@@ -119,8 +129,20 @@ export function AlberoVivo({
   }, [chiavePosa, stadio, stagione, innevato]);
 
   useLayoutEffect(() => {
+    const m = motore.current;
+    if (!m) return;
+    m.aggiornaNodi();
+    m.impostaMestiere(opzioni.current.mestiere ?? null);
+  }, [chiaveMestiere]);
+
+  useLayoutEffect(() => {
     if (fumetto) motore.current?.misuraFumetto();
   }, [fumetto]);
+
+  // Arredi del mestiere: il loro primo fotogramma (poi li muove il motore).
+  const lavoro = mestiere ? statoLavoro(mestiere) : null;
+  const arredi: Attributi = {};
+  if (lavoro) fotogrammaArredi({ ...canaliDaPosa(posa), ...canaliDelMestiere(mestiere) }, lavoro, arredi, 0);
 
   return (
     <FiguraAlbero
@@ -138,6 +160,8 @@ export function AlberoVivo({
       radice={radice}
       nParticelle={N_PARTICELLE}
       giorni={giorni}
+      dietro={lavoro ? <ArrediDietro lavoro={lavoro} A={arredi} /> : null}
+      davanti={lavoro ? <ArrediDavanti lavoro={lavoro} A={arredi} /> : null}
     />
   );
 }

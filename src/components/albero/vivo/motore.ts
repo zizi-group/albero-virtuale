@@ -1,11 +1,13 @@
 import type { Oggetto, Posa } from "@/lib/albero/tipi";
-import { braccioLibero, canaliDaPosa, DOVE, figuraDaPosa, NOMI_CANALI, TERRA, type Canali, type Figura, type Lato } from "./canali";
+import { EVENTO_MOVIMENTO, movimentoRidotto } from "@/components/Movimento";
+import { braccioLibero, canaliDaPosa, DISCRETI, DOVE, figuraDaPosa, NOMI_CANALI, TERRA, type Canali, type Figura, type Lato } from "./canali";
 import type { Clip, OpzioniParticella, Regia, TipoParticella } from "./copione";
 import { PARTICELLE } from "./disegni";
 import { aMondo, fotogramma, statoIniziale, type Attributi, type StatoVivo } from "./fotogramma";
 import { Repertorio, stradaDa, umoreDa } from "./frasi";
 import * as I from "./interazioni";
 import { SCENETTE, scegliScenetta, type NomeScenetta, type Palco } from "./scenette";
+import { baseAlLavoro, canaliDelMestiere, ciclo, entrata, scenaDelMestiere, statoLavoro, type ScenaLavoro, type StatoMestiere } from "./mestiere";
 
 // Il motore dell'albero vivo: un orologio unico per tutti gli alberi della pagina,
 // che a ogni fotogramma fa recitare la scenetta, sovrappone le reazioni alle
@@ -96,6 +98,8 @@ export interface OpzioniMotore {
   foglia: string;
   onFumetto: (testo: string | null) => void;
   onCiclo?: () => void;
+  /** Il mestiere: arredi e cosa fa adesso (vivo/mestiere.ts). */
+  mestiere?: StatoMestiere | null;
 }
 
 interface Particella {
@@ -160,7 +164,15 @@ export class Motore implements Regia {
   private nodi = new Map<string, SVGElement>();
   private cache = new Map<string, string>();
   private s: StatoVivo = statoIniziale();
+  /** I canali su cui gira la scenetta: la posa, oppure la posa al posto di lavoro. */
   private base: Canali;
+  /** I canali della posa della pagina. */
+  private basePosa: Canali;
+  private mestiere: StatoMestiere | null = null;
+  private chiaveMestiere = "";
+  private lavoro: { id: string; scena: ScenaLavoro } | null = null;
+  /** È già al suo posto di lavoro (il prossimo giro è il ciclo, non l'arrivo). */
+  private alPosto = false;
   private figura: Figura;
   private scenetta: NomeScenetta;
   private chiavePosa: string;
@@ -206,7 +218,12 @@ export class Motore implements Regia {
 
   constructor(o: OpzioniMotore) {
     this.o = o;
-    this.base = canaliDaPosa(o.posa);
+    this.mestiere = o.mestiere ?? null;
+    this.chiaveMestiere = JSON.stringify(this.mestiere);
+    this.lavoro = scenaDelMestiere(this.mestiere);
+    this.s.lavoro = this.mestiere ? statoLavoro(this.mestiere) : null;
+    this.basePosa = { ...canaliDaPosa(o.posa), ...canaliDelMestiere(this.mestiere) };
+    this.base = this.basePosa;
     this.figura = figuraDaPosa(o.posa);
     this.scenetta = scegliScenetta(o.posa);
     this.chiavePosa = JSON.stringify(o.posa);
@@ -217,13 +234,18 @@ export class Motore implements Regia {
       this.particelle.push({ vivo: false, tipo: "foglia", x: 0, y: 0, vx: 0, vy: 0, g: 0, vita: 1, eta: 0, scala: 1, cresce: 1, giro: 0, rot: 0, op: 1, seme: Math.random() * 10 });
     }
 
+    // Movimento ridotto: quello del sistema, salvo l'interruttore «Animazioni complete» del sito.
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    this._ridotto = mq.matches;
+    this._ridotto = movimentoRidotto();
     const suCambio = () => {
-      this._ridotto = mq.matches;
+      this._ridotto = movimentoRidotto();
     };
     mq.addEventListener("change", suCambio);
-    this.pulizie.push(() => mq.removeEventListener("change", suCambio));
+    window.addEventListener(EVENTO_MOVIMENTO, suCambio);
+    this.pulizie.push(() => {
+      mq.removeEventListener("change", suCambio);
+      window.removeEventListener(EVENTO_MOVIMENTO, suCambio);
+    });
 
     this.aggiornaNodi(true);
     this.misuraLimiti();
@@ -362,11 +384,25 @@ export class Motore implements Regia {
       spazioDx: lim(this.limiti.dx - margine - (120 + this.casa), 0, 170),
       spazioSx: lim(120 + this.casa - margine - this.limiti.sx, 0, 170),
       figura: this.figura,
+      casa: this.casa,
     };
   }
 
   private nuovaScenetta(): Clip {
     this.clipScenetta = true;
+    if (this.lavoro) {
+      // Il mestiere: la prima volta va al suo posto (e fa il lavoro del cantiere), poi ripete il ciclo.
+      const p = this.palco();
+      const al = baseAlLavoro(this.lavoro.scena, this.basePosa, p);
+      if (!this.alPosto) {
+        this.alPosto = true;
+        this.base = al;
+        return entrata(this.lavoro.scena, { ...this.basePosa, x: 0 }, p);
+      }
+      this.base = al;
+      return ciclo(this.lavoro.scena, al, p);
+    }
+    this.base = this.basePosa;
     return SCENETTE[this.scenetta](this.base, this.palco());
   }
 
@@ -455,13 +491,38 @@ export class Motore implements Regia {
     this.figura = figuraDaPosa(posa);
     this.scenetta = scegliScenetta(posa);
     this.repertorio.aggiorna(stradaDa(this.figura.indossa), umoreDa(posa, this.scenetta));
-    this.base = nuova;
+    this.basePosa = { ...nuova, ...canaliDelMestiere(null) };
+    this.base = this.lavoro ? baseAlLavoro(this.lavoro.scena, this.basePosa, this.palco()) : this.basePosa;
     this.emettitori = {};
     if (this.aria) return;
     const foto = { ...(this.ov ? this.vBase : this.v) };
-    this.clip = I.cambio(foto, nuova, this.palco());
+    this.clip = I.cambio(foto, this.base, this.palco());
     this.clipT = 0;
     this.clipScenetta = false;
+  }
+
+  /** Cambia il mestiere o quello che sta facendo: ci va camminando dal punto in cui è. */
+  impostaMestiere(m: StatoMestiere | null) {
+    const chiave = JSON.stringify(m);
+    if (chiave === this.chiaveMestiere) return;
+    this.chiaveMestiere = chiave;
+    this.mestiere = m;
+    this.lavoro = scenaDelMestiere(m);
+    this.s.lavoro = m ? statoLavoro(m) : null;
+    this.alPosto = false;
+    if (this.aria) return;
+    const foto = { ...(this.ov ? this.vBase : this.v), ...canaliDelMestiere(m) };
+    if (this.lavoro) {
+      const p = this.palco();
+      this.base = baseAlLavoro(this.lavoro.scena, this.basePosa, p);
+      this.alPosto = true;
+      this.clip = entrata(this.lavoro.scena, foto, p);
+    } else {
+      this.base = this.basePosa;
+      this.clip = I.cambio(foto, this.base, this.palco());
+      this.clipScenetta = false;
+    }
+    this.clipT = 0;
   }
 
   private ripristinaPosto() {
@@ -535,7 +596,7 @@ export class Motore implements Regia {
       const w = diss > 0 && ov.t > d - diss ? 1 - liscio((ov.t - (d - diss)) / diss) : 1;
       for (const c of NOMI_CANALI) {
         const val = ov.clip.valore(c, ov.t, ov.foto[c]);
-        v[c] = vb[c] + (val - vb[c]) * w;
+        v[c] = DISCRETI.has(c) ? (w > 0.5 ? val : vb[c]) : vb[c] + (val - vb[c]) * w;
       }
       if (ov.t >= d) this.ov = null;
     }
@@ -559,7 +620,7 @@ export class Motore implements Regia {
     this.rotLento += (v.rot - this.rotLento) * verso0(dt, 6);
     this.passoMolle(dt, v);
     this.passoVita(dt, v, X, Y);
-    if (!this.aria) this.passoEmettitori(v);
+    if (!this.aria && !this.lavoro) this.passoEmettitori(v);
 
     // 5. Disegno
     const A = fotogramma(v, this.figura, s);
@@ -955,6 +1016,7 @@ export class Motore implements Regia {
     };
     this.clip = this.nuovaScenetta();
     this.clipT = 0;
+    this.alPosto = false;
     this.o.radice.setAttribute("data-trascina", "");
   }
 

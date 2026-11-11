@@ -1,4 +1,5 @@
 import { ANCA, BOCCA_Y, OCCHIO, OSSA, SPALLA, TERRA, type Canali, type Figura, type Lato } from "./canali";
+import { fotogrammaArredi, fotogrammaAttrezzi, type StatoLavoro } from "./arredi";
 import { SCHIUMA } from "./disegni";
 
 // Da canali a attributi SVG. La stessa funzione disegna la posa ferma sul server
@@ -27,6 +28,8 @@ export interface StatoVivo {
   guardaY: number;
   guardaW: number;
   ridotto: boolean;
+  /** Il mestiere: arredi nel prato e attrezzi in mano (null = niente mestiere). */
+  lavoro: StatoLavoro | null;
 }
 
 export function statoIniziale(): StatoVivo {
@@ -47,6 +50,7 @@ export function statoIniziale(): StatoVivo {
     guardaY: 0,
     guardaW: 0,
     ridotto: false,
+    lavoro: null,
   };
 }
 
@@ -322,6 +326,13 @@ export function fotogramma(v: Canali, f: Figura, s: StatoVivo): Attributi {
     A[`ogg${L}`] = { transform: `translate(${n(hx)} ${n(hy)}) rotate(${n(v[`${lato}Ogg`])})` };
     // Non è un nodo: la posizione della mano, per far partire vapore e gocce dagli oggetti.
     A[`_mano${L}`] = { x: `${hx}`, y: `${hy}` };
+    // Gli attrezzi del mestiere stanno fuori dal corpo (sopra gli arredi): stessa mano, trasformazioni composte.
+    if (s.lavoro) A[`attr${L}`] = { transform: `${A.corpo.transform} ${A.busto.transform} translate(${n(hx)} ${n(hy)}) rotate(${n(v[`${lato}Ogg`])})` };
+  }
+
+  if (s.lavoro) {
+    fotogrammaArredi(v, s.lavoro, A, t);
+    fotogrammaAttrezzi(v, A);
   }
 
   return A;

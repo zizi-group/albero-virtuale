@@ -83,9 +83,35 @@ export const BASE_CANALI = {
   schiuma: 0,
   davantiY: 0,
   davantiRot: 0,
+  // Mestiere (vivo/mestiere.ts): attrezzi in mano e arredi del prato.
+  /** Attrezzo nella mano: 0 niente, altrimenti posizione+1 in ATTREZZI. */
+  attrSx: 0,
+  attrDx: 0,
+  /** Avanzamento del passo di cantiere in corso, 0-1. */
+  costruzione: 1,
+  /** 1 = la cornetta è sul telefono della scrivania. */
+  cornetta: 1,
+  squillo: 0,
+  lampada: 0,
+  pila: 0.4,
+  grafico: 0,
+  lavagna: 0,
+  sportello: 0,
+  /** Il disco della combinazione, in giri. */
+  disco: 0,
+  nastro: 1,
+  insegnaRot: 0,
+  scrivaniaY: 0,
+  // Lo scoiattolo che fa da cliente e da socio.
+  scoiattolo: 0,
+  scoiattoloX: -200,
+  scoiattoloSu: 0,
+  scoiattoloDorme: 0,
 };
 
 export type Canale = keyof typeof BASE_CANALI;
+/** Canali che non si sfumano: passano da un valore all'altro di colpo (gli attrezzi in mano). */
+export const DISCRETI = new Set<Canale>(["attrSx", "attrDx"]);
 export type Canali = Record<Canale, number>;
 export const NOMI_CANALI = Object.keys(BASE_CANALI) as Canale[];
 
@@ -163,6 +189,27 @@ export function figuraDaPosa(p: Posa): Figura {
 }
 
 const gradi = (r: number) => (r * 180) / Math.PI;
+
+/** Gli attrezzi dei mestieri, che compaiono in mano durante le attività. */
+export const ATTREZZI = [
+  "cornetta",
+  "megafono",
+  "martello",
+  "sega",
+  "timbro",
+  "tazza",
+  "ghianda",
+  "bacchetta",
+  "forbici",
+  "pennello",
+  "ramo",
+  "penna",
+  "livella",
+  "pala",
+] as const;
+export type Attrezzo = (typeof ATTREZZI)[number];
+/** Il valore del canale attrSx/attrDx per un attrezzo (0 = mano vuota). */
+export const attrezzo = (a: Attrezzo | null) => (a ? ATTREZZI.indexOf(a) + 1 : 0);
 
 /** Dove si tiene ogni oggetto: in una mano, davanti con due mani, o per terra. */
 export const DOVE: Record<Oggetto, Lato | "davanti" | "terra"> = {

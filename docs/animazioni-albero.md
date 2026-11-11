@@ -155,6 +155,13 @@ Nei riquadri piccoli (catalogo) lo spazio è poco e la corsa è più corta; nel
 paesaggio delle pagine l'albero può uscire dal suo riquadro e attraversa la
 scena.
 
+## I mestieri delle strade
+
+Quando l'albero ha preso la sua strada fa un mestiere: costruisce arredi nel
+prato e li usa con orari suoi. Il progetto e il pilota dell'imprenditore
+(scrivania, telefono, contratti, riunioni con lo scoiattolo, cantieri) sono in
+`docs/routine-strade.md`; si vede in `/catalogo`.
+
 ## Le altre 17 azioni
 
 Usano già il pupazzo con la loro posa e i loro gesti (saluta, strofina,
@@ -226,6 +233,10 @@ Dettagli:
   scrollate, corse da un lato all'altro (corre piano sul posto), niente calci
   quando è sollevato; quando lo lasci si posa piano. Meno particelle e più
   lente; vento quasi fermo.
+- L'interruttore «Animazioni complete» del sito (`<html data-movimento="pieno">`,
+  `src/components/Movimento.tsx`) vale anche per l'albero: il motore usa
+  `movimentoRidotto()` e ascolta l'evento `linfa-movimento`; le regole CSS del
+  movimento ridotto stanno sotto `:root:not([data-movimento="pieno"])`.
 
 ## Le frasi
 
@@ -267,6 +278,8 @@ persone o marchi reali.
 | `vivo/motore.ts` | Orologio unico, strati, molle, particelle, fumetto, trascinamento, eventi del puntatore |
 | `vivo/disegni.tsx` | Colori, chioma, accessori, oggetti, forme delle particelle |
 | `vivo/AlberoVivo.tsx` | Il componente: disegna il pupazzo e avvia il motore |
+| `vivo/figura.tsx` | Il disegno del pupazzo senza hook (lo usano AlberoVivo e la cartolina sul server) |
+| `vivo/mestiere.ts`, `vivo/gesti.ts`, `vivo/arredi.tsx` | I mestieri delle strade: scene di lavoro, gesti, arredi e attrezzi (pilota: l'imprenditore, vedi `docs/routine-strade.md`) |
 | `vivo/vivo.css` | Cursore, anello del fuoco, dissolvenze della Scena (classi `lv-`) |
 
 Le keyframe `l-*` di `globals.css` non servono più all'albero; la `Scena` usa
