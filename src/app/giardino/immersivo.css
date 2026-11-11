@@ -683,3 +683,34 @@
 .gi-pannello #extra .grid {
   grid-template-columns: 1fr;
 }
+
+/* Il giardino in 3D: la tela riempie la scena; mentre carica si vede un velo verde. */
+@layer components {
+  .g3d {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(70% 60% at 50% 60%, #3f8f4a, #12392a);
+  }
+  .g3d-tela {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+  .g3d[data-stato="pronto"] .g3d-tela {
+    opacity: 1;
+  }
+  .g3d-carica {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .gi-scena[data-vista="3d"] {
+    inset: 0;
+  }
+}

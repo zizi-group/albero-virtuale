@@ -8,6 +8,7 @@ import { Ambiente } from "@/components/ambiente/Ambiente";
 import type { Ora } from "@/components/ambiente/atmosfera";
 import { Cassetta, Taccuino } from "@/components/ambiente/Oggetti";
 import { EVENTO_MOVIMENTO, InterruttoreMovimento, movimentoRidotto } from "@/components/Movimento";
+import { Scena3D } from "@/components/giardino3d/Scena3D";
 import { azione } from "@/lib/albero/azioni";
 import type { Meteo, Posa, Stadio, Stagione } from "@/lib/albero/tipi";
 import { Suoni, type TipoSuono } from "./suoni";
@@ -44,6 +45,7 @@ const TRATTI = {
   schermo: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
   schermoEsci: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
   esci: "M13.5 4H18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4.5M10 8l-4 4 4 4M6 12h10",
+  cubo: "M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5",
 };
 
 function Icona({ nome }: { nome: keyof typeof TRATTI }) {
@@ -65,6 +67,8 @@ const ORE: Ora[] = ["alba", "giorno", "tramonto", "notte"];
 const POSE_TIMELAPSE = ["guardare-cielo", "passeggiata", "leggere", "sonnellino", "scrivere-poesia", "dormire"];
 
 export interface PropsImmersivo {
+  /** Id dell'albero: è anche il seme del suo modello 3D. */
+  idAlbero: string;
   nome: string;
   citta: string;
   orario: string;
@@ -73,6 +77,10 @@ export interface PropsImmersivo {
   giorno: number;
   stadioNome: string;
   strada: string | null;
+  /** Id della strada (filosofo, artista…) per gli accessori del 3D. */
+  idStrada: string | null;
+  /** Id dell'azione del giorno, dalla libreria delle azioni. */
+  idAzione: string;
   umore: string;
   meteo: Meteo;
   ora: Ora;
@@ -100,6 +108,25 @@ function iscriviSchermo(avvisa: () => void) {
   return () => document.removeEventListener("fullscreenchange", avvisa);
 }
 
+// La vista del giardino: 3D di default, 2D a scelta (ricordata nel browser).
+const CHIAVE_VISTA = "linfa-vista";
+const EVENTO_VISTA = "linfa-vista";
+function iscriviVista(avvisa: () => void) {
+  window.addEventListener(EVENTO_VISTA, avvisa);
+  window.addEventListener("storage", avvisa);
+  return () => {
+    window.removeEventListener(EVENTO_VISTA, avvisa);
+    window.removeEventListener("storage", avvisa);
+  };
+}
+function leggiVista(): "3d" | "2d" {
+  try {
+    return localStorage.getItem(CHIAVE_VISTA) === "2d" ? "2d" : "3d";
+  } catch {
+    return "3d";
+  }
+}
+
 function tipoSuono(meteo: Meteo, ora: Ora): TipoSuono {
   if (meteo.cielo === "pioggia" || meteo.cielo === "temporale") return "pioggia";
   return ora === "notte" ? "grilli" : "uccellini";
@@ -116,6 +143,15 @@ export function Immersivo(p: PropsImmersivo) {
   const hudNascosto = schermoIntero && calma;
   const [suoniAccesi, setSuoniAccesi] = useState(false);
   const [tempo, setTempo] = useState<{ ora: Ora; posa: string } | null>(null);
+  // All'arrivo, se c'è una lettera da aprire, l'albero lo fa notare.
+  const [reazione] = useState(() => (p.nonLette > 0 ? { tipo: "lettera" as const, n: 1 } : null));
+  const vista = useSyncExternalStore(iscriviVista, leggiVista, () => "3d" as const);
+  const cambiaVista = () => {
+    try {
+      localStorage.setItem(CHIAVE_VISTA, vista === "3d" ? "2d" : "3d");
+    } catch {}
+    window.dispatchEvent(new Event(EVENTO_VISTA));
+  };
 
   const apri = useCallback((id: IdPannello) => setAperto((a) => (a === id ? null : id)), []);
   const chiudi = useCallback(() => {
@@ -280,6 +316,23 @@ export function Immersivo(p: PropsImmersivo) {
   const scala = misureDellEta(p.stadio, p.giorno).scala;
   const camera = Math.max(1, 1.06 / Math.sqrt(scala));
 
+  const scena2d = (
+    <Ambiente
+      meteo={p.meteo}
+      ora={ora}
+      stagione={p.stagione}
+      className="h-full"
+      chiaveAlbero={tempo ? `tempo-${tempo.posa}` : p.chiave}
+      albero={<Albero posa={posa} giorni={p.giorno} stadio={p.stadio} stagione={p.stagione} innevato={p.meteo.cielo === "neve"} titolo={p.titoloAlbero} />}
+      palco={
+        <>
+          <Cassetta daLeggere={p.nonLette} totale={p.totaleLettere} onApri={() => apri("lettere")} />
+          <Taccuino righe={p.righeDiario} onApri={() => apri("diario")} />
+        </>
+      }
+    />
+  );
+
   return (
     <div
       ref={radice}
@@ -289,21 +342,26 @@ export function Immersivo(p: PropsImmersivo) {
       data-pannello={aperto ?? undefined}
       data-tempo={tempo ? "1" : undefined}
     >
-      <div className="gi-scena">
-        <Ambiente
-          meteo={p.meteo}
-          ora={ora}
-          stagione={p.stagione}
-          className="h-full"
-          chiaveAlbero={tempo ? `tempo-${tempo.posa}` : p.chiave}
-          albero={<Albero posa={posa} giorni={p.giorno} stadio={p.stadio} stagione={p.stagione} innevato={p.meteo.cielo === "neve"} titolo={p.titoloAlbero} />}
-          palco={
-            <>
-              <Cassetta daLeggere={p.nonLette} totale={p.totaleLettere} onApri={() => apri("lettere")} />
-              <Taccuino righe={p.righeDiario} onApri={() => apri("diario")} />
-            </>
-          }
-        />
+      <div className="gi-scena" data-vista={vista}>
+        {vista === "3d" ? (
+          <Scena3D
+            idAlbero={p.idAlbero}
+            nome={p.nome}
+            giorni={p.giorno}
+            strada={p.idStrada}
+            azione={tempo ? tempo.posa : p.idAzione}
+            umore={p.umore}
+            meteo={p.meteo}
+            ora={ora}
+            stagione={p.stagione}
+            reazione={reazione}
+            onCassetta={() => apri("lettere")}
+            onTaccuino={() => apri("diario")}
+            ripiego={scena2d}
+          />
+        ) : (
+          scena2d
+        )}
       </div>
 
       {/* In alto: chi è, dove e quando */}
@@ -330,6 +388,11 @@ export function Immersivo(p: PropsImmersivo) {
             </span>
           </p>
           <div className="gi-comandi">
+            <button type="button" className="gi-icona gi-con-testo" onClick={cambiaVista} aria-pressed={vista === "3d"} title="Giardino in 3D o in 2D">
+              <Icona nome="cubo" />
+              <span className="gi-testo">{vista === "3d" ? "2D" : "3D"}</span>
+              <span className="sr-only">{vista === "3d" ? "Passa al giardino in 2D" : "Passa al giardino in 3D"}</span>
+            </button>
             <button type="button" className="gi-icona" onClick={cambiaSuoni} aria-pressed={suoniAccesi} title="Suoni d'ambiente">
               <Icona nome={suoniAccesi ? "suoniSi" : "suoniNo"} />
               <span className="sr-only">Suoni d&apos;ambiente {suoniAccesi ? "accesi" : "spenti"}</span>

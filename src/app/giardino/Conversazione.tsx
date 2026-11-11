@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
+import { segnalaReazione } from "@/components/giardino3d/reazioni";
 import { inviaMessaggio, type Esito } from "./actions";
 
 export interface Messaggio {
@@ -16,7 +17,10 @@ export function Conversazione({ nome, messaggi }: { nome: string; messaggi: Mess
   const scatola = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (esito.ok) modulo.current?.reset();
+    if (esito.ok) {
+      modulo.current?.reset();
+      segnalaReazione("saluta");
+    }
   }, [esito]);
   useEffect(() => {
     // Scorre solo la scatola dei biglietti, non la pagina.

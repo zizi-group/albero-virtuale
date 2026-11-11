@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { segnalaReazione } from "@/components/giardino3d/reazioni";
 import type { Esito } from "./actions";
 import { rispondiAlBuongiorno } from "./azioniCalendario";
 import "./calendario.css";
@@ -16,6 +17,9 @@ export interface DomandaDelMattino {
 /** Il pannello Buongiorno: la domanda del mattino, una risposta con un tocco. */
 export function Buongiorno({ nome, domanda }: { nome: string; domanda: DomandaDelMattino | null }) {
   const [esito, azione, inCorso] = useActionState<Esito, FormData>(rispondiAlBuongiorno, {});
+  useEffect(() => {
+    if (esito.ok) segnalaReazione("festa");
+  }, [esito]);
 
   if (!domanda) {
     return (

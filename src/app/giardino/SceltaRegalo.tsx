@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { segnalaReazione } from "@/components/giardino3d/reazioni";
 import { IconaRegalo } from "@/components/IconaRegalo";
 import { REGALI } from "@/lib/albero/regali";
 import { azioneDemo, faiRegalo, type Esito } from "./actions";
@@ -9,6 +10,9 @@ import { azioneDemo, faiRegalo, type Esito } from "./actions";
 /** Il regalo del mese: si sceglie dal catalogo, l'albero risponde con una lettera. */
 export function SceltaRegalo({ nome }: { nome: string }) {
   const [esito, azione, inCorso] = useActionState<Esito, FormData>(faiRegalo, {});
+  useEffect(() => {
+    if (esito.ok) segnalaReazione("festa");
+  }, [esito]);
   const [scelto, setScelto] = useState(REGALI[0].id);
   const r = REGALI.find((x) => x.id === scelto) ?? REGALI[0];
 

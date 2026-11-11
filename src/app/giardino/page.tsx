@@ -302,6 +302,9 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
     <main id="contenuto" className={`flex-1 ${fontModerna.variable}`}>
       <Immersivo
         pannelloIniziale={pannelloIniziale}
+        idAlbero={albero.id}
+        idStrada={strada}
+        idAzione={scena.azione.id}
         nome={albero.name}
         citta={albero.city}
         orario={orario}
