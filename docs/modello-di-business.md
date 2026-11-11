@@ -10,7 +10,61 @@ Verso i consumatori il sito mostra il prezzo IVA inclusa (22%), che è
 obbligatorio. Le cifre segnate come **ipotesi** vanno sostituite con dati veri
 appena ci sono.
 
-## I tre pacchetti
+## I pacchetti nuovi: Albero, Famiglia, Foresta (11/11/2026, in definizione)
+
+Decisi con Federico e il suo socio: l'esperienza digitale si lega a una cosa
+reale, **un albero vero piantato in Italia per ogni albero digitale, ogni
+anno**. Tutti i pacchetti sono annuali (il mensile sparisce: l'albero vero si
+pianta una volta all'anno). Prezzi + IVA, **proposte da ricalcolare** con i
+preventivi dell'albero vero e degli oggetti fisici.
+
+| | **Albero** | **Famiglia** | **Foresta** |
+|---|---|---|---|
+| **Alberi veri piantati in Italia** | **1 all'anno** | **3 all'anno** | **7 all'anno** |
+| Prezzo (proposta) | 39 € + IVA/anno | 89 € + IVA/anno | 179 € + IVA/anno |
+| Alberi digitali | 1 | 3 | 7 |
+| Azioni di ogni albero | tutte quelle della libreria | tutte | tutte |
+| Azioni di gruppo | — | 10 | 10 + 10 di foresta |
+| Forme di gruppo | — | famiglia, impresa, banda del bosco | tutte, più la foresta con nome e insegna |
+| Lettere all'anno | 12 | 24, anche di gruppo | 24 + lettere della foresta |
+| Libro | PDF | PDF + diario stampato | PDF + libro della foresta rilegato (un vero libricino) |
+| Extra mensili (regalo, riepilogo, cartolina) | — | sì | sì |
+| A casa | tessera | tessere + adesivi + miniatura | tessere + adesivi dei 7 alberi + miniatura del tuo albero preferito (materiale riciclato) + maglietta con il tuo albero + certificato con la mappa del boschetto vero |
+| Ogni anno che rinnovi | un albero vero in più, un anello di crescita, un seme per un nuovo albero digitale | uguale, per ogni albero | uguale, più la foto annuale degli alberi veri |
+
+**Regole.**
+- Ogni albero digitale fa le stesse cose in tutti i piani: più alberi sbloccano
+  solo le **azioni di gruppo**. I soldi non comprano la vita dell'albero.
+- **Azioni di gruppo, Famiglia** (da costruire): cena di famiglia sotto la luna,
+  litigio per chi ha più ombra, foto di gruppo, giochi con lo scoiattolo,
+  bancarella dell'ombra aperta insieme, riunione sotto la pioggia con un
+  ombrello solo, il colpo alle ghiande della banda, fuga dal giardiniere, festa
+  di compleanno, lettera firmata da tutti.
+- **Azioni di foresta, Foresta** (da costruire): festa del cambio di stagione,
+  assemblea del bosco, mercato della foresta, squadra di calcio, coro della
+  sera, teatro del bosco, cantiere della casetta sull'albero, gita al ruscello
+  guidata dal viaggiatore, olimpiadi del bosco (risultato calcolato dal
+  codice), notte delle lucciole.
+- **La banda del bosco** è la caricatura del boss da film di gangster (Federico:
+  «stereotipo del classico mafioso italiano»): Don Ghianda con cappello e
+  gessato, «affari» di ghiande, riunioni di «famiglia» con lo scoiattolo.
+  Sempre ironica e innocua: niente parole e simboli della mafia vera (pizzo,
+  omertà, vittime, luoghi o nomi reali), niente violenza, niente accenti
+  regionali presi in giro, nessuna citazione di film.
+- **Azioni della libreria**: oggi 23. Obiettivo 80 al lancio (40 di base + 5-6
+  per ognuna delle 7 strade) e 150 a fine primo anno (4 pacchetti stagionali).
+  Da provare prima con un blocco di 15, per misurare i tempi.
+- **Albero vero**: la specie la sceglie il partner per il territorio (pino dove
+  è nativo). Ogni albero ha foto, data, coordinate e partner nominato.
+- **Comunicazione ambientale**: si racconta il fatto (un albero vero, dove, con
+  chi), mai l'effetto sul clima («compensi la CO2», «impatto zero»): regole UE
+  sulle dichiarazioni ambientali (direttiva 2024/825). Testi da far verificare a
+  un legale prima di andare online.
+- **Da preventivare**: albero vero (con anni di cura), maglietta, miniatura,
+  adesivi, certificato, libro della foresta. Senza questi numeri i conti sotto
+  restano quelli del modello precedente.
+
+## Pacchetti precedenti (Albero, Premium annuale, Premium mensile), superati
 
 | | **Albero** | **Premium annuale** | **Premium mensile** |
 |---|---|---|---|
