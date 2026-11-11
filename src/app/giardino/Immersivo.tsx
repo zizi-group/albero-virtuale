@@ -440,7 +440,7 @@ export function Immersivo(p: PropsImmersivo) {
       {/* In basso: che cosa sta facendo, e i pannelli */}
       <div className="gi-hud gi-hud-basso">
         <p className="gi-didascalia" aria-live="polite">
-          {tempo ? `${p.nome} vive le sue giornate.` : p.didascalia}
+          {tempo ? `${p.nome} vive le sue giornate.` : prova.azione ? `${p.nome} ${azione(prova.azione).etichetta}.` : p.didascalia}
         </p>
         <nav className="gi-dock" aria-label="Pannelli del giardino">
           {PANNELLI.map((x) => (
