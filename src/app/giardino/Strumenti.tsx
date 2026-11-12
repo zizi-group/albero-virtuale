@@ -28,6 +28,7 @@ export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoSce
   const [aperto, setAperto] = useState(false);
   const [umoreProva, setUmoreProva] = useState("");
   const [azioneProva, setAzioneProva] = useState("");
+  const [alberiProva, setAlberiProva] = useState("1");
   const maniglia = useRef<HTMLButtonElement>(null);
 
   // Il time-lapse del giardino: avvisa quando i giorni iniziano e finiscono di passare.
@@ -201,6 +202,22 @@ export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoSce
                 {a.etichetta}
               </option>
             ))}
+          </select>
+          <label className="sr-only" htmlFor="alberi-prova">
+            Alberi nella scena
+          </label>
+          <select
+            id="alberi-prova"
+            className="gettone min-h-9 px-2 text-[0.9rem]"
+            value={alberiProva}
+            onChange={(e) => {
+              setAlberiProva(e.target.value);
+              provaNelGiardino({ alberi: Number(e.target.value) });
+            }}
+          >
+            <option value="1">Solo il tuo albero</option>
+            <option value="3">Famiglia: 3 alberi</option>
+            <option value="7">Foresta: 7 alberi</option>
           </select>
         </div>
       </section>

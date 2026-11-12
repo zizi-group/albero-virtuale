@@ -23,6 +23,8 @@ export interface PropsScena3D {
   stagione: Stagione;
   /** Cambia quando bisogna far reagire l'albero (per esempio una lettera nuova). */
   reazione?: { tipo: Reazione; n: number } | null;
+  /** Quanti alberi in tutto (1, 3 o 7): gli altri sono compagni della demo. */
+  quanti?: number;
   /** Parti dello schermo coperte dai riquadri (telefono in verticale). */
   margini?: { sopra: number; sotto: number } | null;
   onCassetta?: () => void;
@@ -32,6 +34,16 @@ export interface PropsScena3D {
 }
 
 const nessunCambio = () => () => {};
+
+// I compagni della demo (Famiglia, Foresta): semi fissi, strade e nomi diversi.
+const COMPAGNI = [
+  { nome: "Ulivetta", strada: "artista" },
+  { nome: "Betta", strada: "sportivo" },
+  { nome: "Rovere", strada: "filosofo" },
+  { nome: "Pinolo", strada: "viaggiatore" },
+  { nome: "Ciliegina", strada: "poeta" },
+  { nome: "Don Ghianda", strada: "furfante" },
+];
 
 let webglPresente: boolean | null = null;
 /** Si controlla una volta sola: creare una tela WebGL costa. */
@@ -69,7 +81,16 @@ export function Scena3D(p: PropsScena3D) {
         if (!vivo || !tela.current) return;
         const q = ultime.current;
         const opzioni: OpzioniGiardino = {
-          alberi: [{ id: q.idAlbero, seme: q.idAlbero, strada: q.strada ?? undefined, nome: q.nome, giorni: q.giorni, principale: true }],
+          alberi: [
+            { id: q.idAlbero, seme: q.idAlbero, strada: q.strada ?? undefined, nome: q.nome, giorni: q.giorni, principale: true },
+            ...COMPAGNI.slice(0, Math.max(0, (q.quanti ?? 1) - 1)).map((c, i) => ({
+              id: `${q.idAlbero}-compagno-${i}`,
+              seme: `${q.idAlbero}-compagno-${i}`,
+              strada: c.strada,
+              nome: c.nome,
+              giorni: q.giorni,
+            })),
+          ],
           meteo: q.meteo,
           ora: q.ora,
           stagione: q.stagione,
@@ -102,7 +123,8 @@ export function Scena3D(p: PropsScena3D) {
       istanza.current?.distruggi();
       istanza.current = null;
     };
-  }, [webgl]);
+    // Con un numero diverso di alberi il giardino si ricrea da capo.
+  }, [webgl, p.quanti]);
 
   // I cambi dal vivo: meteo, ora, stagione, azione, umore
   const { meteo, ora, stagione, azione, umore } = p;
@@ -124,7 +146,7 @@ export function Scena3D(p: PropsScena3D) {
 
   return (
     <div className="g3d" data-stato={stato}>
-      <canvas ref={tela} className="g3d-tela" aria-label={`Il giardino di ${p.nome} in 3D: tocca l'albero per salutarlo, trascinalo per spostarlo.`} role="img" />
+      <canvas key={p.quanti ?? 1} ref={tela} className="g3d-tela" aria-label={`Il giardino di ${p.nome} in 3D: tocca l'albero per salutarlo, trascinalo per spostarlo.`} role="img" />
       {stato === "carica" && (
         <p className="g3d-carica" role="status">
           Il bosco si sta svegliando…

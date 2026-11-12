@@ -10,6 +10,8 @@ export const EVENTO_PROVA = "linfa-prova";
 export interface DettaglioProva {
   umore?: string | null;
   azione?: string | null;
+  /** Quanti alberi in scena: 1 (il tuo), 3 (Famiglia) o 7 (Foresta). */
+  alberi?: number | null;
 }
 export function provaNelGiardino(d: DettaglioProva) {
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent<DettaglioProva>(EVENTO_PROVA, { detail: d }));

@@ -169,11 +169,19 @@ export function Immersivo(p: PropsImmersivo) {
   }, []);
 
   // Strumenti della demo: umore e azione di prova, solo nella scena.
-  const [prova, setProva] = useState<{ umore: string | null; azione: string | null }>({ umore: null, azione: null });
+  const [prova, setProva] = useState<{ umore: string | null; azione: string | null; alberi: number | null }>({
+    umore: null,
+    azione: null,
+    alberi: null,
+  });
   useEffect(() => {
     const ascolta = (e: Event) => {
       const d = (e as CustomEvent<DettaglioProva>).detail;
-      setProva((x) => ({ umore: d.umore !== undefined ? d.umore : x.umore, azione: d.azione !== undefined ? d.azione : x.azione }));
+      setProva((x) => ({
+        umore: d.umore !== undefined ? d.umore : x.umore,
+        azione: d.azione !== undefined ? d.azione : x.azione,
+        alberi: d.alberi !== undefined ? d.alberi : x.alberi,
+      }));
     };
     window.addEventListener(EVENTO_PROVA, ascolta);
     return () => window.removeEventListener(EVENTO_PROVA, ascolta);
@@ -394,6 +402,7 @@ export function Immersivo(p: PropsImmersivo) {
             stagione={p.stagione}
             reazione={reazione}
             margini={margini}
+            quanti={prova.alberi ?? 1}
             onCassetta={() => apri("lettere")}
             onTaccuino={() => apri("diario")}
             ripiego={scena2d}
