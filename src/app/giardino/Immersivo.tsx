@@ -49,6 +49,7 @@ const TRATTI = {
   suoniNo: "M4 9.5h3.5L12 6v12l-4.5-3.5H4zM16 9.5l5 5M21 9.5l-5 5",
   schermo: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
   schermoEsci: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
+  foresta: "M6 20v-3.5M6 16.5 2.8 12h2L3.2 9.2h1.5L6 6l1.3 3.2h1.5L7.2 12h2zM17 20v-3M17 17l-3.6-5h2.2l-1.8-3h1.7L17 5l1.5 4h1.7l-1.8 3h2.2zM11.5 20v-2.2M9.6 17.8a1.9 2.6 0 1 0 3.8 0 1.9 2.6 0 0 0-3.8 0M2 20.5h20",
   esci: "M13.5 4H18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4.5M10 8l-4 4 4 4M6 12h10",
 };
 
@@ -161,6 +162,8 @@ export interface PropsImmersivo {
   strumenti: ReactNode;
   /** È appena stato piantato: lo dice appena arrivi. */
   appenaNato?: boolean;
+  /** Si arriva dalla tua foresta 3D: la scena entra sfumando, come una discesa. */
+  daForesta?: boolean;
   /** Il pannello già aperto all'arrivo (per esempio tornando da una lettera). */
   pannelloIniziale?: IdPannello;
 }
@@ -502,6 +505,7 @@ export function Immersivo(p: PropsImmersivo) {
       data-pannello={aperto ?? undefined}
       data-tempo={tempo ? "1" : undefined}
       data-zoom={zoom ? "1" : undefined}
+      data-arrivo={p.daForesta ? "foresta" : undefined}
     >
       <div className="gi-scena">{scena2d}</div>
 
@@ -543,6 +547,10 @@ export function Immersivo(p: PropsImmersivo) {
               <span aria-hidden>?</span>
               <span className="sr-only">Scorciatoie da tastiera</span>
             </button>
+            <Link href="/foresta" className="gi-icona gi-con-testo" title="La tua foresta, vista dall'alto">
+              <Icona nome="foresta" />
+              <span className="gi-testo">Foresta</span>
+            </Link>
             <form action="/auth/esci" method="post">
               <button className="gi-icona gi-con-testo" title="Esci">
                 <Icona nome="esci" />

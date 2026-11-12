@@ -91,6 +91,17 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   su di lui, risponde in un fumetto, poi è pensieroso 5 minuti
   (`localStorage` `linfa-pensieroso`). Gli strumenti della demo provano
   umore, azione e fascia con `linfa-prova`.
+- **La tua foresta** (fase 6 della 0.2, `/foresta`): i tuoi alberi dall'alto,
+  in 3D, divisi per stanza in radure con recinto e cartello; le stanze chiuse
+  sono radure incolte con il lucchetto di rami e la regola per aprirle. Tocchi
+  un albero o una radura: la camera scende e si entra nel giardino 2D
+  (`/giardino?stanza=…&albero=…&da=foresta`). Pannello dei numeri veri (alberi,
+  giorni, lettere, oggetti, stanze; alberi veri in Italia «in arrivo», niente
+  CO2). Senza WebGL o se è lento: la mappa 2D (`?vista=mappa` la forza).
+  `?esempi=1` aggiunge stanze d'esempio della demo, che non contano nei numeri.
+  Dati: `src/lib/foresta/` (`tipi.ts` interfaccia, `dati.ts` adattatore che oggi
+  mette l'unico albero nella stanza 1, `regole.ts` sblocco delle stanze); pagina
+  in `src/app/foresta/`; motore `src/lib/giardino3d/panoramica.js`.
 - **Motore 3D** (non più nel giardino, tenuto per le foreste della 0.2):
   `src/components/giardino3d/Scena3D.tsx` carica il motore three.js di
   `src/lib/giardino3d/` (JavaScript con JSDoc; API in
@@ -110,7 +121,7 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   (`settimana.tsx`, PNG 1200×900 allegato all'email). Il paesaggio delle
   cartoline è `src/app/giardino/mese/[numero]/cartolina/scena.ts`.
 - `src/app/`: `/` landing, `/accedi`, `/auth/conferma`, `/auth/esci`,
-  `/pianta`, `/giardino` (con gli strumenti della demo e `?meteo=`),
+  `/pianta`, `/giardino` (con gli strumenti della demo e `?meteo=`), `/foresta`,
   `/giardino/lettere/[id]`, `/giardino/mese/[numero]` (riepilogo illustrato
   del mese) con `cartolina` (PNG con `next/og`, `?formato=storia|sfondo`,
   `&scarica=1`), `/catalogo`.

@@ -51,10 +51,16 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
   const utente = await getUtente();
   if (!utente) redirect("/accedi");
   const supabase = await createClient();
-  const { data: albero } = await supabase.from("trees").select("*").eq("owner_id", utente.id).maybeSingle();
-  if (!albero) redirect("/pianta");
-
   const parametri = await searchParams;
+  // Dalla tua foresta (/foresta) arrivano `stanza`, `albero` e `da=foresta`. Oggi c'è un
+  // albero per persona e nessuna stanza: `albero` sceglie l'albero se è uno dei suoi.
+  // `stanza` è pronto per la fase 5 (docs/stanze-e-vita.md, sezione 2).
+  const alberoScelto = typeof parametri.albero === "string" && /^[0-9a-f-]{36}$/i.test(parametri.albero) ? parametri.albero : null;
+  let query = supabase.from("trees").select("*").eq("owner_id", utente.id);
+  if (alberoScelto) query = query.eq("id", alberoScelto);
+  const { data: albero } = await query.order("planted_at", { ascending: true }).limit(1).maybeSingle();
+  if (!albero) redirect(alberoScelto ? "/giardino" : "/pianta");
+
   const sceltaMeteo = typeof parametri.meteo === "string" ? parametri.meteo : undefined;
   const nuovo = parametri.nuovo === "1";
   const pannelloIniziale = (["buongiorno", "lettere", "diario", "scrivi", "mese", "collezione", "carattere"] as const).find(
@@ -330,6 +336,7 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
       <Immersivo
         pannelloIniziale={pannelloIniziale}
         appenaNato={nuovo}
+        daForesta={parametri.da === "foresta"}
         palinsesto={palinsesto}
         fascia={fascia}
         indice={indice}

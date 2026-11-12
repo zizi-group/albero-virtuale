@@ -29,6 +29,28 @@ g.distruggi();                        // libera GPU, eventi, timer
 ```
 
 Solo nel browser (usa `document` e il canvas): in React va dentro `useEffect`.
+
+### Modo «panoramica» (la tua foresta)
+
+```js
+import { creaPanoramica } from "@/lib/giardino3d/panoramica";
+
+const p = creaPanoramica(canvas, {
+  stanze: [{ id, numero, nome, alberi: [{ id, nome, seme, strada, giorni, umore }], esempio? }], // fino a 10, 4 alberi
+  bloccate: [{ numero, regola: "Pianta altri 4 alberi" }],
+  ora: "giorno", stagione: "estate", cielo: "sole", movimentoRidotto: false,
+  margini: { sopra, sotto, sinistra, destra },   // frazioni coperte dai riquadri della pagina
+});
+p.su("tocca-stanza", ({ stanza, albero }) => p.entra(stanza, albero)); // la camera scende
+p.su("tocca-bloccata", ({ numero, regola }) => …);
+p.su("entrata", ({ stanza, albero }) => …);   // fine della discesa
+p.margini({ destra: 0.3 });  p.distruggi();
+```
+
+File a parte (`panoramica.js`): riusa `creaAlbero`, il bosco morbido e le
+texture senza toccare `index.js`. Telecamera alta (54°) che inquadra tutte le
+radure nella fascia libera; gli alberi respirano e ondeggiano col vento (niente
+routine); ombre calcolate una volta sola.
 Il canvas si dimensiona con il CSS; il motore lo segue con un ResizeObserver.
 
 ## File
@@ -55,6 +77,9 @@ fatica; pausa con la scheda nascosta. Misure (computer di sviluppo):
 |---|---|---|
 | 1 albero | ≈ 6,3–6,6 ms | non misurato |
 | 7 alberi | ≈ 8,2–8,4 ms | ≈ 4,4 ms |
+
+Panoramica (`/foresta`, misurata con `_prove.misura()`): vedi la tabella in
+`docs/stanze-e-vita.md`, sezione 13.
 
 Pagine di prova (fuori da Next): `prototipi/foresta-3d/giardino.html` (comandi
 per tutto) e `prototipi/foresta-3d/modelli30.html` (foglio dei 30 modelli).

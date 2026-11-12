@@ -11,6 +11,10 @@ risposta (sezione 16).
 > Gli intermezzi con gesti nuovi arrivano con la libreria dei gesti (fase 2):
 > per ora tra un'attività e l'altra ci sono i pensieri e i gesti a sorpresa
 > della posa viva.
+>
+> **Fase 6 fatta (12/11/2026): la tua foresta** in `/foresta` (dettagli e
+> misure in fondo alla sezione 13). Senza le stanze della fase 5 legge l'unico
+> albero e lo mette nella stanza 1, con un adattatore (`src/lib/foresta/dati.ts`).
 
 Questo documento non butta via niente di quello che c'è: estende i mestieri
 delle strade (`docs/routine-strade.md`, `src/lib/albero/mestieri.ts`: 7 strade,
@@ -625,6 +629,56 @@ cambia lo stesso (tracce, oggetti, posizione).
   (già previsto: «Seme da regalare»).
 - Senza WebGL o su dispositivi lenti: una mappa 2D con le radure e i numeri
   (lo stesso ripiego di oggi).
+
+### La tua foresta: com'è fatta (fase 6)
+
+- **Pagina** `/foresta` (`src/app/foresta/`): la vista a tutto schermo, il
+  pannello dei numeri a destra (computer) o in basso (telefono), «Al giardino»
+  e, nel giardino, il bottone «Foresta» per tornare qui.
+- **Motore**: `src/lib/giardino3d/panoramica.js`, file a parte (non tocca
+  `index.js`, che usa anche la foresta del club). Radure in una griglia sciolta
+  (2 colonne sul telefono in verticale), recinto di pali con il varco davanti,
+  cartello col nome della stanza e degli alberi, sentieri fra le radure, bosco
+  morbido intorno e solo cespugli davanti (non coprono i cartelli). Le chiuse:
+  prato incolto, cespugli, lucchetto di rami che ondeggia piano e cartello con
+  la regola («Pianta altri 4 alberi»). Si vedono le prossime 2 da aprire.
+- **Movimento**: respiro, oscillazione col vento (più forte con pioggia e
+  temporale), braccia che si muovono appena; con il movimento ridotto è tutto
+  fermo e la discesa è immediata.
+- **Il passaggio**: tocchi un albero o una radura → la camera scende in 1,25 s
+  sulla radura (o sull'albero), la pagina sfuma nel colore della carta e si apre
+  `/giardino?stanza=<id>&albero=<id>&da=foresta`; il giardino entra con un velo
+  che si scioglie e un piccolo zoom. Il giardino oggi usa `albero` (se è della
+  persona); `stanza` è pronto per la fase 5.
+- **Numeri veri**: alberi piantati, giorni vissuti (somma), lettere ricevute,
+  oggetti sbloccati, stanze aperte su 10. Gli alberi veri in Italia: nessun dato
+  nel database, il pannello scrive «in arrivo» (`NumeriForesta.alberiVeri =
+  null`). Nessuna cifra di CO2 (1.4).
+- **Stanze aperte** (`src/lib/foresta/regole.ts`): la regola di 2.1 con base 1
+  per tutti i piani (16.3 da decidere) e rinnovi 0 (il dato non c'è ancora).
+- **Prove della demo**: `?esempi=1` aggiunge 3 stanze d'esempio, `?esempi=pieno`
+  la foresta più grande (10 stanze, 37 alberi); gli esempi hanno il cartello
+  «esempio della demo», non si aprono e non entrano nei numeri. `?vista=mappa`
+  forza il ripiego, `?meteo=` come nel giardino.
+- **Ripiego 2D**: senza WebGL, se la scheda grafica si perde o se dopo
+  l'avvio resta sopra i 50 ms per fotogramma (la stessa regola e lo stesso
+  segno `linfa-3d-lento` del giardino 3D di prima): mappa disegnata con le
+  radure, gli alberelli colorati per strada e i lucchetti.
+- **Prestazioni**: oltre 12 alberi i personaggi si «congelano» (i pezzi fermi
+  di corpo, chioma, braccia e gambe uniti per materiale: da ~140 disegni ad
+  albero a una ventina); il viso resta fermo, il respiro e il vento restano.
+  Ombre calcolate una volta sola, qualità adattiva come nel giardino. In
+  sviluppo `window.__foresta.misura()` dà i ms per fotogramma.
+
+| Foresta (computer di sviluppo, misura di 240 fotogrammi) | Disegni | ms per fotogramma |
+|---|---|---|
+| 4 radure + 2 chiuse, 10 alberi, 2560×1600 | 791 | ≈ 8,7–10,3 |
+| 10 radure, 37 alberi, senza congelare, 2560×1600 | 2552 | ≈ 28 |
+| 10 radure, 37 alberi, congelati, 2240×1400 | 760 | ≈ 12 |
+| 4 radure + 2 chiuse, telefono 375×812 (emulato, 750×1624 px) | 791 | ≈ 14 |
+
+Il telefono è stato provato solo con l'emulazione del browser sul computer:
+le misure su un telefono vero sono da fare.
 
 ## 14. Dati e database
 
