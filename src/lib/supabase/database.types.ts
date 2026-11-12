@@ -23,16 +23,30 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "accounts": {
+            "club_consent": {
                   Row: {
-                    "created_at": string,"owner_id": string,"package": string,"renewals": number,"trees_planted": number,"updated_at": string
+                    "granted_at": string,"owner_id": string,"owner_label": string,"revoked_at": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"owner_id": string,"package"?: string,"renewals"?: number,"trees_planted"?: number,"updated_at"?: string
+                    "granted_at"?: string,"owner_id": string,"owner_label"?: string,"revoked_at"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"owner_id"?: string,"package"?: string,"renewals"?: number,"trees_planted"?: number,"updated_at"?: string
+                    "granted_at"?: string,"owner_id"?: string,"owner_label"?: string,"revoked_at"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"club_examples": {
+                  Row: {
+                    "created_at": string,"day_count": number,"id": string,"name": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"day_count"?: number,"id"?: string,"name": string
+                  }
+                  Update: {
+                    "created_at"?: string,"day_count"?: number,"id"?: string,"name"?: string
                   }
                   Relationships: [
                     
@@ -143,20 +157,6 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"rooms": {
-                  Row: {
-                    "celebrated_at": string | null,"created_at": string,"id": string,"name": string,"number": number,"owner_id": string,"unlocked_at": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "celebrated_at"?: string | null,"created_at"?: string,"id"?: string,"name": string,"number": number,"owner_id": string,"unlocked_at"?: string
-                  }
-                  Update: {
-                    "celebrated_at"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"number"?: number,"owner_id"?: string,"unlocked_at"?: string
-                  }
-                  Relationships: [
-                    
-                  ]
                 },"tree_months": {
                   Row: {
                     "closed_at": string | null,"first_day": number,"id": string,"number": number,"recap": Json | null,"started_at": string,"tree_id": string
@@ -199,23 +199,17 @@ isOneToOne: false
                   ]
                 },"trees": {
                   Row: {
-                    "biography": NonNullable<Json>,"city": string,"created_at": string,"day_count": number,"id": string,"last_weather": Json | null,"latitude": number,"longitude": number,"mood": string,"name": string,"owner_id": string,"owner_name": string | null,"path": string | null,"path_scores": NonNullable<Json>,"plan": string,"planted_at": string,"room_id": string | null,"timezone": string,"today_action": string,"today_caption": string | null,"traits": NonNullable<Json>,"updated_at": string
+                    "biography": NonNullable<Json>,"city": string,"created_at": string,"day_count": number,"id": string,"last_weather": Json | null,"latitude": number,"longitude": number,"mood": string,"name": string,"owner_id": string,"owner_name": string | null,"path": string | null,"path_scores": NonNullable<Json>,"plan": string,"planted_at": string,"timezone": string,"today_action": string,"today_caption": string | null,"traits": NonNullable<Json>,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "biography"?: NonNullable<Json>,"city": string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude": number,"longitude": number,"mood"?: string,"name": string,"owner_id": string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"room_id"?: string | null,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits": NonNullable<Json>,"updated_at"?: string
+                    "biography"?: NonNullable<Json>,"city": string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude": number,"longitude": number,"mood"?: string,"name": string,"owner_id": string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits": NonNullable<Json>,"updated_at"?: string
                   }
                   Update: {
-                    "biography"?: NonNullable<Json>,"city"?: string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude"?: number,"longitude"?: number,"mood"?: string,"name"?: string,"owner_id"?: string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"room_id"?: string | null,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits"?: NonNullable<Json>,"updated_at"?: string
+                    "biography"?: NonNullable<Json>,"city"?: string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude"?: number,"longitude"?: number,"mood"?: string,"name"?: string,"owner_id"?: string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits"?: NonNullable<Json>,"updated_at"?: string
                   }
                   Relationships: [
-                    {
-      foreignKeyName: "trees_room_id_fkey"
-      columns: ["room_id"]
-isOneToOne: false
-      referencedRelation: "rooms"
-      referencedColumns: ["id"]
-    }
+                    
                   ]
                 },"unlocks": {
                   Row: {
@@ -240,10 +234,31 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "club_forest": {
+                  Row: {
+                    "crescita": number | null,"esempio": boolean | null,"modello": number | null,"nome": string | null,"persona": string | null,"seme": string | null,"x": number | null,"z": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                }
           }
           Functions: {
-            [_ in never]: never
+            "club_contatori":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "alberi": number,"esempi": number,"in_foresta": number,"questo_mese": number
+            }[]
+                           },
+"club_frazione":
+{ Args: { "testo": string }; Returns: number
+                           },
+"club_imul":
+{ Args: { "a": number,"b": number }; Returns: number
+                           },
+"club_modello":
+{ Args: { "testo": string }; Returns: number
+                           }
           }
           Enums: {
             [_ in never]: never

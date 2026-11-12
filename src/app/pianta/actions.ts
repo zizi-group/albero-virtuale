@@ -3,7 +3,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { COOKIE_ALBERO, alberiDellaPersona } from "@/lib/alberi";
+import { daiConsenso, isEtichetta } from "@/lib/club";
 import { cercaCitta } from "@/lib/meteo";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { piantaAlbero } from "@/lib/motore/servizio";
 import { dopoLaSemina, preparaSemina } from "@/lib/motore/stanze";
 
@@ -46,6 +48,16 @@ export async function azioneSemina(_prima: StatoSemina, form: FormData): Promise
     piano: piano as (typeof PIANI)[number],
     stanzaId,
   });
+  // La foresta del club: solo con il sì esplicito (casella non spuntata di partenza).
+  if (form.get("club") === "si") {
+    const etichetta = form.get("club_persona");
+    try {
+      await daiConsenso(createAdminClient(), utente.id, isEtichetta(etichetta) ? etichetta : "nessuno");
+    } catch (e) {
+      // l'albero è piantato: il consenso si può dare dopo da /club
+      console.error(e);
+    }
+  }
   // Un albero in più: può aprire una stanza (la festa la mostra il giardino).
   await dopoLaSemina(utente.id);
   (await cookies()).set(COOKIE_ALBERO, nato.id, { path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 365 });

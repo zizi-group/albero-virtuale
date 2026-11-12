@@ -1,0 +1,444 @@
+/* La foresta del club: la tela 3D a tutto schermo, i riquadri sopra come nel
+   giardino immersivo (Bricolage, vetro scuro, ambra). Tutto sotto .club. */
+
+@layer components {
+  .club {
+    --club-vetro: rgba(14, 17, 12, 0.62);
+    --club-ambra: #f2b630;
+    position: relative;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 420px;
+    overflow: hidden;
+    background: #cfe6f2;
+    color: #fff;
+    font-family: var(--font-lp), ui-sans-serif, system-ui, sans-serif;
+  }
+  .club-scena,
+  .club-tela,
+  .club-nomi {
+    position: absolute;
+    inset: 0;
+  }
+  .club-tela {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+    outline: none;
+  }
+  .club-tela:active {
+    cursor: grabbing;
+  }
+  .club-tela:focus-visible {
+    box-shadow: inset 0 0 0 3px var(--club-ambra);
+  }
+  .club-nomi {
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .club-carica {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    background: var(--club-vetro);
+    font-weight: 600;
+  }
+
+  /* I nomi sopra gli alberi vicini */
+  .club-nome {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 11rem;
+    padding: 0.18rem 0.55rem 0.22rem;
+    border-radius: 10px;
+    background: rgba(14, 17, 12, 0.72);
+    color: #fff;
+    font-size: 0.82rem;
+    line-height: 1.15;
+    white-space: nowrap;
+    will-change: transform, opacity;
+    transition: opacity 0.2s;
+  }
+  .club-nome::after {
+    content: "";
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    translate: -50% 0;
+    border: 5px solid transparent;
+    border-bottom: 0;
+    border-top-color: rgba(14, 17, 12, 0.72);
+  }
+  .club-nome b {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .club-nome span {
+    font-size: 0.68rem;
+    opacity: 0.8;
+  }
+  .club-nome[data-mio="1"] {
+    background: var(--club-ambra);
+    color: #23261d;
+    font-size: 0.9rem;
+  }
+  .club-nome[data-mio="1"]::after {
+    border-top-color: var(--club-ambra);
+  }
+  .club-nome[data-esempio="1"] {
+    background: rgba(60, 66, 58, 0.7);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  }
+  .club-nome[data-esempio="1"] span {
+    font-style: italic;
+  }
+
+  /* I riquadri */
+  .club-hud {
+    position: absolute;
+    left: max(0.75rem, env(safe-area-inset-left));
+    right: max(0.75rem, env(safe-area-inset-right));
+    display: flex;
+    gap: 0.6rem;
+    pointer-events: none;
+  }
+  .club-hud > * {
+    pointer-events: auto;
+  }
+  .club-alto {
+    top: max(0.75rem, env(safe-area-inset-top));
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  .club-basso {
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  .club-carta {
+    padding: 0.7rem 0.9rem 0.8rem;
+    border-radius: 18px;
+    background: var(--club-vetro);
+    backdrop-filter: blur(12px) saturate(1.2);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+  .club-titolo {
+    max-width: min(23rem, 64vw);
+  }
+  .club-logo {
+    font-weight: 800;
+    font-size: 0.82rem;
+    letter-spacing: -0.02em;
+    color: var(--club-ambra);
+  }
+  .club-occhiello {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+  .club-h1 {
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  .club-conti {
+    margin-top: 0.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.9rem;
+    font-size: 0.86rem;
+  }
+  .club-conti b {
+    color: var(--club-ambra);
+    font-size: 1.05rem;
+  }
+  .club-nota {
+    margin-top: 0.3rem;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    opacity: 0.82;
+  }
+  .club-invito {
+    margin-top: 0.55rem;
+    font-family: var(--font-newsreader), serif;
+    font-style: italic;
+    font-size: 1.02rem;
+    line-height: 1.25;
+  }
+  .club-seme {
+    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(242, 182, 48, 0.35);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.86rem;
+    cursor: not-allowed;
+  }
+  .club-seme span {
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .club-comandi {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.45rem;
+  }
+  .club-zoom {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+  }
+  .club-pillola,
+  .club-tondo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.4rem;
+    padding: 0 0.95rem;
+    border-radius: 999px;
+    background: var(--club-vetro);
+    backdrop-filter: blur(12px);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.86rem;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+  }
+  .club-tondo {
+    width: 2.4rem;
+    padding: 0;
+    font-size: 1.2rem;
+  }
+  .club-pillola:hover,
+  .club-tondo:hover {
+    background: rgba(14, 17, 12, 0.78);
+  }
+  .club-pillola:disabled {
+    opacity: 0.55;
+    cursor: wait;
+  }
+  .club-primario {
+    background: var(--club-ambra);
+    color: #23261d;
+  }
+  .club-primario:hover {
+    background: #f6c34e;
+  }
+
+  .club-esempi {
+    position: absolute;
+    left: 50%;
+    top: max(0.75rem, env(safe-area-inset-top));
+    translate: -50% 0;
+    max-width: min(30rem, 42vw);
+    padding: 0.45rem 0.8rem;
+    border-radius: 12px;
+    background: rgba(255, 246, 216, 0.94);
+    color: #23261d;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+  }
+  .club-scheda {
+    position: absolute;
+    left: 50%;
+    bottom: max(5.5rem, calc(env(safe-area-inset-bottom) + 5.5rem));
+    translate: -50% 0;
+    min-width: 12rem;
+    text-align: center;
+  }
+  .club-scheda-nome {
+    font-size: 1.2rem;
+    font-weight: 800;
+  }
+  .club-chiudi {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.55rem;
+    font-size: 1.2rem;
+    opacity: 0.7;
+    cursor: pointer;
+  }
+
+  .club-consenso,
+  .club-demo {
+    max-width: min(24rem, 100%);
+  }
+  .club-consenso summary,
+  .club-demo summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    cursor: pointer;
+    list-style: none;
+  }
+  .club-consenso summary::-webkit-details-marker,
+  .club-demo summary::-webkit-details-marker {
+    display: none;
+  }
+  .club-stato {
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+  .club-stato[data-attivo="1"] {
+    background: var(--club-ambra);
+    color: #23261d;
+  }
+  .club-modulo {
+    margin-top: 0.3rem;
+  }
+  .club-scelte {
+    margin-top: 0.5rem;
+    display: grid;
+    gap: 0.25rem;
+  }
+  .club-scelta {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.84rem;
+    cursor: pointer;
+  }
+  .club-scelta input {
+    accent-color: var(--club-ambra);
+  }
+  .club-scelta:has(input:disabled) {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .club-anteprima {
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 0.82rem;
+  }
+  .club-bottoni {
+    margin-top: 0.6rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .club-esito {
+    margin-top: 0.45rem;
+    font-size: 0.8rem;
+    color: #d9f0b0;
+  }
+  .club-errore {
+    color: #ffb4a8;
+  }
+  .club-misura {
+    margin-top: 0.5rem;
+    font-family: ui-monospace, monospace;
+    font-size: 0.72rem;
+    line-height: 1.4;
+  }
+
+  /* La mappa 2D di ripiego */
+  .club-mappa {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: #8db85a;
+  }
+  .club-mappa svg {
+    width: min(100vw, 100vh);
+    height: min(100vw, 100vh);
+  }
+
+  /* Telefono: i riquadri si stringono, la foresta resta al centro */
+  @media (max-width: 640px) {
+    .club-alto {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .club-titolo {
+      max-width: none;
+      padding: 0.5rem 0.75rem 0.55rem;
+    }
+    .club-h1 {
+      font-size: 1.15rem;
+    }
+    .club-conti {
+      margin-top: 0.2rem;
+      font-size: 0.8rem;
+    }
+    .club-nota {
+      font-size: 0.72rem;
+    }
+    .club-titolo .club-nota {
+      display: none;
+    }
+    .club-invito {
+      margin-top: 0.3rem;
+      font-size: 0.88rem;
+    }
+    .club-seme {
+      margin-top: 0.35rem;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.78rem;
+    }
+    /* i comandi in una riga sotto il titolo, lontani dal centro dello schermo */
+    .club-comandi {
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.35rem;
+    }
+    .club-comandi .club-pillola,
+    .club-comandi .club-tondo {
+      min-height: 2.1rem;
+      font-size: 0.78rem;
+    }
+    .club-comandi .club-tondo {
+      width: 2.1rem;
+    }
+    .club-esempi {
+      top: auto;
+      bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 6.6rem);
+      max-width: calc(100vw - 1.5rem);
+      width: max-content;
+      font-size: 0.7rem;
+    }
+    .club-basso {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .club-consenso,
+    .club-demo {
+      max-width: none;
+      padding: 0.5rem 0.75rem;
+    }
+    .club-scheda {
+      bottom: 9rem;
+    }
+  }
+}

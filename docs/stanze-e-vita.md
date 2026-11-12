@@ -46,6 +46,12 @@ risposta (sezione 16).
 > **Fase 6 fatta (12/11/2026): la tua foresta** in `/foresta` (dettagli e
 > misure in fondo alla sezione 13). Senza le stanze della fase 5 legge l'unico
 > albero e lo mette nella stanza 1, con un adattatore (`src/lib/foresta/dati.ts`).
+>
+> **Fase 7 fatta (12/11/2026)**: la foresta del club in `/club` (3D a istanze,
+> mappa 2D di ripiego), consenso alla semina e revoca, vista `club_forest` con i
+> soli campi pubblici, contatori veri. Per la demo (16, punto 4) c'è uno
+> strumento che crea alberi d'esempio segnati come tali: la scelta resta di
+> Federico. Dettagli e misure in `src/lib/giardino3d/README.md`.
 
 Questo documento non butta via niente di quello che c'è: estende i mestieri
 delle strade (`docs/routine-strade.md`, `src/lib/albero/mestieri.ts`: 7 strade,

@@ -168,7 +168,16 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   `/pianta`, `/giardino` (con gli strumenti della demo e `?meteo=`), `/foresta`,
   `/giardino/lettere/[id]`, `/giardino/mese/[numero]` (riepilogo illustrato
   del mese) con `cartolina` (PNG con `next/og`, `?formato=storia|sfondo`,
-  `&scarica=1`), `/catalogo`.
+  `&scarica=1`), `/catalogo`, `/club` (la foresta del club, sotto).
+- **Foresta del club** (fase 7 della 0.2): pagina `src/app/club/` (3D, mappa 2D
+  di ripiego, consenso, strumenti della demo), dati in `src/lib/club.ts`,
+  motore leggero a istanze `src/lib/giardino3d/club.js` (non usa gli
+  alberi-personaggio). Gli alberi degli altri si leggono **solo** dalla vista
+  `club_forest` (nome dell'albero, nome di battesimo o iniziali se scelti,
+  seme, numero del modello, crescita, posizione); il consenso sta in
+  `club_consent` (revocabile, con le date) e si chiede alla semina. Gli alberi
+  d'esempio della demo sono in `club_examples`, mai in `trees`, e si vedono
+  come «esempio della demo». Prova senza Next: `prototipi/foresta-3d/club.html`.
 - `supabase/`: `config.toml`, migrazioni, template dell'email di accesso.
 
 ## Regole

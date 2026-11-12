@@ -156,6 +156,25 @@ export function ModuloSemina({ pacchetto = "albero", unAltro }: { pacchetto?: Id
             <p className="mt-1 text-sm leading-snug text-matita">Demo: nessun pagamento, il piano serve solo a provare il percorso.</p>
           </fieldset>
 
+          <fieldset className="scelta-gruppo">
+            <legend className="occhiello mb-2">La foresta del club</legend>
+            <label className="flex items-start gap-2.5">
+              <input type="checkbox" name="club" value="si" className="mt-1 size-4 accent-[var(--muschio)]" />
+              <span className="text-[0.95rem] leading-snug">
+                Fai comparire {nome.trim() || "il mio albero"} nella foresta del club, dove gli altri membri vedono gli alberi
+                piantati. Si vede solo il nome dell&apos;albero; puoi toglierlo quando vuoi.
+              </span>
+            </label>
+            <label className="mt-2 block text-sm text-matita">
+              Accanto al nome mostra anche
+              <select name="club_persona" defaultValue="nessuno" className="campo-carta mt-1 py-1.5">
+                <option value="nessuno">niente altro</option>
+                <option value="iniziali">le mie iniziali</option>
+                <option value="nome">il mio nome di battesimo</option>
+              </select>
+            </label>
+          </fieldset>
+
           {stato.errore && (
             <p className="text-rosso" role="alert">
               {stato.errore}
