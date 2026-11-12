@@ -83,7 +83,13 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   2D. Il pulsante «2D/3D» del giardino sceglie la vista (`localStorage`
   `linfa-vista`). Le reazioni (buongiorno, messaggio, regalo) passano
   dall'evento `linfa-reazione`; gli strumenti della demo provano umore e
-  azione con `linfa-prova`.
+  azione con `linfa-prova`. Il motore ha 30 modelli in 16 specie (`MODELLI`,
+  scelti dal seme = id dell'albero), un viso per ognuno dei 9 umori più
+  espressioni brevi, routine (sonno di notte, ombrello con la pioggia, freddo,
+  caldo, lampi), le 23 azioni con i loro oggetti, trascinamento e reazioni.
+  Sul telefono in verticale `Immersivo` misura i riquadri e passa `margini`
+  perché l'albero resti nella fascia libera. Guida del motore:
+  `src/lib/giardino3d/README.md`; pagina di prova `prototipi/foresta-3d/giardino.html`.
 - `src/lib/motore/`: `personaggio.ts` (prompt di sistema fisso, eventi),
   `vita.ts` (giornate: parte pura, gira anche in memoria), `scritture.ts`
   (lettere e risposte), `servizio.ts` (collegato a database ed email),
