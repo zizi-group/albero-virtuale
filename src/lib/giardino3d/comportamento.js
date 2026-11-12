@@ -12,6 +12,9 @@ import * as O from "./oggetti.js";
  * @typedef {{ giro: number, salto: number, seduto: number, inchino: number, piega: number, allunga: number, bracci: [Braccio, Braccio], gambe: [number, number], divarica: number }} Posa
  */
 
+/** Quanto si può alzare un braccio che tiene un oggetto (oltre, la mano entra nella chioma). */
+const ALZA_MAX = 0.3;
+
 /** @returns {Posa} */
 const posaBase = () => ({
   giro: 0, salto: 0, seduto: 0, inchino: 0, piega: 0, allunga: 0, divarica: 0,
@@ -153,7 +156,7 @@ export const ROUTINE = {
   // ---- meteo
   ripara: {
     durata: 9,
-    inizia: (c) => { c.dati.o = c.inMano(1, O.ombrelloFoglia(Math.max(0.6, (c.albero.altezza - 1.2) / 1.5))); c.dati.o.userData.diritto = [0, 0, 0.1]; c.viso.breve({ sorriso: 0.9, sguardoY: 0.7 }, 3); },
+    inizia: (c) => { c.dati.o = c.inMano(1, O.ombrelloFoglia(Math.max(0.7, (c.albero.altezza * c.albero.scala.scale.x - 1.0) / 1.5))); c.dati.o.userData.diritto = [0, 0, 0.12]; c.viso.breve({ sorriso: 0.9, sguardoY: 0.7 }, 3); },
     posa: (p, t) => {
       const k = busta(t, 9, 0.6, 0.6);
       p.bracci[1].alza = 1.25 * k; p.bracci[1].avanti = 0.45 * k;
@@ -473,6 +476,7 @@ export function creaComportamento(albero, op) {
           p.bracci[0].alza = p.bracci[1].alza = 1.2;
           p.gambe = [0.3, -0.3];
         }
+        tieniSottoLaChioma(p);
         applica(p, dt, t, terra, altezza);
         return;
       }
@@ -562,6 +566,7 @@ export function creaComportamento(albero, op) {
         p.giro += versoCamera(); // le reazioni sono sempre rivolte a noi
         if (reaz.t >= reaz.r.durata) reaz = null;
       }
+      tieniSottoLaChioma(p);
       pos.x = THREE.MathUtils.clamp(pos.x, op.limiti.x0, op.limiti.x1);
       pos.y = THREE.MathUtils.clamp(pos.y, op.limiti.z0, op.limiti.z1);
       applica(p, dt, t, terra, 0);
@@ -569,6 +574,22 @@ export function creaComportamento(albero, op) {
     },
     distruggi() { if (att) att.a.fine?.(att.ctx); libera(); },
   };
+
+  /**
+   * Con un oggetto in mano la mano resta sotto la chioma e davanti al tronco:
+   * il braccio non si alza oltre ALZA_MAX e va un po' in avanti.
+   * @param {Posa} p
+   */
+  function tieniSottoLaChioma(p) {
+    for (let i = 0; i < 2; i++) {
+      const mano = albero.mani[i];
+      const tiene = oggetti.some((o) => o.parent === mano) || !!mano.getObjectByName("pennello-strada");
+      if (!tiene) continue;
+      const b = p.bracci[i];
+      b.alza = Math.min(b.alza, ALZA_MAX);
+      if (b.alza > 0.1) b.avanti = Math.max(b.avanti, 0.45);
+    }
+  }
 
   /** Gli oggetti segnati con userData.diritto restano dritti (ombrelli, tazze), qualunque sia il braccio. */
   function raddrizza() {
