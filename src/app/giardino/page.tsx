@@ -16,7 +16,6 @@ import { meteoAttuale, meteoDiProva, oggiNelFuso } from "@/lib/meteo";
 import type { RecapMese } from "@/lib/motore/extra";
 import { isPremium } from "@/lib/piani";
 import { pacchiDa } from "@/lib/motore/stanza";
-import { createClient, getUtente } from "@/lib/supabase/server";
 import { alberoScelto } from "@/lib/alberi";
 import {
   alberiMassimi,
