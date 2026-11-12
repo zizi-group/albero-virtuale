@@ -562,6 +562,16 @@ Risultati di `npm run simula -- --alberi 3 --giorni 60 --caratteri 90/30,50/85,5
   strada in circa 4 stanze su 10 (0,41 cambi a stanza). Se è troppo, si
   abbassa `CAMBIO_STRADA.probabilita`.
 
+Con l'AI (`npm run simula -- --alberi 3 --giorni 60 --caratteri 90/30,50/85,55/20
+--nomi Pino,Ulivetta,Quercino`, Haiku, 12/11/2026): Quercino (testardo) e Pino
+(capo 90) diventano poeta e furfante e fondano il festival e la banda;
+Ulivetta (influenzabile) entra nel festival come lettore il giorno 23 e il
+giorno dopo si rivela poeta; Quercino non entra mai in niente. Entrambe le
+imprese arrivano al livello 3 in 60 giorni. Il diario racconta tutto con i
+nomi degli altri («Pino dice che non è ballo, io dico che è un verso con le
+gambe»); nessuna parola fuori tono (il controllo di `simula` segnalava
+«picchio», l'uccello: corretto).
+
 I numeri esatti cambiano col seme: si rifanno con `--prove` dopo ogni ritocco.
 
 ## 8. Le animazioni: perché non sembri sempre la stessa cosa

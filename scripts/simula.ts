@@ -68,7 +68,7 @@ function casuale(seme: number): () => number {
 }
 
 /** Parole che non devono mai comparire (tono di personaggio.ts e della banda del bosco, sezione 6). */
-const FUORI_TONO = /\b(mafi\w*|padrin\w*|pizz\w*|omert\w*|cosca|clan|boss|pistol\w*|fucil\w*|coltell\w*|uccid\w*|ammazz\w*|sangue|morto|morte|picchi[ao]\w*|minacc\w*|estorsion\w*|droga|soldi|euro|dollar\w*)\b/i;
+const FUORI_TONO = /\b(mafi\w*|padrin\w*|pizz\w*|omert\w*|cosca|clan|boss|pistol\w*|fucil\w*|coltell\w*|uccid\w*|ammazz\w*|sangue|morto|morte|picchia\w*|picchiat\w*|minacc\w*|estorsion\w*|droga|soldi|euro|dollar\w*)\b/i;
 
 const NOMI = ["Ottavio", "Ulivetta", "Quercino", "Betulla"];
 

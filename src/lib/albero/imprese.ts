@@ -310,7 +310,7 @@ export function ruolo(imp: Impresa, albero: string): Ruolo | null {
 
 export type FattoImpresa =
   | { tipo: "passo"; etichetta: string }
-  | { tipo: "cantiere"; nome: string; lascia: string; livello: 1 | 2 | 3; nomeLivello: string };
+  | { tipo: "cantiere"; nome: string; lascia: string; livello: 1 | 2 | 3; nomeLivello: string; saleDiLivello: boolean; completa: boolean };
 
 /**
  * Un giorno di lavoro: il capo e ogni sostenitore aggiungono lavoro; a ogni
@@ -331,7 +331,15 @@ export function lavoraImpresa(imp: Impresa): { impresa: Impresa; fatti: FattoImp
     nuova.passi += 1;
     const dopo = avanzamento(nuova);
     if (dopo.arredi.length > prima.arredi.length) {
-      fatti.push({ tipo: "cantiere", nome: cantiere.nome, lascia: cantiere.lascia, livello: dopo.livello, nomeLivello: dopo.nomeLivello });
+      fatti.push({
+        tipo: "cantiere",
+        nome: cantiere.nome,
+        lascia: cantiere.lascia,
+        livello: dopo.livello,
+        nomeLivello: dopo.nomeLivello,
+        saleDiLivello: dopo.livello > prima.livello,
+        completa: dopo.completa,
+      });
     }
   }
   if (avanzamento(nuova).completa) nuova.lavoro = 0;

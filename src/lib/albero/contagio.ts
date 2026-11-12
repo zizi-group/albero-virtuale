@@ -324,7 +324,9 @@ export function raccontaFatti(fatti: FattoStanza[], alberi: AlberoInStanza[], im
         const nomeImp = tipoImpresa(f.impresa).nome;
         if (f.fatto.tipo === "passo")
           dai(chi, `«${nomeImp}» va avanti: ${nome(f.capo)} ${f.fatto.etichetta}${aiuti.length ? `, con l'aiuto di ${elencoNomi(aiuti)}` : ""}.`);
-        else dai(chi, `«${nomeImp}» finisce il cantiere «${f.fatto.nome}» e sale al livello ${f.fatto.livello}: ${f.fatto.nomeLivello}.`);
+        else if (f.fatto.saleDiLivello)
+          dai(chi, `«${nomeImp}» finisce il cantiere «${f.fatto.nome}» e sale al livello ${f.fatto.livello}: ${f.fatto.nomeLivello}.`);
+        else dai(chi, `«${nomeImp}» finisce il cantiere «${f.fatto.nome}»${f.fatto.completa ? ": l'impresa è completa, e se ne vanta un po'" : ""}.`);
         break;
       }
       case "punti":
