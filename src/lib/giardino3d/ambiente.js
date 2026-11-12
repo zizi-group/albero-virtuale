@@ -7,6 +7,10 @@ import { generatore, verso } from "./casuale.js";
 import { mat, tubo } from "./forme.js";
 import { UNIFORMI } from "./albero.js";
 import { texAlone, texFoglia, texNuvole } from "./texture.js";
+import { creaBoscoMorbido } from "./boscoMorbido.js";
+
+/** Bosco di contorno nello stile dei personaggi (false: i modelli Kenney a facce piatte). */
+const BOSCO_MORBIDO = true;
 
 const CARTELLA = "/giardino3d/modelli/";
 export const RAGGIO_RADURA = 7;
@@ -445,25 +449,42 @@ export function creaAmbiente(scena, renderer, op) {
   }
 
   let caricato = false;
+  /** @type {ReturnType<typeof creaBoscoMorbido> | null} */
+  let bosco = null;
   const ALBERI_K = ["tree_detailed_dark", "tree_oak_dark", "tree_fat_darkh", "tree_pineTallA_detailed", "tree_pineRoundC"];
   const ALTEZZE = /** @type {Record<string, [number, number]>} */ ({ tree_detailed_dark: [7, 10], tree_oak_dark: [6.5, 9], tree_fat_darkh: [6, 8.5], tree_pineTallA_detailed: [9, 13], tree_pineRoundC: [7, 10] });
   const pronto = (async () => {
     const alberi = sparpaglia(64, RAGGIO_RADURA + 2, 30, 2.6, nonDavanti);
-    const gruppi = Object.fromEntries(ALBERI_K.map((t) => [t, /** @type {any[]} */ ([])]));
-    alberi.forEach((p, i) => { const t = ALBERI_K[i % ALBERI_K.length]; gruppi[t].push({ ...p, h: tra(...ALTEZZE[t]) }); });
-    const lavori = ALBERI_K.map((t) => istanze(t, gruppi[t]));
+    /** @type {Promise<void>[]} */
+    const lavori = [];
     const fisso = (/** @type {any[]} */ l) => l.filter((p) => libero(p.x, p.z, 1.6) && (occupati.push([p.x, p.z, 1.2]), true));
+    if (BOSCO_MORBIDO) {
+      // alberi, cespugli, felci e rocce nello stile dei personaggi
+      bosco = creaBoscoMorbido(scena, {
+        rng, quota,
+        alberi: alberi.map((p) => ({ ...p, h: tra(6.5, 11) })),
+        rocce: [...fisso([{ x: 7.6, z: 0.8, h: 1.3, rot: 0.4 }]), ...sparpaglia(10, 9, 22, 2, lontaneDalDavanti).map((p) => ({ ...p, h: tra(0.9, 1.7) })), ...sparpaglia(18, 3, 18, 0.6).map((p) => ({ ...p, h: tra(0.25, 0.5) }))],
+        cespugli: [...sparpaglia(26, RAGGIO_RADURA, 22, 1.4, (x, z) => z < 6 || Math.abs(x) > 10), ...sparpaglia(26, RAGGIO_RADURA - 0.5, 20, 1.1, basso)].map((p) => ({ ...p, h: tra(0.8, 1.5) })),
+        felci: sparpaglia(60, RAGGIO_RADURA - 1, 20, 0.8, basso).map((p) => ({ ...p, h: tra(0.5, 0.9) })),
+      });
+    } else {
+      const gruppi = Object.fromEntries(ALBERI_K.map((t) => [t, /** @type {any[]} */ ([])]));
+      alberi.forEach((p, i) => { const t = ALBERI_K[i % ALBERI_K.length]; gruppi[t].push({ ...p, h: tra(...ALTEZZE[t]) }); });
+      lavori.push(...ALBERI_K.map((t) => istanze(t, gruppi[t])));
+      lavori.push(
+        istanze("rock_largeA", [...fisso([{ x: 7.6, z: 0.8, h: 1.3, rot: 0.4 }]), ...sparpaglia(5, 10, 22, 2, lontaneDalDavanti).map((p) => ({ ...p, h: tra(1.1, 1.8) }))]),
+        istanze("rock_largeC", sparpaglia(5, 9, 22, 2, lontaneDalDavanti).map((p) => ({ ...p, h: tra(0.9, 1.6) }))),
+        istanze("rock_smallC", sparpaglia(18, 3, 18, 0.6).map((p) => ({ ...p, h: tra(0.25, 0.5) }))),
+        istanze("plant_bushLarge", sparpaglia(28, RAGGIO_RADURA, 22, 1.4, (x, z) => z < 6 || Math.abs(x) > 10).map((p) => ({ ...p, h: tra(1.1, 1.8) }))),
+        istanze("plant_bushDetailed", sparpaglia(30, RAGGIO_RADURA - 0.5, 20, 1.1, basso).map((p) => ({ ...p, h: tra(0.8, 1.3) }))),
+        istanze("grass_leafsLarge", sparpaglia(42, RAGGIO_RADURA - 1, 20, 0.8, basso).map((p) => ({ ...p, h: tra(0.5, 0.9) }))),
+        istanze("plant_flatTall", sparpaglia(34, RAGGIO_RADURA - 1.5, 16, 0.7, basso).map((p) => ({ ...p, h: tra(0.7, 1.1) }))),
+      );
+    }
     lavori.push(
       istanze("stump_oldTall", fisso([{ x: -5.6, z: -3.2, h: 1.0, rot: 0.6 }, { x: 6.2, z: -4.4, h: 0.85, rot: 2.1 }])),
       istanze("stump_roundDetailed", fisso([{ x: -7.4, z: 4.2, h: 0.5, rot: 0.3 }])),
       istanze("log_large", fisso([{ x: -3.2, z: -6.0, h: 0.65, rot: 0.35 }])),
-      istanze("rock_largeA", [...fisso([{ x: 7.6, z: 0.8, h: 1.3, rot: 0.4 }]), ...sparpaglia(5, 10, 22, 2, lontaneDalDavanti).map((p) => ({ ...p, h: tra(1.1, 1.8) }))]),
-      istanze("rock_largeC", sparpaglia(5, 9, 22, 2, lontaneDalDavanti).map((p) => ({ ...p, h: tra(0.9, 1.6) }))),
-      istanze("rock_smallC", sparpaglia(18, 3, 18, 0.6).map((p) => ({ ...p, h: tra(0.25, 0.5) }))),
-      istanze("plant_bushLarge", sparpaglia(28, RAGGIO_RADURA, 22, 1.4, (x, z) => z < 6 || Math.abs(x) > 10).map((p) => ({ ...p, h: tra(1.1, 1.8) }))),
-      istanze("plant_bushDetailed", sparpaglia(30, RAGGIO_RADURA - 0.5, 20, 1.1, basso).map((p) => ({ ...p, h: tra(0.8, 1.3) }))),
-      istanze("grass_leafsLarge", sparpaglia(42, RAGGIO_RADURA - 1, 20, 0.8, basso).map((p) => ({ ...p, h: tra(0.5, 0.9) }))),
-      istanze("plant_flatTall", sparpaglia(34, RAGGIO_RADURA - 1.5, 16, 0.7, basso).map((p) => ({ ...p, h: tra(0.7, 1.1) }))),
       istanze("mushroom_redGroup", fisso([{ x: -4.9, z: -2.4, h: 0.32, rot: 0.2 }, { x: 5.4, z: -3.6, h: 0.28, rot: 2.4 }])),
       istanze("mushroom_tanTall", fisso([{ x: 6.6, z: -3.2, h: 0.4, rot: 0.8 }, { x: -6.6, z: 4.8, h: 0.36, rot: 2 }])),
       istanze("flower_yellowA", sparpaglia(18, 2.0, RAGGIO_RADURA + 1, 0.5).map((p) => ({ ...p, h: tra(0.25, 0.4) })), false),
@@ -548,6 +569,7 @@ export function creaAmbiente(scena, renderer, op) {
       mesh.visible = !(s === "inverno" && CADUCHI.has(modello) && nomeMat.startsWith("leafs"));
       if (modello.startsWith("flower_")) mesh.visible = s === "primavera" || s === "estate";
     }
+    bosco?.stagione(s);
     matTerreno.color.set(PRATO[s] ?? "#ffffff");
     cadute.visible = s === "autunno";
   }
