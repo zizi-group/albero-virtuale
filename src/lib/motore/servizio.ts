@@ -1,10 +1,10 @@
 import { createAdminClient } from "../supabase/admin";
 import type { Database, Json } from "../supabase/database.types";
-import { INFO_STRADE, isStrada, trattiCasuali, type PunteggiStrade, type Tratti } from "../albero/strade";
+import { INFO_STRADE, isStrada, nascita, type PunteggiStrade, type Tratti } from "../albero/strade";
 import { azione } from "../albero/azioni";
 import { descriviCatene, statoDaDatabase } from "../albero/catene";
 import { pianificaGiornate } from "../albero/giornata";
-import { sblocco } from "../albero/collezione";
+import { voce } from "../albero/oggetti";
 import { regalo } from "../albero/regali";
 import { meteoAttuale, oggiNelFuso, previsioni, type Luogo } from "../meteo";
 import { inviaLettera } from "./email";
@@ -109,15 +109,19 @@ export async function piantaAlbero({
   nomePersona,
   luogo,
   piano,
+  stanzaId = null,
 }: {
   ownerId: string;
   nome: string;
   nomePersona: string | null;
   luogo: Luogo;
   piano: "albero" | "premium-annuale" | "premium-mensile";
+  /** La stanza dove abita (fase 5): la sceglie preparaSemina in src/lib/motore/stanze.ts. */
+  stanzaId?: string | null;
 }): Promise<{ id: string; erroreLettera: string | null }> {
   const meteo = await meteoAttuale(luogo.latitudine, luogo.longitudine);
-  const tratti = trattiCasuali();
+  // Tratti, carisma e influenzabilità alla nascita (0.2, sezione 7.1).
+  const { tratti, carisma, influenzabilita } = nascita();
   const { data: albero, error } = await db()
     .from("trees")
     .insert({
@@ -129,7 +133,10 @@ export async function piantaAlbero({
       longitude: luogo.longitudine,
       timezone: luogo.fusoOrario,
       plan: piano,
+      room_id: stanzaId,
       traits: json(tratti),
+      carisma,
+      influenzabilita,
       today_action: "guardare-cielo",
       today_caption: `${nome} è appena spuntato e guarda il cielo di ${luogo.citta} per la prima volta.`,
       last_weather: json(meteo),
@@ -189,7 +196,7 @@ export async function faiPassareGiorni(alberoId: string, n: number) {
     db().from("unlocks").select("id, item").eq("tree_id", alberoId).eq("mentioned", false).order("unlocked_at").limit(4),
   ]);
   ctx.buongiorno = (risposte ?? []).map((r) => ({ giorno: r.day_number, domanda: r.question, risposta: r.answer ?? "" }));
-  ctx.novita = (novita ?? []).map((u) => sblocco(u.item)?.nome).filter((n): n is string => !!n);
+  ctx.novita = (novita ?? []).map((u) => voce(u.item)?.nome).filter((n): n is string => !!n);
 
   // Le giornate a fasce (giornata.ts, catene.ts): il codice le decide dalla memoria,
   // l'AI sceglie tra quelle attività l'azione del giorno e la racconta.

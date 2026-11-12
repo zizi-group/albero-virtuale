@@ -17,6 +17,7 @@ import { NOMI_FASCE_FRASE } from "@/lib/albero/giornata";
 import type { Fascia } from "@/lib/albero/mestieri";
 import type { Meteo, Posa, Stadio, Stagione } from "@/lib/albero/tipi";
 import { EVENTO_DECISIONE, type DettaglioDecisione } from "./Buongiorno";
+import { EVENTO_SBLOCCO, Stanza, type DatiStanza } from "./Stanza";
 import { Suoni, type TipoSuono } from "./suoni";
 
 // Il giardino immersivo: la scena occupa tutto lo schermo, i comandi stanno
@@ -33,7 +34,7 @@ const PANNELLI: { id: IdPannello; nome: string; breve: string; tasto: string }[]
   { id: "diario", nome: "Diario", breve: "Diario", tasto: "D" },
   { id: "scrivi", nome: "Scrivigli", breve: "Scrivi", tasto: "S" },
   { id: "mese", nome: "Il mese", breve: "Mese", tasto: "M" },
-  { id: "collezione", nome: "Collezione", breve: "Trofei", tasto: "T" },
+  { id: "collezione", nome: "Collezione", breve: "Oggetti", tasto: "T" },
   { id: "carattere", nome: "Carattere", breve: "Tratti", tasto: "C" },
 ];
 
@@ -50,6 +51,7 @@ const TRATTI = {
   suoniNo: "M4 9.5h3.5L12 6v12l-4.5-3.5H4zM16 9.5l5 5M21 9.5l-5 5",
   schermo: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
   schermoEsci: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
+  foresta: "M6 20v-3.5M6 16.5 2.8 12h2L3.2 9.2h1.5L6 6l1.3 3.2h1.5L7.2 12h2zM17 20v-3M17 17l-3.6-5h2.2l-1.8-3h1.7L17 5l1.5 4h1.7l-1.8 3h2.2zM11.5 20v-2.2M9.6 17.8a1.9 2.6 0 1 0 3.8 0 1.9 2.6 0 0 0-3.8 0M2 20.5h20",
   esci: "M13.5 4H18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4.5M10 8l-4 4 4 4M6 12h10",
 };
 
@@ -164,8 +166,20 @@ export interface PropsImmersivo {
   strumenti: ReactNode;
   /** È appena stato piantato: lo dice appena arrivi. */
   appenaNato?: boolean;
+  /** Si arriva dalla tua foresta 3D: la scena entra sfumando, come una discesa. */
+  daForesta?: boolean;
   /** Il pannello già aperto all'arrivo (per esempio tornando da una lettera). */
   pannelloIniziale?: IdPannello;
+  /** La stanza: oggetti nei posti, pacchi in attesa (docs/stanze-e-vita.md, 9.3). */
+  stanza: DatiStanza;
+  /** Le voci del catalogo con l'etichetta «Nuovo» (pallino sulla Collezione). */
+  nuoviCatalogo?: number;
+  /** Le stanze (fase 5): la scelta della stanza sotto il nome, se ce n'è più d'una o più alberi. */
+  sceltaStanza?: ReactNode;
+  /** Quello che c'è nella stanza oltre a lui: gli altri alberi e gli arredi. */
+  inStanza?: ReactNode;
+  /** Dove sta lui sul prato, in percentuale della larghezza (50 da solo). */
+  alberoX?: number;
 }
 
 /** Tutto schermo: disponibile solo dove il browser lo permette (non su iPhone). */
@@ -254,6 +268,22 @@ export function Immersivo(p: PropsImmersivo) {
     };
   }, []);
   const zoom = zoomRisposta || (aperto === "buongiorno" && !!p.domandaAperta);
+
+  // Uno sblocco: Pino fa la festa per qualche secondo (un balletto, o fermo col movimento ridotto).
+  const [festa, setFesta] = useState(false);
+  useEffect(() => {
+    let t = 0;
+    const evviva = () => {
+      setFesta(true);
+      clearTimeout(t);
+      t = window.setTimeout(() => setFesta(false), 3600);
+    };
+    window.addEventListener(EVENTO_SBLOCCO, evviva);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener(EVENTO_SBLOCCO, evviva);
+    };
+  }, []);
 
   // All'arrivo dice la cosa importante; poi reagisce a quello che fa la persona.
   const arrivo = useRef({ nato: !!p.appenaNato, posta: p.nonLette > 0 });
@@ -459,7 +489,7 @@ export function Immersivo(p: PropsImmersivo) {
   // Che cosa fa adesso: il time-lapse, poi la prova della demo, poi il pensiero
   // dopo una decisione, poi la sua giornata. I vestiti (meteo, regali, strada) restano.
   const indossa = att.posa.indossa;
-  const idInScena = tempo ? tempo.posa : (prova.azione ?? (pensiero ? "pensare" : att.id));
+  const idInScena = tempo ? tempo.posa : festa ? "ballare" : (prova.azione ?? (pensiero ? "pensare" : att.id));
   const posa: Posa = tempo
     ? { ...azione(tempo.posa).posa }
     : idInScena === att.id
@@ -467,8 +497,10 @@ export function Immersivo(p: PropsImmersivo) {
       : { ...azione(idInScena).posa, indossa: [...new Set([...azione(idInScena).posa.indossa, ...indossa])] };
   const didascalia = tempo
     ? `${p.nome} vive le sue giornate.`
-    : prova.azione
-      ? `${p.nome} ${azione(prova.azione).etichetta}.`
+    : festa
+      ? `${p.nome} fa festa per la novità.`
+      : prova.azione
+        ? `${p.nome} ${azione(prova.azione).etichetta}.`
       : pensiero
         ? `${p.nome} ci pensa su: «${pensiero.tema}».`
         : (att.didascalia ?? `${NOMI_FASCE_FRASE[fascia]} ${p.nome} ${att.etichetta}.`);
@@ -485,6 +517,7 @@ export function Immersivo(p: PropsImmersivo) {
       ora={ora}
       stagione={p.stagione}
       className="h-full"
+      style={p.alberoX !== undefined && p.alberoX !== 50 ? ({ "--albero-x": `${p.alberoX}%` } as CSSProperties) : undefined}
       chiaveAlbero={tempo ? `tempo-${tempo.posa}` : p.chiave}
       albero={
         <Albero
@@ -499,8 +532,10 @@ export function Immersivo(p: PropsImmersivo) {
       }
       palco={
         <>
+          {p.inStanza}
           <Cassetta daLeggere={p.nonLette} totale={p.totaleLettere} onApri={() => apri("lettere")} />
           <Taccuino righe={p.righeDiario} onApri={() => apri("diario")} />
+          <Stanza dati={p.stanza} nome={p.nome} suoniAccesi={suoniAccesi} />
         </>
       }
     />
@@ -515,6 +550,7 @@ export function Immersivo(p: PropsImmersivo) {
       data-pannello={aperto ?? undefined}
       data-tempo={tempo ? "1" : undefined}
       data-zoom={zoom ? "1" : undefined}
+      data-arrivo={p.daForesta ? "foresta" : undefined}
     >
       <div className="gi-scena">{scena2d}</div>
 
@@ -532,6 +568,7 @@ export function Immersivo(p: PropsImmersivo) {
             {p.strada && <span className="gi-chip">{p.strada}</span>}
             <span className="gi-chip">Umore: {p.umore}</span>
           </p>
+          {p.sceltaStanza}
         </div>
         <div className="gi-destra">
           <p className="gi-meteo">
@@ -556,6 +593,14 @@ export function Immersivo(p: PropsImmersivo) {
               <span aria-hidden>?</span>
               <span className="sr-only">Scorciatoie da tastiera</span>
             </button>
+            <Link href="/foresta" className="gi-icona gi-con-testo" title="La tua foresta, vista dall'alto">
+              <Icona nome="foresta" />
+              <span className="gi-testo">Foresta</span>
+            </Link>
+            <Link href="/club" className="gi-icona gi-con-testo" title="La foresta del club">
+              <span aria-hidden>♣</span>
+              <span className="gi-testo">Club</span>
+            </Link>
             <form action="/auth/esci" method="post">
               <button className="gi-icona gi-con-testo" title="Esci">
                 <Icona nome="esci" />
@@ -594,6 +639,11 @@ export function Immersivo(p: PropsImmersivo) {
               <span className="gi-dock-icona">
                 <Icona nome={x.id} />
                 {x.id === "lettere" && p.nonLette > 0 && <span className="gi-badge">{p.nonLette}</span>}
+                {x.id === "collezione" && !!p.nuoviCatalogo && (
+                  <span className="gi-badge" aria-label={`${p.nuoviCatalogo} novità nella collezione`}>
+                    {p.nuoviCatalogo}
+                  </span>
+                )}
                 {x.id === "buongiorno" && p.domandaAperta && (
                   <span className="gi-badge" aria-label="una domanda da rispondere">
                     1

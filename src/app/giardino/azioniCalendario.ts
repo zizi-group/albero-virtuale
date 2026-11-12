@@ -1,9 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { rispondiBuongiorno } from "@/lib/motore/servizio";
-import { createClient, getUtente } from "@/lib/supabase/server";
+import { alberoScelto } from "@/lib/alberi";
 import type { Esito } from "./actions";
 
 // La risposta al buongiorno. Come in actions.ts: l'azione ricontrolla che
@@ -11,12 +10,8 @@ import type { Esito } from "./actions";
 // demo stanno in azioneDemo, actions.ts.)
 
 async function alberoDellaPersona() {
-  const utente = await getUtente();
-  if (!utente) redirect("/accedi");
-  const supabase = await createClient();
-  const { data } = await supabase.from("trees").select("id, name").eq("owner_id", utente.id).maybeSingle();
-  if (!data) redirect("/pianta");
-  return data;
+  const { albero } = await alberoScelto();
+  return { id: albero.id, name: albero.name };
 }
 
 /** La persona risponde alla domanda del mattino con un tocco. */

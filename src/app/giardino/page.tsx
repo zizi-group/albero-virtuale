@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Albero } from "@/components/albero/Albero";
 import { oraDelGiorno, type Ora } from "@/components/ambiente/atmosfera";
 import { fontModerna } from "@/components/fontModerna";
 import { azione } from "@/lib/albero/azioni";
-import { sblocco } from "@/lib/albero/collezione";
+import { inScena as nellaStanza, TOTALE_CATALOGO, voce } from "@/lib/albero/oggetti";
 import { vestiConRegali } from "@/lib/albero/regali";
+import { misureDellEta } from "@/components/albero/vivo/figura";
 import { faiAttivita, statoAllaFascia, statoDaDatabase, tracceDa } from "@/lib/albero/catene";
 import { adattaAlMeteo, FASCE_DI_GIORNO, fasciaAdesso, giornataDi, indiceAdesso, voglia, type FasciaDiGiorno } from "@/lib/albero/giornata";
 import { FRASI_ROUTINE, posaDelGiorno, risolviScena } from "@/lib/albero/scena";
@@ -14,14 +15,30 @@ import { classifica, INFO_STRADE, isStrada, NOMI_TRATTI, TRATTI, type PunteggiSt
 import { stadioDa, stagioneDa, type Cielo, type Meteo, type Stagione } from "@/lib/albero/tipi";
 import { meteoAttuale, meteoDiProva, oggiNelFuso } from "@/lib/meteo";
 import type { RecapMese } from "@/lib/motore/extra";
-import { createClient, getUtente } from "@/lib/supabase/server";
+import { pacchiDa } from "@/lib/motore/stanza";
+import { alberoScelto } from "@/lib/alberi";
+import {
+  alberiMassimi,
+  CAPIENZA_STANZA,
+  disposizione,
+  isPacchettoConto,
+  regolaProssimaStanza,
+  STANZE_MASSIME,
+  stanzeSbloccate,
+  type ArredoInStanza,
+  type Conto,
+} from "@/lib/stanze";
+import { festeggia } from "./azioniStanze";
 import { Buongiorno } from "./Buongiorno";
 import { Collezione, type PaginaStagione } from "./Collezione";
 import { Conversazione } from "./Conversazione";
 import { ExtraDelMese } from "./Extra";
 import { Immersivo, type AttivitaInScena, type PalinsestoScena } from "./Immersivo";
 import "./immersivo.css";
+import "./stanze.css";
+import { Arredi, Compagni, RicordaAlbero, SceltaStanza, type CompagnoInScena, type StanzaInElenco } from "./Stanze";
 import { Strumenti } from "./Strumenti";
+import { StrumentiStanze } from "./StrumentiStanze";
 
 export const metadata: Metadata = { title: "Il giardino — Linfa" };
 
@@ -49,20 +66,17 @@ const data = (d: string) =>
   new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${d}T12:00:00Z`));
 
 export default async function Giardino({ searchParams }: PageProps<"/giardino">) {
-  const utente = await getUtente();
-  if (!utente) redirect("/accedi");
-  const supabase = await createClient();
-  const { data: albero } = await supabase.from("trees").select("*").eq("owner_id", utente.id).maybeSingle();
-  if (!albero) redirect("/pianta");
-
   const parametri = await searchParams;
+  // Più alberi (fase 5): `?albero=` sceglie quale si guarda, altrimenti quello ricordato o il primo.
+  const { utente, supabase, alberi, albero } = await alberoScelto(typeof parametri.albero === "string" ? parametri.albero : null);
+
   const sceltaMeteo = typeof parametri.meteo === "string" ? parametri.meteo : undefined;
   const nuovo = parametri.nuovo === "1";
   const pannelloIniziale = (["buongiorno", "lettere", "diario", "scrivi", "mese", "collezione", "carattere"] as const).find(
     (x) => x === parametri.pannello,
   );
 
-  const [diario, lettere, messaggi, meteoVero, mesi, regali, domanda, sbloccati] = await Promise.all([
+  const [diario, lettere, messaggi, meteoVero, mesi, regali, domanda, sbloccati, righeOggetti, righeStanze, rigaConto] = await Promise.all([
     supabase.from("diary_entries").select("*").eq("tree_id", albero.id).order("day_number", { ascending: false }).limit(12),
     supabase.from("letters").select("id, kind, subject, created_at, read_at, day_number").eq("tree_id", albero.id).order("created_at", { ascending: false }),
     supabase.from("messages").select("id, author, body").eq("tree_id", albero.id).order("created_at", { ascending: true }).limit(40),
@@ -76,11 +90,14 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
       .eq("tree_id", albero.id)
       .eq("day_number", albero.day_count + 1)
       .maybeSingle(),
-    supabase.from("unlocks").select("item, day_number").eq("tree_id", albero.id).order("unlocked_at", { ascending: true }),
+    supabase.from("unlocks").select("item, day_number, opened_at, seen_at").eq("tree_id", albero.id).order("unlocked_at", { ascending: true }),
+    supabase.from("room_items").select("item, place, is_new").eq("tree_id", albero.id).order("moved_at", { ascending: true }),
+    supabase.from("rooms").select("id, number, name, celebrated_at").eq("owner_id", utente.id).order("number", { ascending: true }),
+    supabase.from("accounts").select("package, trees_planted, renewals").eq("owner_id", utente.id).maybeSingle(),
   ]);
   const elencoSbloccati = sbloccati.data ?? [];
   // L'album delle stagioni: la prima pagina di diario di ogni stagione vissuta.
-  const giorniStagione = elencoSbloccati.filter((u) => sblocco(u.item)?.tipo === "stagione");
+  const giorniStagione = elencoSbloccati.filter((u) => ["primavera", "estate", "autunno", "inverno"].includes(u.item));
   const { data: pagineStagione } = giorniStagione.length
     ? await supabase
         .from("diary_entries")
@@ -172,6 +189,57 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
   const minutiLocali = oraLocale * 60 + adesso.getUTCMinutes();
   const fascia = fasciaAdesso(oraLocale, meteo.giorno);
   const indice = indiceAdesso(minutiLocali, palinsesto[fascia].length);
+
+  // ——— La stanza (fase 5, docs/stanze-e-vita.md sezione 2) ———
+  const conto: Conto = {
+    pacchetto: isPacchettoConto(rigaConto.data?.package) ? rigaConto.data.package : "albero",
+    alberiPiantati: rigaConto.data?.trees_planted ?? alberi.length,
+    rinnovi: rigaConto.data?.renewals ?? 0,
+  };
+  const stanze: StanzaInElenco[] = (righeStanze.data ?? []).map((s) => ({
+    id: s.id,
+    numero: s.number,
+    nome: s.name,
+    alberi: alberi.filter((a) => a.room_id === s.id).map((a) => ({ id: a.id, nome: a.name, giorni: a.day_count })),
+  }));
+  const stanza = stanze.find((s) => s.id === albero.room_id) ?? null;
+  // Gli altri alberi della stanza: ognuno con la sua giornata, nella stessa fascia e sotto lo stesso cielo.
+  const vicini = stanza ? alberi.filter((a) => a.room_id === stanza.id && a.id !== albero.id).slice(0, CAPIENZA_STANZA - 1) : [];
+  const posti = disposizione(vicini.length + 1);
+  const compagni: CompagnoInScena[] = vicini.map((a, i) => {
+    const suaGiornata = giornataDi({
+      seme: a.id,
+      giorno: a.day_count,
+      strada: a.path,
+      umore: a.mood,
+      azioneDelGiorno: a.today_action,
+      azioniRecenti: [],
+      meteo,
+    });
+    const elenco = fascia === "notte" ? ["dormire"] : suaGiornata[fascia];
+    const id = elenco[indice % elenco.length];
+    const suoStadio = stadioDa(a.day_count);
+    return {
+      id: a.id,
+      nome: a.name,
+      etichetta: azione(id).etichetta,
+      posa: posaDelGiorno(id, meteo, a.path),
+      giorni: a.day_count,
+      stadio: suoStadio,
+      x: posti.compagni[i],
+      camera: Math.max(1, 1.06 / Math.sqrt(misureDellEta(suoStadio, a.day_count).scala)),
+      dietro: vicini.length >= 2,
+    };
+  });
+  // Gli arredi della stanza: l'aggancio per room_items (fase 3). Per ora nessuno.
+  const arredi: ArredoInStanza[] = [];
+  const aperte = stanze.length;
+  const chiuse = Math.max(0, STANZE_MASSIME - aperte);
+  const regola = regolaProssimaStanza(conto);
+  const massimo = alberiMassimi(conto);
+  const mostraStanze = alberi.length > 1 || aperte > 1;
+  // Le stanze appena aperte: il momento di festa (sezione 2.1), una volta sola.
+  const daFesteggiare = (righeStanze.data ?? []).filter((s) => !s.celebrated_at);
 
   const scheda = (
     <section aria-labelledby="titolo-scheda" className="scheda-albero pagina">
@@ -324,23 +392,43 @@ Ne arriva una ogni 7 giorni, con la cartolina della settimana, più una nei mome
     </div>
   );
 
+  // La stanza: gli oggetti nei loro posti e i pacchi ancora da aprire.
+  const oggettiStanza = (righeOggetti.data ?? []).map((o) => ({ item: o.item, place: o.place, nuovo: o.is_new }));
+  const daAprire = elencoSbloccati.filter((u) => !u.opened_at).map((u) => u.item);
+  const datiStanza = {
+    oggetti: oggettiStanza,
+    pacchi: pacchiDa(daAprire).map((p) => p.oggetti),
+    sbloccati: elencoSbloccati.length,
+    totale: TOTALE_CATALOGO,
+    haAttrezzi: elencoSbloccati.some((u) => u.opened_at && voce(u.item)?.posto === "cassetta"),
+  };
+  const nuoviCatalogo = elencoSbloccati.filter((u) => u.opened_at && !u.seen_at).length;
+  const inDeposito = new Set(oggettiStanza.filter((o) => !o.place).map((o) => o.item));
+  const fuoriStanza = elencoSbloccati.filter((u) => {
+    const v = voce(u.item);
+    return u.opened_at && v && nellaStanza(v) && !oggettiStanza.some((o) => o.item === u.item);
+  });
+  for (const u of fuoriStanza) inDeposito.add(u.item);
+
   const pannelloCollezione = (
     <div>
       <p className="gi-nota">
-        Trofei, oggetti, vestiti e stagioni arrivano vivendo: la prima pioggia, i 30 giorni di diario, la strada presa.
-        Non si comprano.
+        Edifici, arredi, giochi, attrezzi, vestiti, trofei e rarità arrivano vivendo: dalle decisioni di {albero.name}, dal
+        tempo che fa, dai tuoi regali. Non si comprano.
       </p>
       <div className="mt-4">
-        <Collezione nome={albero.name} sbloccati={elencoSbloccati} stagioni={stagioni} />
+        <Collezione nome={albero.name} sbloccati={elencoSbloccati} stagioni={stagioni} inDeposito={[...inDeposito]} />
       </div>
     </div>
   );
 
   return (
     <main id="contenuto" className={`flex-1 ${fontModerna.variable}`}>
+      <RicordaAlbero id={albero.id} />
       <Immersivo
         pannelloIniziale={pannelloIniziale}
         appenaNato={nuovo}
+        daForesta={parametri.da === "foresta"}
         palinsesto={palinsesto}
         fascia={fascia}
         indice={indice}
@@ -362,6 +450,8 @@ Ne arriva una ogni 7 giorni, con la cartolina della settimana, più una nei mome
         totaleLettere={elencoLettere.length}
         righeDiario={pagine.length}
         domandaAperta={!!domandaDelMattino && !domandaDelMattino.risposta}
+        stanza={datiStanza}
+        nuoviCatalogo={nuoviCatalogo}
         pannelli={{
           buongiorno: pannelloBuongiorno,
           lettere: pannelloLettere,
@@ -371,8 +461,52 @@ Ne arriva una ogni 7 giorni, con la cartolina della settimana, più una nei mome
           collezione: pannelloCollezione,
           carattere: scheda,
         }}
+        sceltaStanza={
+          mostraStanze ? (
+            <SceltaStanza
+              stanze={stanze}
+              stanzaId={stanza?.id ?? null}
+              alberoId={albero.id}
+              alberoNome={albero.name}
+              capienza={CAPIENZA_STANZA}
+              chiuse={chiuse}
+              regola={regola?.testo ?? null}
+              puoPiantare={alberi.length < massimo}
+            />
+          ) : undefined
+        }
+        alberoX={posti.protagonista}
+        inStanza={
+          compagni.length || arredi.length ? (
+            <>
+              <Arredi arredi={arredi} />
+              <Compagni compagni={compagni} stagione={stagione} innevato={meteo.cielo === "neve"} />
+            </>
+          ) : undefined
+        }
         avviso={
-          nuovo ? (
+          daFesteggiare.length ? (
+            <div className="gi-avviso st-festa" role="status">
+              <span className="st-coriandoli" aria-hidden>
+                {Array.from({ length: 18 }, (_, i) => (
+                  <i key={i} style={{ "--i": i } as CSSProperties} />
+                ))}
+              </span>
+              <p className="font-bold">
+                {daFesteggiare.length === 1
+                  ? `Si è aperta una stanza nuova: «${daFesteggiare[0].name}»!`
+                  : `Si sono aperte ${daFesteggiare.length} stanze nuove!`}
+              </p>
+              <p className="mt-1">
+                Ora hai {aperte} {aperte === 1 ? "stanza" : "stanze"} su {STANZE_MASSIME}: puoi traslocarci un albero o piantarne uno nuovo.
+              </p>
+              <form action={festeggia} className="mt-2">
+                <button name="vai" value="/giardino" className="font-semibold underline underline-offset-4">
+                  Evviva!
+                </button>
+              </form>
+            </div>
+          ) : nuovo ? (
             <div className="gi-avviso" role="status">
               <p className="font-bold">
                 {albero.name} è nato oggi a {albero.city}.
@@ -384,7 +518,23 @@ Ne arriva una ogni 7 giorni, con la cartolina della settimana, più una nei mome
             </div>
           ) : undefined
         }
-        strumenti={<Strumenti nome={albero.name} meteoScelto={sceltaMeteo} piano={albero.plan} />}
+        strumenti={
+          <Strumenti
+            nome={albero.name}
+            meteoScelto={sceltaMeteo}
+            piano={albero.plan}
+            altri={
+              <StrumentiStanze
+                pacchetto={conto.pacchetto}
+                alberi={alberi.length}
+                massimo={massimo}
+                stanze={Math.max(aperte, stanzeSbloccate(conto))}
+                rinnovi={conto.rinnovi}
+                piantati={conto.alberiPiantati}
+              />
+            }
+          />
+        }
       />
     </main>
   );

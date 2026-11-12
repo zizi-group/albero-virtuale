@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Foresta del club · prova</title>
+  <!-- Pagina di prova della foresta del club (src/lib/giardino3d/club.js), fuori da Next.
+       Servire la radice del repository: node prototipi/foresta-3d/servi.mjs
+       poi http://localhost:4318/prototipi/foresta-3d/club.html?n=1000
+       Parametri: n (alberi d'esempio), misura=1 (ms con gl.finish), ridotto=1. -->
+  <script type="importmap">
+    { "imports": { "three": "/node_modules/three/build/three.module.js", "three/addons/": "/node_modules/three/examples/jsm/" } }
+  </script>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; font-family: system-ui, sans-serif; }
+    canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    #nomi { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .club-nome { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; padding: 2px 8px; border-radius: 10px; background: rgba(14,17,12,.72); color: #fff; font-size: 13px; white-space: nowrap; }
+    .club-nome span { font-size: 11px; opacity: .8; }
+    .club-nome[data-mio="1"] { background: #f2b630; color: #23261d; }
+    #misure { position: absolute; left: 8px; bottom: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(14,17,12,.75); color: #fff; font: 12px ui-monospace, monospace; }
+  </style>
+</head>
+<body>
+  <canvas id="tela" tabindex="0"></canvas>
+  <div id="nomi"></div>
+  <pre id="misure">…</pre>
+  <script type="module">
+    import { creaForestaClub } from "/src/lib/giardino3d/club.js";
+    import { generatore } from "/src/lib/giardino3d/casuale.js";
+
+    const q = new URLSearchParams(location.search);
+    const n = Number(q.get("n") ?? 300);
+    const r = generatore(42);
+    // alberi d'esempio in memoria: posizione uniforme nel cerchio, come la vista
+    const alberi = Array.from({ length: n }, (_, i) => {
+      const rr = Math.sqrt(r()), a = r() * Math.PI * 2;
+      return { seme: `esempio-${i}`, modello: r(), nome: `Esempio ${i + 1}`, persona: null, crescita: Math.round(r() * 10) / 10, x: rr * Math.cos(a), z: rr * Math.sin(a), esempio: true, mio: i === 0 };
+    });
+    const f = creaForestaClub(document.getElementById("tela"), {
+      alberi,
+      etichette: document.getElementById("nomi"),
+      stagione: q.get("stagione") ?? "estate",
+      movimentoRidotto: q.get("ridotto") === "1",
+      misura: q.get("misura") === "1",
+    });
+    window.foresta = f;
+    setInterval(() => {
+      const s = f.statistiche();
+      document.getElementById("misure").textContent =
+        `${s.alberi} alberi (${s.vicini} vicini) · lavoro ${s.msMediana.toFixed(2)} ms (95%: ${s.ms95.toFixed(2)})\n` +
+        `tra due fotogrammi ${s.intervalloMediana.toFixed(1)} ms · ${s.disegni} disegni · ${s.triangoli} triangoli · pixel ×${s.pixelRatio}`;
+    }, 1000);
+  </script>
+</body>
+</html>

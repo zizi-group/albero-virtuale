@@ -47,8 +47,9 @@ Tutto in italiano: codice (nomi), testi, commit, report.
 | `npm run build` | Build di produzione |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Tipi delle route + `tsc` |
-| `npm run notte` | Motore notturno: un giorno per ogni albero, poi il calendario (collezione, cartolina e lettera della settimana, fine del mese) |
+| `npm run notte` | Motore notturno: un giorno per ogni albero (tutti, anche più alberi della stessa persona), poi il calendario (collezione, cartolina e lettera della settimana, fine del mese) e le stanze da aprire |
 | `npm run simula -- --giorni 7 [--lettera] [--senza-ai] [--meteo-finto]` | Albero in memoria, senza database: per provare prompt e motore. Stampa le giornate a fasce, le catene e il controllo delle ripetizioni; `--senza-ai` solo codice (gratis), `--meteo-finto` senza Open-Meteo |
+| `npm run simula -- --alberi 3 --giorni 60 [--senza-ai] [--prove 300]` | Più alberi nella stessa stanza: imprese, contagio, attività di gruppo; `--prove` dà le statistiche senza AI |
 | `supabase gen types typescript --local > src/lib/supabase/database.types.ts` | Tipi dopo una migrazione |
 
 ## Dove sta cosa
@@ -60,6 +61,22 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   (`strade.ts`), regole delle abitudini col meteo (`scena.ts`), catalogo dei
   regali e quando compaiono nella scena (`regali.ts`), collezione di trofei,
   oggetti, vestiti e stagioni con le sue regole (`collezione.ts`).
+- **Catalogo degli oggetti** (fase 3 della 0.2): `src/lib/albero/oggetti.ts`
+  estende `collezione.ts` e `regali.ts`. Ogni voce ha categoria (edifici,
+  arredi, attrezzi, giochi, vestiti, trofei, rarità), regola nel codice,
+  indizio per la sagoma, usi (attività che apre), tipo di posto e stato
+  «disegnato» o «in arrivo» (non si sblocca). `nuoviDalCatalogo` sostituisce
+  `nuoviSblocchi` in `controllaSblocchi`. Disegni 100 × 100 con il terreno a
+  y = 96 in `src/components/albero/vivo/oggettiStanza.tsx` (`FiguraOggetto`,
+  `Coccarda`, `Pacco`). Una voce nuova: regola qui, disegno lì.
+- **La stanza e lo sblocco** (`src/app/giardino/Stanza.tsx`, `stanza.css`,
+  servizio in `src/lib/motore/stanza.ts`): ogni sblocco è un pacco
+  (`unlocks.opened_at` null, al massimo 3 pacchi, il terzo raccoglie il resto);
+  aperto, Pino sistema l'oggetto nel primo posto libero (`room_items`, posti in
+  `POSTI_STANZA`), altrimenti mette in deposito il più vecchio di quel tipo.
+  La persona tocca un oggetto per spostarlo o metterlo via. «Nuovo» nel
+  catalogo finché non lo guardi (`seen_at`). Evento `linfa-sblocco`: Pino
+  balla qualche secondo. Strumenti della demo: «Sblocca un oggetto», «Cinque oggetti».
 - `src/lib/piani.ts`: i tre pacchetti (`albero`, `premium-annuale`,
   `premium-mensile`) e `isPremium`, usati dalla demo; i loro prezzi e testi
   per il giardino sono in `src/components/landing/Pacchetti.tsx`.
@@ -80,7 +97,24 @@ Tutto in italiano: codice (nomi), testi, commit, report.
 - **Progetto 0.2** (Federico, 12/11/2026): `docs/stanze-e-vita.md`. Il gioco
   si fa in 2D (la stanza); il 3D servirà per la vista d'insieme «la tua
   foresta» e per la foresta del club. Fasi 1 e 2 fatte: giardino 2D, giornata
-  a fasce, lettera settimanale, risorse e catene, 30 attività quotidiane.
+  a fasce, lettera settimanale, risorse e catene, 30 attività quotidiane;
+  le fasi 3-7 sono descritte qui sotto.
+- **Più alberi e stanze** (fase 5 della 0.2, sezione 2 di `docs/stanze-e-vita.md`):
+  regole pure in `src/lib/stanze.ts` (stanze = `min(10, base del pacchetto +
+  floor(alberi piantati / 5) + rinnovi)`, base Albero 1 · Famiglia 2 · Foresta 3
+  e capienza 4 ancora da confermare; alberi del pacchetto 1 · 3 · 7, più un seme
+  per albero a ogni rinnovo; posti della stanza e disposizione degli alberi).
+  Database: `accounts` (pacchetto nuovo, rinnovi, alberi piantati in tutto),
+  `rooms` (solo le stanze aperte, `celebrated_at` per la festa), `trees.room_id`.
+  Servizio in `src/lib/motore/stanze.ts` (semina, trasloco, nome, festa, demo).
+  L'albero che si guarda: `/giardino?albero=<id>`, ricordato nel cookie
+  `linfa-albero`; le pagine e le azioni lo prendono da `alberoScelto()`
+  (`src/lib/alberi.ts`), mai con `maybeSingle()` sul proprietario. Il giardino
+  mostra la stanza dell'albero scelto con gli altri (fino a 3, `Stanze.tsx`,
+  `stanze.css`); chi ha un albero solo e una stanza sola vede il giardino di
+  sempre. Gli extra del Premium restano su `trees.plan`, uguale per tutti gli
+  alberi della persona. Gli arredi della stanza (`room_items`, fase 3) si
+  agganciano con `ArredoInStanza` e `Arredi`.
 - **La giornata a fasce** (`src/lib/albero/giornata.ts`): per mattina, giorno,
   pomeriggio e sera 3 attività pesate (sezione 3.3: base quotidiana/di strada,
   strada, umore, meteo, catena, novità). La prima è la principale: lascia le
@@ -109,6 +143,15 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   falò con le braci, orto, vasetti, mucchio di foglie, scorte) si passano ad
   `Albero` con `tracce`; sugli schermi stretti il prato si stringe attorno
   all'albero (`stringiPrato`). Il motore riconosce l'attività dalla posa.
+- **Imprese e contagio** (fase 4 della 0.2, motore puro): `imprese.ts`
+  (imprese principali dai mestieri e libere dalle catene, capo, sostenitori,
+  ruoli, crescita, `fattoreImpresa` ×4 per i pesi della giornata),
+  `contagio.ts` (`giornoDellaStanza`: contagio, abbandoni, punti alla strada,
+  cambio di strada spegnibile con `CAMBIO_STRADA.attivo`, rivalità),
+  `gruppo.ts` (attività di gruppo). Carisma e influenzabilità in `strade.ts`
+  (`nascita`), colonne `trees.carisma` e `trees.influenzabilita`, tabelle
+  `ventures` e `venture_members`. Numeri e prove: sezione 7.3 di
+  `docs/stanze-e-vita.md`.
 - **Voci dell'albero** (`EVENTO_VOCE` in `vivo/AlberoVivo.tsx`): il giardino
   lo fa parlare (fumetto) o pensare (nuvoletta con le bollicine). La
   nuvoletta compare ogni 35-75 s (che cosa farà dopo, il suo umore).
@@ -116,6 +159,17 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   su di lui, risponde in un fumetto, poi è pensieroso 5 minuti
   (`localStorage` `linfa-pensieroso`). Gli strumenti della demo provano
   umore, azione e fascia con `linfa-prova`.
+- **La tua foresta** (fase 6 della 0.2, `/foresta`): i tuoi alberi dall'alto,
+  in 3D, divisi per stanza in radure con recinto e cartello; le stanze chiuse
+  sono radure incolte con il lucchetto di rami e la regola per aprirle. Tocchi
+  un albero o una radura: la camera scende e si entra nel giardino 2D
+  (`/giardino?stanza=…&albero=…&da=foresta`). Pannello dei numeri veri (alberi,
+  giorni, lettere, oggetti, stanze; alberi veri in Italia «in arrivo», niente
+  CO2). Senza WebGL o se è lento: la mappa 2D (`?vista=mappa` la forza).
+  `?esempi=1` aggiunge stanze d'esempio della demo, che non contano nei numeri.
+  Dati: `src/lib/foresta/` (`tipi.ts` interfaccia, `dati.ts` adattatore che oggi
+  mette l'unico albero nella stanza 1, `regole.ts` sblocco delle stanze); pagina
+  in `src/app/foresta/`; motore `src/lib/giardino3d/panoramica.js`.
 - **Motore 3D** (non più nel giardino, tenuto per le foreste della 0.2):
   `src/components/giardino3d/Scena3D.tsx` carica il motore three.js di
   `src/lib/giardino3d/` (JavaScript con JSDoc; API in
@@ -135,10 +189,21 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   (`settimana.tsx`, PNG 1200×900 allegato all'email). Il paesaggio delle
   cartoline è `src/app/giardino/mese/[numero]/cartolina/scena.ts`.
 - `src/app/`: `/` landing, `/accedi`, `/auth/conferma`, `/auth/esci`,
-  `/pianta`, `/giardino` (con gli strumenti della demo e `?meteo=`),
+  `/pianta` (con `?altro=1[&stanza=<id>]` per un altro albero), `/giardino` (con gli strumenti della demo e `?meteo=`),
+>
+  `/pianta`, `/giardino` (con gli strumenti della demo e `?meteo=`), `/foresta`,
   `/giardino/lettere/[id]`, `/giardino/mese/[numero]` (riepilogo illustrato
   del mese) con `cartolina` (PNG con `next/og`, `?formato=storia|sfondo`,
-  `&scarica=1`), `/catalogo`.
+  `&scarica=1`), `/catalogo`, `/club` (la foresta del club, sotto).
+- **Foresta del club** (fase 7 della 0.2): pagina `src/app/club/` (3D, mappa 2D
+  di ripiego, consenso, strumenti della demo), dati in `src/lib/club.ts`,
+  motore leggero a istanze `src/lib/giardino3d/club.js` (non usa gli
+  alberi-personaggio). Gli alberi degli altri si leggono **solo** dalla vista
+  `club_forest` (nome dell'albero, nome di battesimo o iniziali se scelti,
+  seme, numero del modello, crescita, posizione); il consenso sta in
+  `club_consent` (revocabile, con le date) e si chiede alla semina. Gli alberi
+  d'esempio della demo sono in `club_examples`, mai in `trees`, e si vedono
+  come «esempio della demo». Prova senza Next: `prototipi/foresta-3d/club.html`.
 - `supabase/`: `config.toml`, migrazioni, template dell'email di accesso.
 
 ## Regole
@@ -174,9 +239,10 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   sblocchi. Ha preso il posto della lettera di fine mese e di metà mese
   (`mensile` e `meta-mese` restano solo per le lettere già scritte). A fine
   mese il mese si chiude senza lettera. Lettere sempre su Opus.
-- **Collezione** (tutti i piani): trofei, oggetti, vestiti e album delle
+- **Collezione** (tutti i piani): il catalogo degli oggetti e l'album delle
   stagioni si sbloccano vivendo, mai comprando (`unlocks`). Le regole sono nel
-  codice (`collezione.ts`), mai decise dall'AI; le novità entrano una volta nel
+  codice (`oggetti.ts`, che comprende `collezione.ts`), mai decise dall'AI;
+  i regali diventano oggetti dal giorno della lettera di ringraziamento; le novità entrano una volta nel
   prompt delle giornate (`ContestoVita.novita`) perché l'albero possa nominarle
   nel diario, poi `mentioned = true`.
 - **Script fuori da Next** (`npm run notte`): i file con JSX usati dal motore

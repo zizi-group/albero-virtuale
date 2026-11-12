@@ -1,6 +1,7 @@
 import { azione } from "../albero/azioni";
 import { fattiDellaSettimana, leggiMemoria } from "../albero/catene";
-import { nuoviSblocchi, sblocco, type DatiCollezione, type PaginaCollezione } from "../albero/collezione";
+import type { PaginaCollezione } from "../albero/collezione";
+import { nuoviDalCatalogo, voce, type DatiOggetti } from "../albero/oggetti";
 import type { Cielo } from "../albero/tipi";
 import { pngSettimana } from "../cartolina/settimana";
 import type { MeteoGiorno } from "../meteo";
@@ -11,7 +12,8 @@ import { caricaStato, db, emailDelProprietario, faiPassareGiorni, scriviEInviaLe
 import { scriviNotaSettimana } from "./scritture";
 
 // Il calendario dell'albero: quello che succede dopo le giornate vissute.
-// - Collezione: trofei, oggetti, vestiti e stagioni (regole in albero/collezione.ts).
+// - Collezione: il catalogo degli oggetti (regole in albero/oggetti.ts, che
+//   comprende quelle di albero/collezione.ts); i regali diventano oggetti.
 // - Settimana: ogni 7 giorni vissuti, per tutti i piani, una sola email con la
 //   cartolina del momento migliore (nota e momento sul modello piccolo) e la
 //   lettera della settimana (Opus). La lettera settimanale (Federico,
@@ -69,12 +71,14 @@ export async function controllaSblocchi(alberoId: string): Promise<string[]> {
     caricaStato(alberoId),
     db().from("diary_entries").select("day_number, lived_on, action, weather").eq("tree_id", alberoId).order("day_number"),
     db().from("unlocks").select("item").eq("tree_id", alberoId),
-    db().from("letters").select("day_number").eq("tree_id", alberoId).eq("kind", "regalo").order("day_number").limit(1),
+    db().from("letters").select("id, day_number").eq("tree_id", alberoId).eq("kind", "regalo").order("day_number"),
     db().from("messages").select("id", { count: "exact", head: true }).eq("tree_id", alberoId).eq("author", "persona"),
   ]);
+  const { data: doni } = await db().from("gifts").select("gift, letter_id").eq("tree_id", alberoId);
+  const giornoLettera = new Map((regali ?? []).map((l) => [l.id, l.day_number]));
 
   const biografia = Array.isArray(riga.biography) ? (riga.biography as { giorno: number; testo: string }[]) : [];
-  const dati: DatiCollezione = {
+  const dati: DatiOggetti = {
     pagine: (righe ?? []).map((p): PaginaCollezione => {
       const m = p.weather as Partial<MeteoGiorno> | null;
       return {
@@ -91,9 +95,12 @@ export async function controllaSblocchi(alberoId: string): Promise<string[]> {
     giornoPrimoRegalo: regali?.[0]?.day_number ?? null,
     haScritto: (messaggi ?? 0) > 0,
     oggi: riga.day_count,
+    // I regali diventano oggetti dal giorno della lettera di ringraziamento.
+    regali: (doni ?? []).map((g) => ({ id: g.gift, giorno: (g.letter_id && giornoLettera.get(g.letter_id)) || riga.day_count })),
+    strada: riga.path,
   };
 
-  const nuovi = nuoviSblocchi(dati, new Set((gia ?? []).map((u) => u.item)));
+  const nuovi = nuoviDalCatalogo(dati, new Set((gia ?? []).map((u) => u.item)));
   if (!nuovi.length) return [];
   await db()
     .from("unlocks")
@@ -205,7 +212,7 @@ export async function chiudiSettimana(alberoId: string) {
       .lte("day_number", riga.day_count);
     const fatti = [
       ...fattiDellaSettimana(leggiMemoria(riga.memoria), primo, riga.day_count),
-      ...(sblocchi ?? []).map((u) => sblocco(u.item)?.nome).filter((n): n is string => !!n).map((n) => `nella collezione è entrato «${n}»`),
+      ...(sblocchi ?? []).map((u) => voce(u.item)?.nome).filter((n): n is string => !!n).map((n) => `nella collezione è entrato «${n}»`),
     ];
     lettera = await scriviEInviaLettera(alberoId, "settimanale", fatti.join("; ") || undefined, false);
     await db().from("tree_weeks").update({ letter_id: lettera.id }).eq("id", settimana.id);

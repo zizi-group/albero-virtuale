@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState, type CSSProperties } from "react";
 import { Albero } from "@/components/albero/Albero";
 import { Ambiente } from "@/components/ambiente/Ambiente";
@@ -36,7 +37,16 @@ const SALUTO: Posa = {
   dx: { forma: "dritto", angolo: 58, anim: "saluta" },
 };
 
-export function ModuloSemina({ pacchetto = "albero" }: { pacchetto?: IdPiano }) {
+/** Chi ha già un albero e ne pianta un altro (fase 5): quanti ne ha, quanti ne tiene il pacchetto. */
+export interface UnAltroAlbero {
+  quanti: number;
+  massimo: number;
+  pacchetto: string;
+  stanza?: string;
+}
+
+export function ModuloSemina({ pacchetto = "albero", unAltro }: { pacchetto?: IdPiano; unAltro?: UnAltroAlbero }) {
+  const pieno = !!unAltro && unAltro.quanti >= unAltro.massimo;
   const [stato, azione, inCorso] = useActionState<StatoSemina, FormData>(azioneSemina, {});
   const [nome, setNome] = useState("");
   const [citta, setCitta] = useState("");
@@ -63,13 +73,30 @@ export function ModuloSemina({ pacchetto = "albero" }: { pacchetto?: IdPiano }) 
       </div>
 
       <section className="semina-foglio pagina nastro" aria-labelledby="titolo-semina">
-        <p className="occhiello">Semina</p>
+        <p className="occhiello">{unAltro ? `Un altro albero · ne hai ${unAltro.quanti} su ${unAltro.massimo}` : "Semina"}</p>
         <h1 id="titolo-semina" className="font-titolo mt-2 text-[2rem] leading-[1.05] sm:text-[2.6rem]">
-          Compri un albero. Non sai chi diventerà.
+          {unAltro ? "Un seme nuovo, un carattere tutto suo." : "Compri un albero. Non sai chi diventerà."}
         </h1>
-        <p className="mt-2 text-matita">Tutti partono da un seme uguale. Poi ognuno prende la sua strada.</p>
+        <p className="mt-2 text-matita">
+          {unAltro
+            ? "Andrà a vivere in una stanza con posto, accanto agli altri. Ogni 5 alberi piantati si apre una stanza nuova."
+            : "Tutti partono da un seme uguale. Poi ognuno prende la sua strada."}
+        </p>
 
-        <form action={azione} className="mt-6 space-y-5">
+        {pieno && unAltro && (
+          <div className="mt-6 space-y-4">
+            <p>
+              Il pacchetto {unAltro.pacchetto} tiene {unAltro.massimo === 1 ? "un albero solo" : `${unAltro.massimo} alberi`} e li hai già
+              piantati tutti. Nella demo puoi cambiare pacchetto o simulare un rinnovo dagli strumenti del giardino.
+            </p>
+            <Link href="/giardino" className="timbro inline-block">
+              Torna al giardino
+            </Link>
+          </div>
+        )}
+        <form action={azione} className="mt-6 space-y-5" hidden={pieno}>
+          {unAltro && <input type="hidden" name="altro" value="1" />}
+          {unAltro?.stanza && <input type="hidden" name="stanza" value={unAltro.stanza} />}
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="occhiello">Come si chiama?</span>
@@ -103,6 +130,8 @@ export function ModuloSemina({ pacchetto = "albero" }: { pacchetto?: IdPiano }) 
           </label>
 
           <fieldset
+            hidden={!!unAltro}
+            disabled={!!unAltro}
             onChange={(e) => {
               const campo = e.target;
               if (campo instanceof HTMLInputElement && campo.name === "piano" && campo.value in PIANI) setScelto(campo.value as IdPiano);
@@ -127,14 +156,38 @@ export function ModuloSemina({ pacchetto = "albero" }: { pacchetto?: IdPiano }) 
             <p className="mt-1 text-sm leading-snug text-matita">Demo: nessun pagamento, il piano serve solo a provare il percorso.</p>
           </fieldset>
 
+          <fieldset className="scelta-gruppo">
+            <legend className="occhiello mb-2">La foresta del club</legend>
+            <label className="flex items-start gap-2.5">
+              <input type="checkbox" name="club" value="si" className="mt-1 size-4 accent-[var(--muschio)]" />
+              <span className="text-[0.95rem] leading-snug">
+                Fai comparire {nome.trim() || "il mio albero"} nella foresta del club, dove gli altri membri vedono gli alberi
+                piantati. Si vede solo il nome dell&apos;albero; puoi toglierlo quando vuoi.
+              </span>
+            </label>
+            <label className="mt-2 block text-sm text-matita">
+              Accanto al nome mostra anche
+              <select name="club_persona" defaultValue="nessuno" className="campo-carta mt-1 py-1.5">
+                <option value="nessuno">niente altro</option>
+                <option value="iniziali">le mie iniziali</option>
+                <option value="nome">il mio nome di battesimo</option>
+              </select>
+            </label>
+          </fieldset>
+
           {stato.errore && (
             <p className="text-rosso" role="alert">
               {stato.errore}
             </p>
           )}
           <button className="timbro w-full text-lg" disabled={inCorso}>
-            {inCorso ? "Lo stiamo piantando… e sta già scrivendo la prima lettera" : "Pianta il tuo albero"}
+            {inCorso ? "Lo stiamo piantando… e sta già scrivendo la prima lettera" : unAltro ? "Pianta questo albero" : "Pianta il tuo albero"}
           </button>
+          {unAltro && (
+            <Link href="/giardino" className="block text-center text-matita underline underline-offset-4">
+              Non ora, torna al giardino
+            </Link>
+          )}
         </form>
       </section>
     </div>

@@ -753,3 +753,38 @@
     }
   }
 }
+
+/* Arrivo dalla tua foresta 3D (src/app/foresta): la camera è scesa sulla radura,
+   qui la stanza 2D compare da un velo color carta e si assesta. */
+@layer components {
+  .gi[data-arrivo="foresta"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    background: var(--carta);
+    pointer-events: none;
+    animation: gi-dalla-foresta-velo 0.7s ease-out forwards;
+  }
+  .gi[data-arrivo="foresta"] .gi-scena {
+    animation: gi-dalla-foresta 1.1s cubic-bezier(0.22, 0.8, 0.24, 1) both;
+  }
+  @keyframes gi-dalla-foresta-velo {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes gi-dalla-foresta {
+    from {
+      scale: 1.12;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-movimento="pieno"]) .gi[data-arrivo="foresta"] .gi-scena {
+      animation: none;
+    }
+    html:not([data-movimento="pieno"]) .gi[data-arrivo="foresta"]::after {
+      animation-duration: 0.2s;
+    }
+  }
+}
