@@ -1,0 +1,341 @@
+/* La tua foresta: la vista d'insieme a tutto schermo, testata in alto,
+   pannello dei numeri a destra (computer) o in basso (telefono). */
+
+.foresta {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #cfe6d4;
+  color: var(--inchiostro);
+}
+
+/* ---------------------------------------------------------------- 3D */
+.fo-tela {
+  position: absolute;
+  inset: 0;
+}
+.fo-tela canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.fo-tela[data-pronto] canvas {
+  opacity: 1;
+}
+.fo-carica {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-gochi), cursive;
+  font-size: 1.4rem;
+  color: var(--muschio);
+}
+
+/* ---------------------------------------------------------------- Testata */
+.fo-testata {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1.25rem;
+  background: linear-gradient(to bottom, rgba(243, 236, 220, 0.92), rgba(243, 236, 220, 0.6) 70%, rgba(243, 236, 220, 0));
+  z-index: 2;
+}
+.fo-logo {
+  font-size: 1.35rem;
+  color: var(--muschio);
+  text-decoration: none;
+}
+.fo-titolo {
+  font-size: 1.35rem;
+  margin: 0;
+  flex: 1;
+}
+.fo-azioni {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.fo-bottone {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+  background: var(--muschio);
+  color: var(--carta-chiara);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+}
+.fo-bottone-chiaro {
+  background: var(--carta-chiara);
+  color: var(--muschio);
+  border: 1.5px solid var(--muschio);
+}
+.fo-bottone:focus-visible,
+.fo-cartello:focus-visible {
+  outline: 3px solid var(--linfa);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- Pannello */
+.fo-pannello {
+  position: absolute;
+  z-index: 2;
+  background: var(--carta-chiara);
+  border: 1.5px solid rgba(63, 90, 42, 0.25);
+  border-radius: 1.25rem;
+  box-shadow: 0 10px 30px rgba(35, 38, 29, 0.18);
+  padding: 1rem 1.15rem;
+}
+.fo-pannello-titolo {
+  margin: 0 0 0.5rem;
+}
+.fo-numeri {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem 1rem;
+  margin: 0;
+}
+.fo-numero {
+  display: flex;
+  flex-direction: column-reverse;
+}
+.fo-numero dd {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.1;
+  color: var(--muschio);
+}
+.fo-numero dt {
+  font-size: 0.9rem;
+  color: var(--matita);
+}
+.fo-veri {
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(107, 102, 86, 0.4);
+}
+.fo-veri-titolo {
+  margin: 0;
+  font-weight: 600;
+}
+.fo-veri-testo {
+  margin: 0.25rem 0 0;
+  font-size: 0.92rem;
+  color: var(--matita);
+}
+.fo-bollino {
+  display: inline-block;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  background: var(--linfa);
+  color: var(--inchiostro);
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-right: 0.25rem;
+}
+.fo-nota,
+.fo-aiuto {
+  margin: 0.7rem 0 0;
+  font-size: 0.85rem;
+  color: var(--matita);
+}
+.fo-aiuto {
+  font-family: var(--font-gochi), cursive;
+  font-size: 1.05rem;
+  color: var(--muschio);
+}
+
+/* computer: pannello a destra */
+@media (min-width: 900px) {
+  .fo-pannello {
+    top: 5.25rem;
+    right: 1.25rem;
+    width: 20rem;
+    max-height: calc(100% - 6.5rem);
+    overflow: auto;
+  }
+}
+/* telefono: pannello in basso, i numeri scorrono in orizzontale */
+@media (max-width: 899.98px) {
+  .fo-testata {
+    padding: 0.6rem 1rem;
+  }
+  .fo-titolo {
+    font-size: 1.15rem;
+  }
+  .fo-bottone {
+    min-height: 2.25rem;
+    padding: 0.25rem 0.8rem;
+    font-size: 0.9rem;
+  }
+  .fo-pannello {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    padding: 0.75rem 0.9rem;
+  }
+  .fo-numeri {
+    display: flex;
+    gap: 1.1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .fo-numero {
+    flex: none;
+  }
+  .fo-numero dd {
+    font-size: 1.3rem;
+  }
+  .fo-numero dt {
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .fo-veri {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+  }
+  .fo-veri-testo {
+    font-size: 0.82rem;
+  }
+  .fo-aiuto {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- Avviso e velo */
+.fo-avviso {
+  position: absolute;
+  left: 50%;
+  top: 5.5rem;
+  z-index: 3;
+  max-width: min(28rem, calc(100% - 2rem));
+  margin: 0;
+  padding: 0.6rem 1rem;
+  border-radius: 1rem;
+  background: var(--inchiostro);
+  color: var(--carta-chiara);
+  font-size: 0.95rem;
+  transform: translate(-50%, -0.5rem);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.fo-avviso[data-visibile] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.fo-velo {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: var(--carta);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.fo-velo[data-attivo] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---------------------------------------------------------------- Mappa (ripiego 2D) */
+.fo-mappa {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 6rem 1rem 13rem;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.18), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(0, 60, 0, 0.12), transparent 45%),
+    #8cc464;
+}
+.fo-mappa[data-stagione="autunno"] {
+  background-color: #b8b058;
+}
+.fo-mappa[data-stagione="inverno"] {
+  background-color: #b8c4b0;
+}
+.fo-mappa[data-ora="notte"] {
+  filter: brightness(0.75) saturate(0.85);
+}
+.fo-mappa-griglia {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(9.25rem, 42vw), 1fr));
+  gap: 1.5rem 1rem;
+  max-width: 60rem;
+}
+.fo-radura {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.fo-radura-disegno {
+  width: 100%;
+  max-width: 12rem;
+  overflow: visible;
+}
+.fo-radura-prato {
+  fill: #b8de8a;
+}
+.fo-radura-recinto {
+  fill: none;
+  stroke: #8a5a32;
+  stroke-width: 2.2;
+  stroke-dasharray: 3 2.4;
+}
+.fo-radura-incolta {
+  fill: #5e8a3e;
+}
+.fo-cartello {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: -0.4rem 0 0;
+  padding: 0.3rem 0.8rem;
+  border-radius: 0.6rem;
+  background: #c99a62;
+  color: #3a2412;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 2px 0 rgba(60, 36, 18, 0.4);
+}
+.fo-cartello-chiuso {
+  background: #7a5e44;
+  color: #f3e6d0;
+}
+.fo-cartello-nome {
+  font-weight: 700;
+  font-family: var(--font-young-serif), Georgia, serif;
+}
+.fo-cartello-riga {
+  font-size: 0.8rem;
+}
+.fo-radura[data-esempio] .fo-radura-disegno {
+  opacity: 0.85;
+}
+@media (min-width: 900px) {
+  .fo-mappa {
+    padding: 6rem 23rem 2rem 2rem;
+  }
+}
+
+:root:not([data-movimento="pieno"]) .fo-velo,
+:root:not([data-movimento="pieno"]) .fo-avviso,
+:root:not([data-movimento="pieno"]) .fo-tela canvas {
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0.01s;
+  }
+}

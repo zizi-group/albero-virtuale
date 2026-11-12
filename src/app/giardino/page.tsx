@@ -69,6 +69,7 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
   const parametri = await searchParams;
   // Più alberi (fase 5): `?albero=` sceglie quale si guarda, altrimenti quello ricordato o il primo.
   const { utente, supabase, alberi, albero } = await alberoScelto(typeof parametri.albero === "string" ? parametri.albero : null);
+
   const sceltaMeteo = typeof parametri.meteo === "string" ? parametri.meteo : undefined;
   const nuovo = parametri.nuovo === "1";
   const pannelloIniziale = (["buongiorno", "lettere", "diario", "scrivi", "mese", "collezione", "carattere"] as const).find(
@@ -417,6 +418,7 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
       <Immersivo
         pannelloIniziale={pannelloIniziale}
         appenaNato={nuovo}
+        daForesta={parametri.da === "foresta"}
         palinsesto={palinsesto}
         fascia={fascia}
         indice={indice}
