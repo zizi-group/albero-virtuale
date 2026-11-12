@@ -4,6 +4,7 @@
 // muschio sopra. Pochi oggetti da disegnare: ogni tipo è una sola InstancedMesh.
 // I colori seguono le stagioni come per i personaggi; la neve si posa sopra.
 import * as THREE from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { UNIFORMI } from "./albero.js";
 import { SPECIE } from "./modelli.js";
 import { texCorteccia, texFoglia } from "./texture.js";
@@ -99,6 +100,57 @@ function sferaMorbida(seme, segmenti = 14) {
   return g;
 }
 
+/** Quanti palchi ha la sagoma degli abeti e dei pini. */
+const PALCHI = 4;
+
+/**
+ * Nucleo degli abeti a palchi: strati di rami che si allargano verso il basso,
+ * con il bordo frastagliato come gli aghi (altezza 0..1, raggio 1 alla base).
+ */
+function abeteAPalchi() {
+  /** @type {THREE.Vector2[]} */
+  const profilo = [new THREE.Vector2(0, 0)];
+  for (let i = 0; i < PALCHI; i++) {
+    const y0 = i / PALCHI, y1 = (i + 1) / PALCHI;
+    const rb = 1 - i / PALCHI * 0.82;
+    profilo.push(new THREE.Vector2(rb, y0 + 0.02), new THREE.Vector2(rb * 0.97, y0 + 0.05), new THREE.Vector2(rb * 0.42, y1 - 0.02));
+  }
+  profilo.push(new THREE.Vector2(0, 1));
+  const g = new THREE.LatheGeometry(profilo, 28);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const ang = Math.atan2(z, x);
+    // bordo dei palchi frastagliato e un po' cadente
+    const bordo = Math.max(0, Math.cos(((y * PALCHI) % 1) * Math.PI * 2)); // 1 sul bordo del palco
+    const f = 1 + 0.14 * Math.sin(ang * 11 + y * 23) * bordo;
+    p.setXYZ(i, x * f, y - 0.03 * bordo * (0.5 + 0.5 * Math.sin(ang * 7)), z * f);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/** Ventaglio di 5 rami principali nudi, per le caducifoglie d'inverno (altezza 0..1). */
+function ramiNudi() {
+  /** @type {THREE.BufferGeometry[]} */
+  const parti = [];
+  for (let k = 0; k < 5; k++) {
+    const a = (k / 5) * Math.PI * 2 + 0.3;
+    const fuori = 0.55 + (k % 2) * 0.2;
+    const curva = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, -0.05, 0),
+      new THREE.Vector3(Math.cos(a) * fuori * 0.35, 0.45, Math.sin(a) * fuori * 0.35),
+      new THREE.Vector3(Math.cos(a) * fuori, 0.95, Math.sin(a) * fuori),
+    ]);
+    parti.push(new THREE.TubeGeometry(curva, 6, 0.035, 5, false));
+    // un rametto a metà
+    const b = a + 0.7;
+    const m = curva.getPoint(0.55);
+    parti.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([m, m.clone().add(new THREE.Vector3(Math.cos(b) * 0.25, 0.3, Math.sin(b) * 0.25))]), 3, 0.018, 4, false));
+  }
+  return /** @type {THREE.BufferGeometry} */ (mergeGeometries(parti));
+}
+
 /**
  * @typedef {{ x: number, z: number, h: number, rot: number }} Posto
  * @param {THREE.Scene} scena
@@ -122,7 +174,10 @@ export function creaBoscoMorbido(scena, op) {
     alberi.length,
   );
   const sfera = sferaMorbida(1, 16);
-  const cono = new THREE.ConeGeometry(1, 1, 24, 4).translate(0, 0.5, 0);
+  const cono = abeteAPalchi();
+  // rami nudi delle caducifoglie: si vedono solo d'inverno, al posto della chioma
+  const rami = new THREE.InstancedMesh(ramiNudi(), new THREE.MeshLambertMaterial({ color: "#4e3a2c" }), alberi.length);
+  rami.count = 0;
   const nucleiTondi = new THREE.InstancedMesh(sfera, materialeMorbido(false), alberi.length);
   const nucleiConi = new THREE.InstancedMesh(cono, materialeMorbido(false), alberi.length);
   /** Foglie raggruppate per texture. @type {Map<string, { posti: { m: THREE.Matrix4, c: THREE.Vector3, albero: number, t: number }[] }>} */
@@ -151,6 +206,11 @@ export function creaBoscoMorbido(scena, op) {
       m4.compose(centro, q.setFromAxisAngle(su, a.rot), new THREE.Vector3(R, altoC, R * 0.95));
       nucleiTondi.setMatrixAt(nT, m4);
       nuclei.push({ i: nT++, mesh: nucleiTondi, tipo: a.tipo, t: a.t, m: m4.clone() });
+      // i rami partono dalla cima del tronco e arrivano al bordo della chioma
+      if (!SPECIE[a.tipo.specie].sempreverde) {
+        m4.compose(new THREE.Vector3(a.x, a.y + fusto + h * 0.1, a.z), q.setFromAxisAngle(su, a.rot), new THREE.Vector3(R * 1.05, altoC * 1.9, R * 1.05));
+        rami.setMatrixAt(rami.count++, m4);
+      }
     }
     // guscio di foglie sulla superficie del nucleo
     const sp = SPECIE[a.tipo.specie];
@@ -158,15 +218,17 @@ export function creaBoscoMorbido(scena, op) {
     perFoglia.set(sp.foglia, lista);
     // meno foglie (e più grandi) sugli alberi lontani: la nebbia e gli altri alberi li coprono
     const lontano = Math.hypot(a.x, a.z) > 17;
-    const n = lontano ? 70 : conico ? 140 : 130;
+    const n = lontano ? 55 : conico ? 120 : 115;
     const misura = (conico ? h * 0.075 : h * 0.09) * (lontano ? 1.35 : 1);
     const centroLuce = conico ? centro.clone().add(new THREE.Vector3(0, altoC * 0.4, 0)) : centro;
     for (let k = 0; k < n; k++) {
       // un punto sulla superficie (sfera schiacciata o cono)
       let p;
       if (conico) {
-        const f = Math.pow(rng(), 0.8), ang = rng() * Math.PI * 2;
-        const r = R * (1 - f) * 1.04;
+        // ciuffi di aghi sul bordo di ogni palco
+        const palco = Math.floor(rng() * PALCHI), su0 = rng(), ang = rng() * Math.PI * 2;
+        const f = (palco + 0.05 + su0 * 0.85) / PALCHI;
+        const r = R * (1 - (palco / PALCHI) * 0.82) * (1 - 0.58 * su0) * 1.04;
         p = new THREE.Vector3(Math.cos(ang) * r, altoC * f, Math.sin(ang) * r).add(centro);
       } else {
         const d = new THREE.Vector3(rng() - 0.5, rng() - 0.5, rng() - 0.5).normalize();
@@ -279,10 +341,10 @@ export function creaBoscoMorbido(scena, op) {
     rocce.setColorAt(k, new THREE.Color("#8a908a").multiplyScalar(0.85 + rng() * 0.25));
   });
 
-  const tutti = [tronchi, nucleiTondi, nucleiConi, cespugli, rocce, ...foglie.map((f) => f.mesh)];
+  const tutti = [tronchi, nucleiTondi, nucleiConi, rami, cespugli, rocce, ...foglie.map((f) => f.mesh)];
   for (const m of tutti) { m.castShadow = true; m.receiveShadow = true; scena.add(m); }
   // le foglie e i nuclei del bosco non ricevono ombre: costerebbe molto e non si vedrebbe
-  for (const m of [nucleiTondi, nucleiConi, ...foglie.map((f) => f.mesh)]) m.receiveShadow = false;
+  for (const m of [nucleiTondi, nucleiConi, rami, ...foglie.map((f) => f.mesh)]) m.receiveShadow = false;
   for (const f of foglie.slice(-2)) f.mesh.castShadow = false; // felci e foglie dei cespugli: ombra inutile
 
   /** Colori di stagione, come per i personaggi. @param {string} stagione */
@@ -313,14 +375,7 @@ export function creaBoscoMorbido(scena, op) {
         // d'inverno le caduche tengono solo qualche foglia secca
         if (spoglio && !sottobosco) c.set(p.t < 0.5 ? "#8a6a48" : "#a8885c");
         f.mesh.setColorAt(k, c);
-        if (spoglio && !sottobosco) {
-          // le poche foglie rimaste stanno sul nucleo più piccolo (non restano sospese)
-          if (p.t > 0.3) f.mesh.setMatrixAt(k, zero);
-          else {
-            const pos = new THREE.Vector3().setFromMatrixPosition(p.m).sub(p.c).multiplyScalar(0.62).add(p.c);
-            f.mesh.setMatrixAt(k, p.m.clone().multiply(new THREE.Matrix4().makeScale(0.8, 0.8, 0.8)).setPosition(pos));
-          }
-        } else f.mesh.setMatrixAt(k, p.m);
+        f.mesh.setMatrixAt(k, spoglio && !sottobosco ? zero : p.m);
       });
       if (f.mesh.instanceColor) f.mesh.instanceColor.needsUpdate = true;
       f.mesh.instanceMatrix.needsUpdate = true;
@@ -332,10 +387,11 @@ export function creaBoscoMorbido(scena, op) {
       c.copy(a).lerp(b, 0.25).multiplyScalar(0.62);
       if (spoglio) c.set("#5e4c3e");
       n.mesh.setColorAt(n.i, c);
-      // d'inverno la chioma spoglia è un intrico di rami più piccolo
-      n.mesh.setMatrixAt(n.i, spoglio ? n.m.clone().multiply(new THREE.Matrix4().makeScale(0.6, 0.6, 0.6)) : n.m);
+      // d'inverno la chioma delle caducifoglie sparisce: restano i rami nudi
+      n.mesh.setMatrixAt(n.i, spoglio ? zero : n.m);
     }
     for (const m of [nucleiTondi, nucleiConi]) { if (m.instanceColor) m.instanceColor.needsUpdate = true; m.instanceMatrix.needsUpdate = true; }
+    rami.visible = stagione === "inverno";
     // cespugli
     c.set(stagione === "autunno" ? "#8a8a30" : stagione === "inverno" ? "#4e6a40" : "#2f7a2c");
     for (let k = 0; k < cespugli.count; k++) cespugli.setColorAt(k, c);
