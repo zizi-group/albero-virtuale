@@ -106,12 +106,15 @@ export async function piantaAlbero({
   nomePersona,
   luogo,
   piano,
+  stanzaId = null,
 }: {
   ownerId: string;
   nome: string;
   nomePersona: string | null;
   luogo: Luogo;
   piano: "albero" | "premium-annuale" | "premium-mensile";
+  /** La stanza dove abita (fase 5): la sceglie preparaSemina in src/lib/motore/stanze.ts. */
+  stanzaId?: string | null;
 }): Promise<{ id: string; erroreLettera: string | null }> {
   const meteo = await meteoAttuale(luogo.latitudine, luogo.longitudine);
   // Tratti, carisma e influenzabilità alla nascita (0.2, sezione 7.1).
@@ -127,6 +130,7 @@ export async function piantaAlbero({
       longitude: luogo.longitudine,
       timezone: luogo.fusoOrario,
       plan: piano,
+      room_id: stanzaId,
       traits: json(tratti),
       carisma,
       influenzabilita,

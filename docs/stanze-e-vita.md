@@ -28,6 +28,20 @@ risposta (sezione 16).
 > `20261112120000_imprese_contagio.sql`. Si provano con `npm run simula --
 > --alberi 3` (sezione 7.3). Il collegamento al database e al giardino arriva
 > con le stanze (fase 5).
+>
+> **Fase 5 (12/11/2026, sul branch delle stanze).** Più alberi per persona
+> fino al numero del pacchetto, stanze con la regola di 2.1 (i numeri
+> «proposta» sono costanti in `src/lib/stanze.ts`), festa quando se ne apre
+> una, trasloco e nome della stanza dall'elenco «Le tue stanze» in alto, da 1 a
+> 4 alberi nella stessa scena 2D (il protagonista davanti, gli altri con la
+> loro giornata; toccarne uno lo mette davanti). Strumenti della demo: pacchetto
+> Albero/Famiglia/Foresta, «Pianta un altro albero», «Simula un rinnovo».
+> Ancora da fare: Pino che va a vedere la stanza nuova il giorno dopo, gli
+> arredi (aspettano `room_items` della fase 3: l'aggancio è pronto), il
+> trascinamento dalla foresta 3D (fase 6). Scelte prese senza conferma:
+> ogni rinnovo dà un seme per ogni albero del pacchetto (dalla tabella dei
+> pacchetti nuovi); una stanza aperta resta aperta anche se il pacchetto
+> scende; gli alberi di una stanza vedono il cielo dell'albero scelto.
 
 Questo documento non butta via niente di quello che c'è: estende i mestieri
 delle strade (`docs/routine-strade.md`, `src/lib/albero/mestieri.ts`: 7 strade,

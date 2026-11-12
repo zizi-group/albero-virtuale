@@ -47,7 +47,7 @@ Tutto in italiano: codice (nomi), testi, commit, report.
 | `npm run build` | Build di produzione |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Tipi delle route + `tsc` |
-| `npm run notte` | Motore notturno: un giorno per ogni albero, poi il calendario (collezione, cartolina della settimana, lettere, fine del mese) |
+| `npm run notte` | Motore notturno: un giorno per ogni albero (tutti, anche più alberi della stessa persona), poi il calendario (collezione, cartolina della settimana, lettere, fine del mese) e le stanze da aprire |
 | `npm run simula -- --giorni 7 [--lettera]` | Albero in memoria, senza database: per provare prompt e motore |
 | `npm run simula -- --alberi 3 --giorni 60 [--senza-ai] [--prove 300]` | Più alberi nella stessa stanza: imprese, contagio, attività di gruppo; `--prove` dà le statistiche senza AI |
 | `supabase gen types typescript --local > src/lib/supabase/database.types.ts` | Tipi dopo una migrazione |
@@ -95,6 +95,22 @@ Tutto in italiano: codice (nomi), testi, commit, report.
 - **Progetto 0.2** (Federico, 12/11/2026): `docs/stanze-e-vita.md`. Il gioco
   si fa in 2D (la stanza); il 3D servirà per la vista d'insieme «la tua
   foresta» e per la foresta del club. Fase 1 fatta: il giardino è tornato al 2D.
+- **Più alberi e stanze** (fase 5 della 0.2, sezione 2 di `docs/stanze-e-vita.md`):
+  regole pure in `src/lib/stanze.ts` (stanze = `min(10, base del pacchetto +
+  floor(alberi piantati / 5) + rinnovi)`, base Albero 1 · Famiglia 2 · Foresta 3
+  e capienza 4 ancora da confermare; alberi del pacchetto 1 · 3 · 7, più un seme
+  per albero a ogni rinnovo; posti della stanza e disposizione degli alberi).
+  Database: `accounts` (pacchetto nuovo, rinnovi, alberi piantati in tutto),
+  `rooms` (solo le stanze aperte, `celebrated_at` per la festa), `trees.room_id`.
+  Servizio in `src/lib/motore/stanze.ts` (semina, trasloco, nome, festa, demo).
+  L'albero che si guarda: `/giardino?albero=<id>`, ricordato nel cookie
+  `linfa-albero`; le pagine e le azioni lo prendono da `alberoScelto()`
+  (`src/lib/alberi.ts`), mai con `maybeSingle()` sul proprietario. Il giardino
+  mostra la stanza dell'albero scelto con gli altri (fino a 3, `Stanze.tsx`,
+  `stanze.css`); chi ha un albero solo e una stanza sola vede il giardino di
+  sempre. Gli extra del Premium restano su `trees.plan`, uguale per tutti gli
+  alberi della persona. Gli arredi della stanza (`room_items`, fase 3) si
+  agganciano con `ArredoInStanza` e `Arredi`.
 - **La giornata a fasce** (`src/lib/albero/giornata.ts`): per mattina, giorno,
   pomeriggio e sera 3 attività pesate (strada, umore, meteo) che non si
   ripetono rispetto ai due giorni prima; l'azione dell'AI è la principale di
@@ -136,7 +152,7 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   (`settimana.tsx`, PNG 1200×900 allegato all'email). Il paesaggio delle
   cartoline è `src/app/giardino/mese/[numero]/cartolina/scena.ts`.
 - `src/app/`: `/` landing, `/accedi`, `/auth/conferma`, `/auth/esci`,
-  `/pianta`, `/giardino` (con gli strumenti della demo e `?meteo=`),
+  `/pianta` (con `?altro=1[&stanza=<id>]` per un altro albero), `/giardino` (con gli strumenti della demo e `?meteo=`),
   `/giardino/lettere/[id]`, `/giardino/mese/[numero]` (riepilogo illustrato
   del mese) con `cartolina` (PNG con `next/og`, `?formato=storia|sfondo`,
   `&scarica=1`), `/catalogo`.

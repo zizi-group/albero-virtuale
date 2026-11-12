@@ -23,7 +23,21 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "diary_entries": {
+            "accounts": {
+                  Row: {
+                    "created_at": string,"owner_id": string,"package": string,"renewals": number,"trees_planted": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"owner_id": string,"package"?: string,"renewals"?: number,"trees_planted"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"owner_id"?: string,"package"?: string,"renewals"?: number,"trees_planted"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"diary_entries": {
                   Row: {
                     "action": string,"body": string,"created_at": string,"day_number": number,"id": string,"lived_on": string,"milestone": boolean,"mood": string | null,"tree_id": string,"weather": Json | null
                   }
@@ -129,6 +143,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"rooms": {
+                  Row: {
+                    "celebrated_at": string | null,"created_at": string,"id": string,"name": string,"number": number,"owner_id": string,"unlocked_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "celebrated_at"?: string | null,"created_at"?: string,"id"?: string,"name": string,"number": number,"owner_id": string,"unlocked_at"?: string
+                  }
+                  Update: {
+                    "celebrated_at"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"number"?: number,"owner_id"?: string,"unlocked_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"tree_months": {
                   Row: {
                     "closed_at": string | null,"first_day": number,"id": string,"number": number,"recap": Json | null,"started_at": string,"tree_id": string
@@ -169,50 +197,36 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"room_items": {
+                },"trees": {
                   Row: {
-                    "created_at": string,"id": string,"is_new": boolean,"item": string,"moved_at": string,"place": string | null,"placed_by": string,"room_id": string | null,"source": string,"tree_id": string
+                    "biography": NonNullable<Json>,"city": string,"created_at": string,"day_count": number,"id": string,"last_weather": Json | null,"latitude": number,"longitude": number,"mood": string,"name": string,"owner_id": string,"owner_name": string | null,"path": string | null,"path_scores": NonNullable<Json>,"plan": string,"planted_at": string,"room_id": string | null,"timezone": string,"today_action": string,"today_caption": string | null,"traits": NonNullable<Json>,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"is_new"?: boolean,"item": string,"moved_at"?: string,"place"?: string | null,"placed_by"?: string,"room_id"?: string | null,"source": string,"tree_id": string
+                    "biography"?: NonNullable<Json>,"city": string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude": number,"longitude": number,"mood"?: string,"name": string,"owner_id": string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"room_id"?: string | null,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits": NonNullable<Json>,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"is_new"?: boolean,"item"?: string,"moved_at"?: string,"place"?: string | null,"placed_by"?: string,"room_id"?: string | null,"source"?: string,"tree_id"?: string
+                    "biography"?: NonNullable<Json>,"city"?: string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude"?: number,"longitude"?: number,"mood"?: string,"name"?: string,"owner_id"?: string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"room_id"?: string | null,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits"?: NonNullable<Json>,"updated_at"?: string
                   }
                   Relationships: [
                     {
-      foreignKeyName: "room_items_tree_id_fkey"
-      columns: ["tree_id"]
+      foreignKeyName: "trees_room_id_fkey"
+      columns: ["room_id"]
 isOneToOne: false
-      referencedRelation: "trees"
+      referencedRelation: "rooms"
       referencedColumns: ["id"]
     }
                   ]
-                },"trees": {
-                  Row: {
-                    "biography": NonNullable<Json>,"carisma": number,"city": string,"created_at": string,"day_count": number,"id": string,"influenzabilita": number,"last_weather": Json | null,"latitude": number,"longitude": number,"mood": string,"name": string,"owner_id": string,"owner_name": string | null,"path": string | null,"path_scores": NonNullable<Json>,"plan": string,"planted_at": string,"timezone": string,"today_action": string,"today_caption": string | null,"traits": NonNullable<Json>,"updated_at": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "biography"?: NonNullable<Json>,"carisma"?: number,"city": string,"created_at"?: string,"day_count"?: number,"id"?: string,"influenzabilita"?: number,"last_weather"?: Json | null,"latitude": number,"longitude": number,"mood"?: string,"name": string,"owner_id": string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits": NonNullable<Json>,"updated_at"?: string
-                  }
-                  Update: {
-                    "biography"?: NonNullable<Json>,"carisma"?: number,"city"?: string,"created_at"?: string,"day_count"?: number,"id"?: string,"influenzabilita"?: number,"last_weather"?: Json | null,"latitude"?: number,"longitude"?: number,"mood"?: string,"name"?: string,"owner_id"?: string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits"?: NonNullable<Json>,"updated_at"?: string
-                  }
-                  Relationships: [
-                    
-                  ]
                 },"unlocks": {
                   Row: {
-                    "day_number": number,"id": string,"item": string,"mentioned": boolean,"opened_at": string | null,"seen_at": string | null,"tree_id": string,"unlocked_at": string
+                    "day_number": number,"id": string,"item": string,"mentioned": boolean,"tree_id": string,"unlocked_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "day_number": number,"id"?: string,"item": string,"mentioned"?: boolean,"opened_at"?: string | null,"seen_at"?: string | null,"tree_id": string,"unlocked_at"?: string
+                    "day_number": number,"id"?: string,"item": string,"mentioned"?: boolean,"tree_id": string,"unlocked_at"?: string
                   }
                   Update: {
-                    "day_number"?: number,"id"?: string,"item"?: string,"mentioned"?: boolean,"opened_at"?: string | null,"seen_at"?: string | null,"tree_id"?: string,"unlocked_at"?: string
+                    "day_number"?: number,"id"?: string,"item"?: string,"mentioned"?: boolean,"tree_id"?: string,"unlocked_at"?: string
                   }
                   Relationships: [
                     {

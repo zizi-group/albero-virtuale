@@ -168,6 +168,12 @@ export interface PropsImmersivo {
   stanza: DatiStanza;
   /** Le voci del catalogo con l'etichetta «Nuovo» (pallino sulla Collezione). */
   nuoviCatalogo?: number;
+  /** Le stanze (fase 5): la scelta della stanza sotto il nome, se ce n'è più d'una o più alberi. */
+  sceltaStanza?: ReactNode;
+  /** Quello che c'è nella stanza oltre a lui: gli altri alberi e gli arredi. */
+  inStanza?: ReactNode;
+  /** Dove sta lui sul prato, in percentuale della larghezza (50 da solo). */
+  alberoX?: number;
 }
 
 /** Tutto schermo: disponibile solo dove il browser lo permette (non su iPhone). */
@@ -505,10 +511,12 @@ export function Immersivo(p: PropsImmersivo) {
       ora={ora}
       stagione={p.stagione}
       className="h-full"
+      style={p.alberoX !== undefined && p.alberoX !== 50 ? ({ "--albero-x": `${p.alberoX}%` } as CSSProperties) : undefined}
       chiaveAlbero={tempo ? `tempo-${tempo.posa}` : p.chiave}
       albero={<Albero posa={posa} giorni={p.giorno} stadio={p.stadio} stagione={p.stagione} innevato={p.meteo.cielo === "neve"} titolo={`${p.nome} ${azione(idInScena).etichetta}`} />}
       palco={
         <>
+          {p.inStanza}
           <Cassetta daLeggere={p.nonLette} totale={p.totaleLettere} onApri={() => apri("lettere")} />
           <Taccuino righe={p.righeDiario} onApri={() => apri("diario")} />
           <Stanza dati={p.stanza} nome={p.nome} suoniAccesi={suoniAccesi} />
@@ -543,6 +551,7 @@ export function Immersivo(p: PropsImmersivo) {
             {p.strada && <span className="gi-chip">{p.strada}</span>}
             <span className="gi-chip">Umore: {p.umore}</span>
           </p>
+          {p.sceltaStanza}
         </div>
         <div className="gi-destra">
           <p className="gi-meteo">
