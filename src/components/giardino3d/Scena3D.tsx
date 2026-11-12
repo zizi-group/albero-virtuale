@@ -35,6 +35,16 @@ export interface PropsScena3D {
 
 const nessunCambio = () => () => {};
 
+/** In questa visita il 3D si è già rivelato troppo lento: si parte dal 2D. */
+export const CHIAVE_LENTO = "linfa-3d-lento";
+function giaLento(): boolean {
+  try {
+    return sessionStorage.getItem(CHIAVE_LENTO) === "1";
+  } catch {
+    return false;
+  }
+}
+
 // I compagni della demo (Famiglia, Foresta): semi fissi, strade e nomi diversi.
 const COMPAGNI = [
   { nome: "Ulivetta", strada: "artista" },
@@ -62,7 +72,7 @@ function haWebGL(): boolean {
 export function Scena3D(p: PropsScena3D) {
   const tela = useRef<HTMLCanvasElement>(null);
   const istanza = useRef<IstanzaGiardino | null>(null);
-  const webgl = useSyncExternalStore(nessunCambio, haWebGL, () => true);
+  const webgl = useSyncExternalStore(nessunCambio, () => haWebGL() && !giaLento(), () => true);
   const [stato, setStato] = useState<"carica" | "pronto" | "ripiego">("carica");
   // Le ultime props, lette dal motore quando finisce di caricarsi.
   const ultime = useRef(p);
@@ -101,14 +111,57 @@ export function Scena3D(p: PropsScena3D) {
         };
         const g = creaGiardino(tela.current, opzioni);
         istanza.current = g;
-        g.su("pronto", () => vivo && setStato("pronto"));
+        g.su("pronto", () => {
+          if (!vivo) return;
+          setStato("pronto");
+          controllaFluidita();
+        });
         g.su("tocca-cassetta", () => ultime.current.onCassetta?.());
         g.su("tocca-taccuino", () => ultime.current.onTaccuino?.());
+        // Se la scheda grafica si perde (driver, troppe schede aperte), si torna al 2D.
+        const persa = (e: Event) => {
+          e.preventDefault();
+          if (vivo) setStato("ripiego");
+        };
+        tela.current.addEventListener("webglcontextlost", persa);
+        // Dispositivo troppo lento: dopo che la qualità adattiva si è assestata,
+        // se resta sotto i ~20 fotogrammi al secondo il giardino passa al 2D.
+        let raf = 0;
+        let attesa = 0;
+        const controllaFluidita = () => {
+          attesa = window.setTimeout(() => {
+            const tempi: number[] = [];
+            let prima = performance.now();
+            const passo = (ora: number) => {
+              if (!vivo) return;
+              if (!document.hidden) tempi.push(ora - prima);
+              prima = ora;
+              if (tempi.length < 90) {
+                raf = requestAnimationFrame(passo);
+                return;
+              }
+              const ordinati = [...tempi].sort((a, b) => a - b);
+              const mediana = ordinati[Math.floor(ordinati.length / 2)];
+              if (mediana > 50) {
+                console.warn(`Giardino 3D troppo lento qui (${Math.round(mediana)} ms per fotogramma): passo al 2D.`);
+                try {
+                  sessionStorage.setItem(CHIAVE_LENTO, "1");
+                } catch {}
+                setStato("ripiego");
+              }
+            };
+            raf = requestAnimationFrame(passo);
+          }, 4000);
+        };
         const movimento = () => g.imposta({ movimentoRidotto: movimentoRidotto() });
         const reagisci = (e: Event) => g.reagisci((e as CustomEvent<Reazione>).detail);
         window.addEventListener(EVENTO_MOVIMENTO, movimento);
         window.addEventListener(EVENTO_REAZIONE, reagisci);
+        const canvas = tela.current;
         pulisci = () => {
+          cancelAnimationFrame(raf);
+          clearTimeout(attesa);
+          canvas.removeEventListener("webglcontextlost", persa);
           window.removeEventListener(EVENTO_MOVIMENTO, movimento);
           window.removeEventListener(EVENTO_REAZIONE, reagisci);
         };

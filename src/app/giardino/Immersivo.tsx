@@ -9,7 +9,7 @@ import type { Ora } from "@/components/ambiente/atmosfera";
 import { Cassetta, Taccuino } from "@/components/ambiente/Oggetti";
 import { EVENTO_MOVIMENTO, InterruttoreMovimento, movimentoRidotto } from "@/components/Movimento";
 import { EVENTO_PROVA, type DettaglioProva } from "@/components/giardino3d/reazioni";
-import { Scena3D } from "@/components/giardino3d/Scena3D";
+import { CHIAVE_LENTO, Scena3D } from "@/components/giardino3d/Scena3D";
 import { azione } from "@/lib/albero/azioni";
 import type { Meteo, Posa, Stadio, Stagione } from "@/lib/albero/tipi";
 import { Suoni, type TipoSuono } from "./suoni";
@@ -195,6 +195,8 @@ export function Immersivo(p: PropsImmersivo) {
   const cambiaVista = () => {
     try {
       localStorage.setItem(CHIAVE_VISTA, vista === "3d" ? "2d" : "3d");
+      // Chi rimette il 3D a mano vuole riprovarlo, anche se prima era lento.
+      sessionStorage.removeItem(CHIAVE_LENTO);
     } catch {}
     window.dispatchEvent(new Event(EVENTO_VISTA));
   };
