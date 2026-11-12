@@ -218,8 +218,8 @@ export function creaBoscoMorbido(scena, op) {
     perFoglia.set(sp.foglia, lista);
     // meno foglie (e più grandi) sugli alberi lontani: la nebbia e gli altri alberi li coprono
     const lontano = Math.hypot(a.x, a.z) > 17;
-    const n = lontano ? 55 : conico ? 120 : 115;
-    const misura = (conico ? h * 0.075 : h * 0.09) * (lontano ? 1.35 : 1);
+    const n = lontano ? 40 : conico ? 95 : 90;
+    const misura = (conico ? h * 0.075 : h * 0.09) * (lontano ? 1.55 : 1.12);
     const centroLuce = conico ? centro.clone().add(new THREE.Vector3(0, altoC * 0.4, 0)) : centro;
     for (let k = 0; k < n; k++) {
       // un punto sulla superficie (sfera schiacciata o cono)
