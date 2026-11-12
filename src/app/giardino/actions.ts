@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { sblocco } from "@/lib/albero/collezione";
+import { voce } from "@/lib/albero/oggetti";
 import { NOMI_USO } from "@/lib/albero/regali";
 import { INFO_STRADE } from "@/lib/albero/strade";
 import { apriNuovoMese, cambiaPacchetto, faiRegaloDelMese } from "@/lib/motore/extra";
 import { chiudiSettimana, controllaSblocchi, viviGiorni } from "@/lib/motore/calendario";
 import { nuovoBuongiorno, rispondiAllaPersona, scriviEInviaLettera } from "@/lib/motore/servizio";
+import { apriPacchi, sbloccaPerProva, segnaVisti, spostaOggetto, type OggettoArrivato } from "@/lib/motore/stanza";
 import { NOMI_PACCHETTO } from "@/lib/piani";
 import { createClient, getUtente } from "@/lib/supabase/server";
 
@@ -43,6 +44,14 @@ export async function azioneDemo(_prima: Esito, form: FormData): Promise<Esito> 
       const piano = await cambiaPacchetto(albero.id, String(form.get("piano") ?? ""));
       revalidatePath("/giardino", "layout");
       return { ok: true, messaggio: `Ora ${albero.name} ha il pacchetto ${NOMI_PACCHETTO[piano]}. Demo: nessun pagamento.` };
+    }
+    if (form.get("cosa") === "oggetti") {
+      const n = Math.min(6, Math.max(1, Number(form.get("quanti") ?? 1)));
+      const presi = await sbloccaPerProva(albero.id, n);
+      revalidatePath("/giardino");
+      if (!presi.length) return { ok: true, messaggio: `${albero.name} ha già tutto quello che il catalogo sa disegnare.` };
+      const nomi = presi.map((id) => voce(id)?.nome).filter(Boolean);
+      return { ok: true, messaggio: `Nella stanza ${presi.length === 1 ? "c'è un pacco" : "ci sono dei pacchi"} da aprire: ${nomi.join(", ")}. ${presi.length === 1 ? "Toccalo!" : "Toccali!"}` };
     }
     if (form.get("cosa") === "mese") {
       const m = await apriNuovoMese(albero.id);
@@ -81,7 +90,7 @@ export async function azioneDemo(_prima: Esito, form: FormData): Promise<Esito> 
         : `Sono passati ${r.vissuti} giorni: ${albero.name} è al giorno ${r.giorni}.`;
     if (r.rivelata) messaggio += ` Ha capito chi è: ${INFO_STRADE[r.rivelata].nome.toLowerCase()}!`;
     if (r.lettera) messaggio += " Ti ha scritto una lettera.";
-    const nuovi = r.eventi.sbloccati.map((id) => sblocco(id)?.nome).filter(Boolean);
+    const nuovi = r.eventi.sbloccati.map((id) => voce(id)?.nome).filter(Boolean);
     if (nuovi.length) messaggio += ` Nella collezione: ${nuovi.join(", ")}.`;
     if (r.eventi.letteraMetaMese) messaggio += " È arrivata la lettera di metà mese.";
     if (r.eventi.mese) messaggio += ` Finito il mese ${r.eventi.mese.chiuso}: c'è la lettera del mese.`;
@@ -127,4 +136,36 @@ export async function faiRegalo(_prima: Esito, form: FormData): Promise<Esito> {
   } catch (e) {
     return errore(e);
   }
+}
+
+// ——— La stanza: pacchi, oggetti, catalogo ———
+
+/** Apre i pacchi: Pino sistema da solo le cose nuove (docs/stanze-e-vita.md, 9.3). */
+export async function apriIPacchi(items: string[]): Promise<{ ok: boolean; arrivati: OggettoArrivato[]; messaggio?: string }> {
+  const albero = await alberoDellaPersona();
+  try {
+    const arrivati = await apriPacchi(albero.id, items.slice(0, 40).map(String));
+    revalidatePath("/giardino");
+    return { ok: true, arrivati };
+  } catch (e) {
+    return { ok: false, arrivati: [], messaggio: errore(e).messaggio };
+  }
+}
+
+/** La persona sposta un oggetto della stanza, o lo mette via (posto null). */
+export async function spostaNellaStanza(item: string, posto: string | null): Promise<Esito> {
+  const albero = await alberoDellaPersona();
+  try {
+    await spostaOggetto(albero.id, String(item), posto === null ? null : String(posto));
+    revalidatePath("/giardino");
+    return { ok: true };
+  } catch (e) {
+    return errore(e);
+  }
+}
+
+/** Ha guardato il catalogo: le etichette «Nuovo» se ne vanno alla prossima visita. */
+export async function catalogoVisto(): Promise<void> {
+  const albero = await alberoDellaPersona();
+  await segnaVisti(albero.id);
 }

@@ -150,3 +150,31 @@ export class Suoni {
     });
   }
 }
+
+/**
+ * Il suono leggero dello sblocco: due note brevi, solo se i suoni sono accesi
+ * (lo decide chi chiama). Un contesto audio suo, chiuso subito dopo.
+ */
+export function dlin() {
+  if (typeof window === "undefined") return;
+  const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Ctor) return;
+  const ctx = new Ctor();
+  const out = ctx.createGain();
+  out.gain.value = 0.18;
+  out.connect(ctx.destination);
+  [880, 1318.5].forEach((f, i) => {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = f;
+    const t = ctx.currentTime + i * 0.12;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(1, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    o.connect(g).connect(out);
+    o.start(t);
+    o.stop(t + 0.65);
+  });
+  window.setTimeout(() => void ctx.close(), 1200);
+}

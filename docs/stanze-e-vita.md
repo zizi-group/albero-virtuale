@@ -11,6 +11,16 @@ risposta (sezione 16).
 > Gli intermezzi con gesti nuovi arrivano con la libreria dei gesti (fase 2):
 > per ora tra un'attività e l'altra ci sono i pensieri e i gesti a sorpresa
 > della posa viva.
+>
+> **Fase 3 (12/11/2026, branch `0.1.2-oggetti-e-sblocchi`).** Catalogo in
+> `src/lib/albero/oggetti.ts`: 124 voci (le 25 della collezione con lo stesso
+> id, 59 nuove sbloccabili, 40 «in arrivo» senza disegno), 64 oggetti disegnati
+> in `vivo/oggettiStanza.tsx` di cui 10 edifici. Tabella `room_items` e colonne
+> `unlocks.opened_at` / `seen_at`; pacco, coriandoli, volo, festa di Pino e
+> banner in `src/app/giardino/Stanza.tsx`; il pannello Collezione è il catalogo.
+> I 10 regali diventano oggetti con almeno due attività. Pino sistema da solo
+> (proposta 16.6 applicata, la persona sposta o mette via): se i posti di un
+> tipo sono pieni, la cosa più vecchia va in deposito.
 
 Questo documento non butta via niente di quello che c'è: estende i mestieri
 delle strade (`docs/routine-strade.md`, `src/lib/albero/mestieri.ts`: 7 strade,

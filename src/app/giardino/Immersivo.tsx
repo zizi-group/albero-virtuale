@@ -16,6 +16,7 @@ import { NOMI_FASCE_FRASE } from "@/lib/albero/giornata";
 import type { Fascia } from "@/lib/albero/mestieri";
 import type { Meteo, Posa, Stadio, Stagione } from "@/lib/albero/tipi";
 import { EVENTO_DECISIONE, type DettaglioDecisione } from "./Buongiorno";
+import { EVENTO_SBLOCCO, Stanza, type DatiStanza } from "./Stanza";
 import { Suoni, type TipoSuono } from "./suoni";
 
 // Il giardino immersivo: la scena occupa tutto lo schermo, i comandi stanno
@@ -32,7 +33,7 @@ const PANNELLI: { id: IdPannello; nome: string; breve: string; tasto: string }[]
   { id: "diario", nome: "Diario", breve: "Diario", tasto: "D" },
   { id: "scrivi", nome: "Scrivigli", breve: "Scrivi", tasto: "S" },
   { id: "mese", nome: "Il mese", breve: "Mese", tasto: "M" },
-  { id: "collezione", nome: "Collezione", breve: "Trofei", tasto: "T" },
+  { id: "collezione", nome: "Collezione", breve: "Oggetti", tasto: "T" },
   { id: "carattere", nome: "Carattere", breve: "Tratti", tasto: "C" },
 ];
 
@@ -163,6 +164,10 @@ export interface PropsImmersivo {
   appenaNato?: boolean;
   /** Il pannello già aperto all'arrivo (per esempio tornando da una lettera). */
   pannelloIniziale?: IdPannello;
+  /** La stanza: oggetti nei posti, pacchi in attesa (docs/stanze-e-vita.md, 9.3). */
+  stanza: DatiStanza;
+  /** Le voci del catalogo con l'etichetta «Nuovo» (pallino sulla Collezione). */
+  nuoviCatalogo?: number;
 }
 
 /** Tutto schermo: disponibile solo dove il browser lo permette (non su iPhone). */
@@ -251,6 +256,22 @@ export function Immersivo(p: PropsImmersivo) {
     };
   }, []);
   const zoom = zoomRisposta || (aperto === "buongiorno" && !!p.domandaAperta);
+
+  // Uno sblocco: Pino fa la festa per qualche secondo (un balletto, o fermo col movimento ridotto).
+  const [festa, setFesta] = useState(false);
+  useEffect(() => {
+    let t = 0;
+    const evviva = () => {
+      setFesta(true);
+      clearTimeout(t);
+      t = window.setTimeout(() => setFesta(false), 3600);
+    };
+    window.addEventListener(EVENTO_SBLOCCO, evviva);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener(EVENTO_SBLOCCO, evviva);
+    };
+  }, []);
 
   // All'arrivo dice la cosa importante; poi reagisce a quello che fa la persona.
   const arrivo = useRef({ nato: !!p.appenaNato, posta: p.nonLette > 0 });
@@ -456,7 +477,7 @@ export function Immersivo(p: PropsImmersivo) {
   // Che cosa fa adesso: il time-lapse, poi la prova della demo, poi il pensiero
   // dopo una decisione, poi la sua giornata. I vestiti (meteo, regali, strada) restano.
   const indossa = att.posa.indossa;
-  const idInScena = tempo ? tempo.posa : (prova.azione ?? (pensiero ? "pensare" : att.id));
+  const idInScena = tempo ? tempo.posa : festa ? "ballare" : (prova.azione ?? (pensiero ? "pensare" : att.id));
   const posa: Posa = tempo
     ? { ...azione(tempo.posa).posa }
     : idInScena === att.id
@@ -464,8 +485,10 @@ export function Immersivo(p: PropsImmersivo) {
       : { ...azione(idInScena).posa, indossa: [...new Set([...azione(idInScena).posa.indossa, ...indossa])] };
   const didascalia = tempo
     ? `${p.nome} vive le sue giornate.`
-    : prova.azione
-      ? `${p.nome} ${azione(prova.azione).etichetta}.`
+    : festa
+      ? `${p.nome} fa festa per la novità.`
+      : prova.azione
+        ? `${p.nome} ${azione(prova.azione).etichetta}.`
       : pensiero
         ? `${p.nome} ci pensa su: «${pensiero.tema}».`
         : (att.didascalia ?? `${NOMI_FASCE_FRASE[fascia]} ${p.nome} ${att.etichetta}.`);
@@ -488,6 +511,7 @@ export function Immersivo(p: PropsImmersivo) {
         <>
           <Cassetta daLeggere={p.nonLette} totale={p.totaleLettere} onApri={() => apri("lettere")} />
           <Taccuino righe={p.righeDiario} onApri={() => apri("diario")} />
+          <Stanza dati={p.stanza} nome={p.nome} suoniAccesi={suoniAccesi} />
         </>
       }
     />
@@ -581,6 +605,11 @@ export function Immersivo(p: PropsImmersivo) {
               <span className="gi-dock-icona">
                 <Icona nome={x.id} />
                 {x.id === "lettere" && p.nonLette > 0 && <span className="gi-badge">{p.nonLette}</span>}
+                {x.id === "collezione" && !!p.nuoviCatalogo && (
+                  <span className="gi-badge" aria-label={`${p.nuoviCatalogo} novità nella collezione`}>
+                    {p.nuoviCatalogo}
+                  </span>
+                )}
                 {x.id === "buongiorno" && p.domandaAperta && (
                   <span className="gi-badge" aria-label="una domanda da rispondere">
                     1

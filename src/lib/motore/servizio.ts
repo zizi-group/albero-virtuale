@@ -2,7 +2,7 @@ import { createAdminClient } from "../supabase/admin";
 import type { Database, Json } from "../supabase/database.types";
 import { INFO_STRADE, isStrada, trattiCasuali, type PunteggiStrade, type Tratti } from "../albero/strade";
 import { azione } from "../albero/azioni";
-import { sblocco } from "../albero/collezione";
+import { voce } from "../albero/oggetti";
 import { regalo } from "../albero/regali";
 import { meteoAttuale, oggiNelFuso, previsioni, type Luogo } from "../meteo";
 import { inviaLettera } from "./email";
@@ -186,7 +186,7 @@ export async function faiPassareGiorni(alberoId: string, n: number) {
     db().from("unlocks").select("id, item").eq("tree_id", alberoId).eq("mentioned", false).order("unlocked_at").limit(4),
   ]);
   ctx.buongiorno = (risposte ?? []).map((r) => ({ giorno: r.day_number, domanda: r.question, risposta: r.answer ?? "" }));
-  ctx.novita = (novita ?? []).map((u) => sblocco(u.item)?.nome).filter((n): n is string => !!n);
+  ctx.novita = (novita ?? []).map((u) => voce(u.item)?.nome).filter((n): n is string => !!n);
 
   const domani = prev.find((p) => p.data === aggiungiGiorni(stato.dataSemina, ultimoGiorno + 1));
   const { esiti, buongiorno } = await viviGiornate(stato, giorni, ctx, { meteo: domani?.descrizione });

@@ -58,6 +58,22 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   (`strade.ts`), regole delle abitudini col meteo (`scena.ts`), catalogo dei
   regali e quando compaiono nella scena (`regali.ts`), collezione di trofei,
   oggetti, vestiti e stagioni con le sue regole (`collezione.ts`).
+- **Catalogo degli oggetti** (fase 3 della 0.2): `src/lib/albero/oggetti.ts`
+  estende `collezione.ts` e `regali.ts`. Ogni voce ha categoria (edifici,
+  arredi, attrezzi, giochi, vestiti, trofei, rarità), regola nel codice,
+  indizio per la sagoma, usi (attività che apre), tipo di posto e stato
+  «disegnato» o «in arrivo» (non si sblocca). `nuoviDalCatalogo` sostituisce
+  `nuoviSblocchi` in `controllaSblocchi`. Disegni 100 × 100 con il terreno a
+  y = 96 in `src/components/albero/vivo/oggettiStanza.tsx` (`FiguraOggetto`,
+  `Coccarda`, `Pacco`). Una voce nuova: regola qui, disegno lì.
+- **La stanza e lo sblocco** (`src/app/giardino/Stanza.tsx`, `stanza.css`,
+  servizio in `src/lib/motore/stanza.ts`): ogni sblocco è un pacco
+  (`unlocks.opened_at` null, al massimo 3 pacchi, il terzo raccoglie il resto);
+  aperto, Pino sistema l'oggetto nel primo posto libero (`room_items`, posti in
+  `POSTI_STANZA`), altrimenti mette in deposito il più vecchio di quel tipo.
+  La persona tocca un oggetto per spostarlo o metterlo via. «Nuovo» nel
+  catalogo finché non lo guardi (`seen_at`). Evento `linfa-sblocco`: Pino
+  balla qualche secondo. Strumenti della demo: «Sblocca un oggetto», «Cinque oggetti».
 - `src/lib/piani.ts`: i tre pacchetti (`albero`, `premium-annuale`,
   `premium-mensile`) e `isPremium`, usati dalla demo; i loro prezzi e testi
   per il giardino sono in `src/components/landing/Pacchetti.tsx`.
@@ -143,9 +159,10 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   momento migliore, immagine con `next/og` allegata nell'email); lettera ogni
   30 giorni per tutti a fine mese, e per il Premium anche quella di metà mese
   al 15° giorno (`meta-mese`): una ogni 15 giorni. Lettere sempre su Opus.
-- **Collezione** (tutti i piani): trofei, oggetti, vestiti e album delle
+- **Collezione** (tutti i piani): il catalogo degli oggetti e l'album delle
   stagioni si sbloccano vivendo, mai comprando (`unlocks`). Le regole sono nel
-  codice (`collezione.ts`), mai decise dall'AI; le novità entrano una volta nel
+  codice (`oggetti.ts`, che comprende `collezione.ts`), mai decise dall'AI;
+  i regali diventano oggetti dal giorno della lettera di ringraziamento; le novità entrano una volta nel
   prompt delle giornate (`ContestoVita.novita`) perché l'albero possa nominarle
   nel diario, poi `mentioned = true`.
 - **Script fuori da Next** (`npm run notte`): i file con JSX usati dal motore
