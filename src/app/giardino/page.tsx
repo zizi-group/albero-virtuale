@@ -5,7 +5,7 @@ import { Albero } from "@/components/albero/Albero";
 import { oraDelGiorno, type Ora } from "@/components/ambiente/atmosfera";
 import { fontModerna } from "@/components/fontModerna";
 import { azione } from "@/lib/albero/azioni";
-import { sblocco } from "@/lib/albero/collezione";
+import { inScena as nellaStanza, TOTALE_CATALOGO, voce } from "@/lib/albero/oggetti";
 import { vestiConRegali } from "@/lib/albero/regali";
 import { fasciaAdesso, giornataDi, indiceAdesso, voglia } from "@/lib/albero/giornata";
 import { FRASI_ROUTINE, posaDelGiorno, risolviScena } from "@/lib/albero/scena";
@@ -14,6 +14,7 @@ import { stadioDa, stagioneDa, type Cielo, type Meteo, type Stagione } from "@/l
 import { meteoAttuale, meteoDiProva, oggiNelFuso } from "@/lib/meteo";
 import type { RecapMese } from "@/lib/motore/extra";
 import { isPremium } from "@/lib/piani";
+import { pacchiDa } from "@/lib/motore/stanza";
 import { createClient, getUtente } from "@/lib/supabase/server";
 import { Buongiorno } from "./Buongiorno";
 import { Collezione, type PaginaStagione } from "./Collezione";
@@ -61,7 +62,7 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
     (x) => x === parametri.pannello,
   );
 
-  const [diario, lettere, messaggi, meteoVero, mesi, regali, domanda, sbloccati] = await Promise.all([
+  const [diario, lettere, messaggi, meteoVero, mesi, regali, domanda, sbloccati, stanza] = await Promise.all([
     supabase.from("diary_entries").select("*").eq("tree_id", albero.id).order("day_number", { ascending: false }).limit(12),
     supabase.from("letters").select("id, kind, subject, created_at, read_at, day_number").eq("tree_id", albero.id).order("created_at", { ascending: false }),
     supabase.from("messages").select("id, author, body").eq("tree_id", albero.id).order("created_at", { ascending: true }).limit(40),
@@ -75,11 +76,12 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
       .eq("tree_id", albero.id)
       .eq("day_number", albero.day_count + 1)
       .maybeSingle(),
-    supabase.from("unlocks").select("item, day_number").eq("tree_id", albero.id).order("unlocked_at", { ascending: true }),
+    supabase.from("unlocks").select("item, day_number, opened_at, seen_at").eq("tree_id", albero.id).order("unlocked_at", { ascending: true }),
+    supabase.from("room_items").select("item, place, is_new").eq("tree_id", albero.id).order("moved_at", { ascending: true }),
   ]);
   const elencoSbloccati = sbloccati.data ?? [];
   // L'album delle stagioni: la prima pagina di diario di ogni stagione vissuta.
-  const giorniStagione = elencoSbloccati.filter((u) => sblocco(u.item)?.tipo === "stagione");
+  const giorniStagione = elencoSbloccati.filter((u) => ["primavera", "estate", "autunno", "inverno"].includes(u.item));
   const { data: pagineStagione } = giorniStagione.length
     ? await supabase
         .from("diary_entries")
@@ -313,14 +315,32 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
     </div>
   );
 
+  // La stanza: gli oggetti nei loro posti e i pacchi ancora da aprire.
+  const oggettiStanza = (stanza.data ?? []).map((o) => ({ item: o.item, place: o.place, nuovo: o.is_new }));
+  const daAprire = elencoSbloccati.filter((u) => !u.opened_at).map((u) => u.item);
+  const datiStanza = {
+    oggetti: oggettiStanza,
+    pacchi: pacchiDa(daAprire).map((p) => p.oggetti),
+    sbloccati: elencoSbloccati.length,
+    totale: TOTALE_CATALOGO,
+    haAttrezzi: elencoSbloccati.some((u) => u.opened_at && voce(u.item)?.posto === "cassetta"),
+  };
+  const nuoviCatalogo = elencoSbloccati.filter((u) => u.opened_at && !u.seen_at).length;
+  const inDeposito = new Set(oggettiStanza.filter((o) => !o.place).map((o) => o.item));
+  const fuoriStanza = elencoSbloccati.filter((u) => {
+    const v = voce(u.item);
+    return u.opened_at && v && nellaStanza(v) && !oggettiStanza.some((o) => o.item === u.item);
+  });
+  for (const u of fuoriStanza) inDeposito.add(u.item);
+
   const pannelloCollezione = (
     <div>
       <p className="gi-nota">
-        Trofei, oggetti, vestiti e stagioni arrivano vivendo: la prima pioggia, i 30 giorni di diario, la strada presa.
-        Non si comprano.
+        Edifici, arredi, giochi, attrezzi, vestiti, trofei e rarità arrivano vivendo: dalle decisioni di {albero.name}, dal
+        tempo che fa, dai tuoi regali. Non si comprano.
       </p>
       <div className="mt-4">
-        <Collezione nome={albero.name} sbloccati={elencoSbloccati} stagioni={stagioni} />
+        <Collezione nome={albero.name} sbloccati={elencoSbloccati} stagioni={stagioni} inDeposito={[...inDeposito]} />
       </div>
     </div>
   );
@@ -351,6 +371,8 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
         totaleLettere={elencoLettere.length}
         righeDiario={pagine.length}
         domandaAperta={!!domandaDelMattino && !domandaDelMattino.risposta}
+        stanza={datiStanza}
+        nuoviCatalogo={nuoviCatalogo}
         pannelli={{
           buongiorno: pannelloBuongiorno,
           lettere: pannelloLettere,
