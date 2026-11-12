@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { segnalaReazione } from "@/components/giardino3d/reazioni";
 import type { Esito } from "./actions";
 import { rispondiAlBuongiorno } from "./azioniCalendario";
@@ -14,11 +14,20 @@ export interface DomandaDelMattino {
   risposta: string | null;
 }
 
+/** Evento: la persona ha appena risposto al buongiorno (il giardino zooma e lui risponde). */
+export const EVENTO_DECISIONE = "linfa-decisione";
+export interface DettaglioDecisione {
+  risposta: string;
+}
+
 /** Il pannello Buongiorno: la domanda del mattino, una risposta con un tocco. */
 export function Buongiorno({ nome, domanda }: { nome: string; domanda: DomandaDelMattino | null }) {
   const [esito, azione, inCorso] = useActionState<Esito, FormData>(rispondiAlBuongiorno, {});
+  const scelta = useRef("");
   useEffect(() => {
-    if (esito.ok) segnalaReazione("festa");
+    if (!esito.ok) return;
+    if (scelta.current) window.dispatchEvent(new CustomEvent<DettaglioDecisione>(EVENTO_DECISIONE, { detail: { risposta: scelta.current } }));
+    else segnalaReazione("festa");
   }, [esito]);
 
   if (!domanda) {
@@ -45,7 +54,7 @@ export function Buongiorno({ nome, domanda }: { nome: string; domanda: DomandaDe
         <form action={azione} className="cal-risposte">
           <input type="hidden" name="giorno" value={domanda.giorno} />
           {domanda.risposte.map((r) => (
-            <button key={r} name="risposta" value={r} className="cal-risposta" disabled={inCorso}>
+            <button key={r} name="risposta" value={r} className="cal-risposta" disabled={inCorso} onClick={() => (scelta.current = r)}>
               {r}
             </button>
           ))}

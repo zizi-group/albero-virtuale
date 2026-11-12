@@ -202,7 +202,7 @@ export class Motore implements Regia {
   private ultimoAccorto = -10;
   private lontano = true;
   private emettitori: Record<string, number> = {};
-  private fum = { testo: null as string | null, t: 0, durata: 0, w: 0, h: 0, x0: 0 };
+  private fum = { testo: null as string | null, t: 0, durata: 0, w: 0, h: 0, x0: 0, pensiero: false };
   private molle = { c: 0, cv: 0, dy: 0, dyv: 0, coda: 0, codav: 0 };
   private rotLento = 0;
   private prevX = 0;
@@ -411,9 +411,15 @@ export class Motore implements Regia {
     return this.repertorio.gruppo(gruppo);
   }
 
-  fumetto(testo: string, durata = 3) {
-    this.fum = { ...this.fum, testo, t: 0, durata };
+  /** Un fumetto (parole) o, con `pensiero`, la nuvoletta di quello che gli passa per la testa. */
+  fumetto(testo: string, durata = 3, pensiero = false) {
+    this.fum = { ...this.fum, testo, t: 0, durata, pensiero };
     this.o.onFumetto(testo);
+  }
+
+  /** C'è già un fumetto o una nuvoletta in scena. */
+  get parla(): boolean {
+    return !!this.fum.testo;
   }
 
   /** Dopo che React ha scritto il testo: misura e disegna la nuvoletta. */
@@ -422,10 +428,11 @@ export class Motore implements Regia {
     const rett = this.nodi.get("fumettoRett");
     const g = this.nodi.get("fumetto");
     if (!testo || !rett || !g || !this.fum.testo) return;
-    // Per misurare il testo il gruppo deve essere visibile (piccolissimo, non si vede).
+    // Per misurare il testo il gruppo deve essere visibile: lo si porta fuori dalla
+    // vista a grandezza piena (rimpicciolito, il carattere minimo del browser falsa la misura).
     if (this.cache.get("fumetto|display") !== "inline") {
       g.setAttribute("display", "inline");
-      g.setAttribute("transform", "scale(0.001)");
+      g.setAttribute("transform", "translate(-10000 -10000)");
       this.cache.set("fumetto|display", "inline");
     }
     let b: DOMRect;
@@ -442,6 +449,10 @@ export class Motore implements Regia {
     rett.setAttribute("y", `${y}`);
     rett.setAttribute("width", `${w}`);
     rett.setAttribute("height", `${h}`);
+    // Il pensiero è una nuvola tonda, con le bollicine; le parole hanno la punta.
+    rett.setAttribute("rx", this.fum.pensiero ? `${Math.min(h / 2, 22)}` : "12");
+    testo.setAttribute("font-style", this.fum.pensiero ? "italic" : "normal");
+    testo.setAttribute("fill-opacity", this.fum.pensiero ? "0.8" : "1");
     this.fum.w = w;
     this.fum.h = h;
     this.fum.x0 = x;
@@ -865,6 +876,13 @@ export class Motore implements Regia {
     this.cache.set("fumetto|display", "inline");
     g.setAttribute("display", "inline");
     g.setAttribute("transform", `translate(${tipX.toFixed(1)} ${tipY.toFixed(1)}) scale(${Math.max(0.001, pop).toFixed(3)})`);
+    // Punta per le parole, bollicine per i pensieri.
+    const forma = f.pensiero ? "pensiero" : "parole";
+    if (this.cache.get("fumetto|forma") !== forma) {
+      this.cache.set("fumetto|forma", forma);
+      this.nodi.get("fumettoCoda")?.setAttribute("display", f.pensiero ? "none" : "inline");
+      this.nodi.get("fumettoBolle")?.setAttribute("display", f.pensiero ? "inline" : "none");
+    }
     box.setAttribute("transform", `translate(${bx.toFixed(1)} 0)`);
   }
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { provaNelGiardino } from "@/components/giardino3d/reazioni";
 import { AZIONI } from "@/lib/albero/azioni";
+import { FASCE, NOMI_FASCE, type Fascia } from "@/lib/albero/mestieri";
 import { UMORI } from "@/lib/motore/personaggio";
 import { ID_PACCHETTI, NOMI_PACCHETTO } from "@/lib/piani";
 import { azioneDemo, type Esito } from "./actions";
@@ -28,7 +29,7 @@ export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoSce
   const [aperto, setAperto] = useState(false);
   const [umoreProva, setUmoreProva] = useState("");
   const [azioneProva, setAzioneProva] = useState("");
-  const [alberiProva, setAlberiProva] = useState("1");
+  const [fasciaProva, setFasciaProva] = useState("");
   const maniglia = useRef<HTMLButtonElement>(null);
 
   // Il time-lapse del giardino: avvisa quando i giorni iniziano e finiscono di passare.
@@ -163,7 +164,7 @@ export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoSce
             );
           })}
         </div>
-        <p className="mt-3 mb-1.5 text-sm text-matita">Prova un umore o un&apos;azione (solo la scena, per un momento)</p>
+        <p className="mt-3 mb-1.5 text-sm text-matita">Prova un umore, un&apos;azione o un&apos;ora del giorno (solo la scena)</p>
         <div className="flex flex-wrap gap-2">
           <label className="sr-only" htmlFor="umore-prova">
             Umore di prova
@@ -203,21 +204,24 @@ export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoSce
               </option>
             ))}
           </select>
-          <label className="sr-only" htmlFor="alberi-prova">
-            Alberi nella scena
+          <label className="sr-only" htmlFor="fascia-prova">
+            Ora del giorno di prova
           </label>
           <select
-            id="alberi-prova"
+            id="fascia-prova"
             className="gettone min-h-9 px-2 text-[0.9rem]"
-            value={alberiProva}
+            value={fasciaProva}
             onChange={(e) => {
-              setAlberiProva(e.target.value);
-              provaNelGiardino({ alberi: Number(e.target.value) });
+              setFasciaProva(e.target.value);
+              provaNelGiardino({ fascia: (e.target.value || null) as Fascia | null });
             }}
           >
-            <option value="1">Solo il tuo albero</option>
-            <option value="3">Famiglia: 3 alberi</option>
-            <option value="7">Foresta: 7 alberi</option>
+            <option value="">Ora vera</option>
+            {FASCE.map((f) => (
+              <option key={f} value={f}>
+                {NOMI_FASCE[f]}
+              </option>
+            ))}
           </select>
         </div>
       </section>

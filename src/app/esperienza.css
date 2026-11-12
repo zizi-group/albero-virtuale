@@ -1703,6 +1703,64 @@ html {
     clip-path: polygon(0 0, 46% 0, 56% 40%, 44% 60%, 54% 100%, 0 100%);
     opacity: 0.8;
   }
+  /* Chiusa e da aprire: busta calda, bordo di resina, ombra alta, dondola piano */
+  .busta-lista[data-da-leggere] {
+    background-color: #fff1cf;
+    border: 2px solid var(--resina);
+    box-shadow: 0 18px 30px -16px rgba(150, 90, 20, 0.55);
+    animation: busta-attesa 4.5s ease-in-out infinite;
+  }
+  .busta-lista[data-da-leggere]::before {
+    background: color-mix(in srgb, #fff1cf 70%, #c98a2b);
+  }
+  @keyframes busta-attesa {
+    0%, 82%, 100% { rotate: 0deg; }
+    86% { rotate: -1.4deg; }
+    90% { rotate: 1.2deg; }
+    94% { rotate: -0.6deg; }
+  }
+  /* Aperta e letta: carta più chiara e spenta, linguetta alzata */
+  .busta-lista:not([data-da-leggere]) {
+    background-color: #f4f1e8;
+    box-shadow: 0 8px 16px -14px rgba(35, 38, 29, 0.45);
+    filter: saturate(0.55);
+    opacity: 0.86;
+  }
+  .busta-lista:not([data-da-leggere]) .busta-lista-sigillo {
+    display: none;
+  }
+  .busta-lista:not([data-da-leggere])::before {
+    transform: scaleY(-0.42);
+    background: color-mix(in srgb, #f4f1e8 80%, #b9a77a);
+  }
+  .busta-lista:not([data-da-leggere]):hover::before {
+    transform: scaleY(-0.5);
+  }
+  .busta-lista-stato {
+    position: absolute;
+    left: 1.1rem;
+    top: 0.7rem;
+    z-index: 1;
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .busta-lista[data-da-leggere] .busta-lista-stato {
+    background: #b8322a;
+    color: #fff;
+  }
+  .busta-lista:not([data-da-leggere]) .busta-lista-stato {
+    background: color-mix(in srgb, var(--inchiostro) 10%, transparent);
+    color: color-mix(in srgb, var(--inchiostro) 70%, transparent);
+    font-weight: 600;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-movimento="pieno"]) .busta-lista[data-da-leggere] {
+      animation: none;
+    }
+  }
   .busta-lista[data-da-leggere] .busta-lista-sigillo {
     animation: sigillo 2.6s ease-in-out infinite;
   }

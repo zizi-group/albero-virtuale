@@ -1,17 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { Albero } from "@/components/albero/Albero";
+import { EVENTO_VOCE, type DettaglioVoce } from "@/components/albero/vivo/AlberoVivo";
 import { misureDellEta } from "@/components/albero/vivo/figura";
 import { Ambiente } from "@/components/ambiente/Ambiente";
 import type { Ora } from "@/components/ambiente/atmosfera";
 import { Cassetta, Taccuino } from "@/components/ambiente/Oggetti";
 import { EVENTO_MOVIMENTO, InterruttoreMovimento, movimentoRidotto } from "@/components/Movimento";
-import { EVENTO_PROVA, type DettaglioProva } from "@/components/giardino3d/reazioni";
-import { CHIAVE_LENTO, Scena3D } from "@/components/giardino3d/Scena3D";
+import { EVENTO_PROVA, EVENTO_REAZIONE, type DettaglioProva } from "@/components/giardino3d/reazioni";
+import type { Reazione } from "@/components/giardino3d/tipi";
 import { azione } from "@/lib/albero/azioni";
+import { NOMI_FASCE_FRASE } from "@/lib/albero/giornata";
+import type { Fascia } from "@/lib/albero/mestieri";
 import type { Meteo, Posa, Stadio, Stagione } from "@/lib/albero/tipi";
+import { EVENTO_DECISIONE, type DettaglioDecisione } from "./Buongiorno";
 import { Suoni, type TipoSuono } from "./suoni";
 
 // Il giardino immersivo: la scena occupa tutto lo schermo, i comandi stanno
@@ -46,7 +50,6 @@ const TRATTI = {
   schermo: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
   schermoEsci: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
   esci: "M13.5 4H18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4.5M10 8l-4 4 4 4M6 12h10",
-  cubo: "M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5",
 };
 
 function Icona({ nome }: { nome: keyof typeof TRATTI }) {
@@ -67,9 +70,69 @@ export interface DettaglioTempo {
 const ORE: Ora[] = ["alba", "giorno", "tramonto", "notte"];
 const POSE_TIMELAPSE = ["guardare-cielo", "passeggiata", "leggere", "sonnellino", "scrivere-poesia", "dormire"];
 
+/** Un'attività della giornata, pronta per la scena (la prepara il server). */
+export interface AttivitaInScena {
+  id: string;
+  etichetta: string;
+  posa: Posa;
+  /** Che cosa pensa quando gli viene voglia di farla. */
+  voglia: string;
+  /** La didascalia scritta dall'AI, se è l'azione del giorno. */
+  didascalia: string | null;
+}
+export type PalinsestoScena = Record<Fascia, AttivitaInScena[]>;
+
+/** Dopo una decisione del buongiorno ci pensa su per qualche minuto (ricordato nel browser). */
+const CHIAVE_PENSIERO = "linfa-pensieroso";
+const EVENTO_PENSIERO = "linfa-pensieroso";
+const MINUTI_PENSIEROSO = 5;
+/** Ogni quanto passa all'attività dopo, mentre lo guardi. */
+const CAMBIO_ATTIVITA_MS = 210_000;
+
+function iscriviPensiero(avvisa: () => void) {
+  window.addEventListener(EVENTO_PENSIERO, avvisa);
+  window.addEventListener("storage", avvisa);
+  return () => {
+    window.removeEventListener(EVENTO_PENSIERO, avvisa);
+    window.removeEventListener("storage", avvisa);
+  };
+}
+function leggiPensiero(): string | null {
+  try {
+    return localStorage.getItem(CHIAVE_PENSIERO);
+  } catch {
+    return null;
+  }
+}
+/** Il tema della decisione, se ci sta ancora pensando. */
+function temaDelPensiero(grezzo: string | null): { tema: string; fino: number } | null {
+  if (!grezzo) return null;
+  try {
+    const x = JSON.parse(grezzo) as { fino: number; tema: string };
+    return x.fino > Date.now() ? x : null;
+  } catch {
+    return null;
+  }
+}
+
+const voce = (d: DettaglioVoce) => window.dispatchEvent(new CustomEvent<DettaglioVoce>(EVENTO_VOCE, { detail: d }));
+function aCaso<T>(x: T[]): T {
+  return x[Math.floor(Math.random() * x.length)];
+}
+
+const PENSIERI_UMORE: Record<string, string[]> = {
+  curioso: ["e quello cos'è?", "chissà dove va la formica"],
+  allegro: ["che bella giornata!", "la la la…"],
+  pensieroso: ["mmh…", "e se fosse il contrario?"],
+  assonnato: ["cinque minuti ancora…", "uaaah…"],
+  furbo: ["ho un piano…", "eh eh eh"],
+  fiero: ["sono proprio bravo", "guardate che rami!"],
+  sognante: ["una nuvola a forma di me", "un giorno volerò"],
+  energico: ["facciamo qualcosa!", "via, via, via!"],
+  malinconico: ["mi manca l'estate", "una foglia… addio"],
+};
+
 export interface PropsImmersivo {
-  /** Id dell'albero: è anche il seme del suo modello 3D. */
-  idAlbero: string;
   nome: string;
   citta: string;
   orario: string;
@@ -78,28 +141,25 @@ export interface PropsImmersivo {
   giorno: number;
   stadioNome: string;
   strada: string | null;
-  /** Id della strada (filosofo, artista…) per gli accessori del 3D. */
-  idStrada: string | null;
-  /** Id dell'azione del giorno, dalla libreria delle azioni. */
-  idAzione: string;
   umore: string;
+  /** La giornata a fasce, la fascia di adesso e quale attività si vede. */
+  palinsesto: PalinsestoScena;
+  fascia: Fascia;
+  indice: number;
   meteo: Meteo;
   ora: Ora;
   stagione: Stagione;
   stadio: Stadio;
-  posa: Posa;
   chiave: string;
-  titoloAlbero: string;
   nonLette: number;
   /** C'è una domanda del mattino senza risposta (pallino sul Buongiorno). */
   domandaAperta?: boolean;
   totaleLettere: number;
   righeDiario: number;
-  didascalia: string;
   pannelli: Record<IdPannello, ReactNode>;
   avviso?: ReactNode;
   strumenti: ReactNode;
-  /** È appena stato piantato: nel 3D fa festa all'arrivo. */
+  /** È appena stato piantato: lo dice appena arrivi. */
   appenaNato?: boolean;
   /** Il pannello già aperto all'arrivo (per esempio tornando da una lettera). */
   pannelloIniziale?: IdPannello;
@@ -109,25 +169,6 @@ export interface PropsImmersivo {
 function iscriviSchermo(avvisa: () => void) {
   document.addEventListener("fullscreenchange", avvisa);
   return () => document.removeEventListener("fullscreenchange", avvisa);
-}
-
-// La vista del giardino: 3D di default, 2D a scelta (ricordata nel browser).
-const CHIAVE_VISTA = "linfa-vista";
-const EVENTO_VISTA = "linfa-vista";
-function iscriviVista(avvisa: () => void) {
-  window.addEventListener(EVENTO_VISTA, avvisa);
-  window.addEventListener("storage", avvisa);
-  return () => {
-    window.removeEventListener(EVENTO_VISTA, avvisa);
-    window.removeEventListener("storage", avvisa);
-  };
-}
-function leggiVista(): "3d" | "2d" {
-  try {
-    return localStorage.getItem(CHIAVE_VISTA) === "2d" ? "2d" : "3d";
-  } catch {
-    return "3d";
-  }
 }
 
 function tipoSuono(meteo: Meteo, ora: Ora): TipoSuono {
@@ -146,33 +187,11 @@ export function Immersivo(p: PropsImmersivo) {
   const hudNascosto = schermoIntero && calma;
   const [suoniAccesi, setSuoniAccesi] = useState(false);
   const [tempo, setTempo] = useState<{ ora: Ora; posa: string } | null>(null);
-  // Telefono in verticale: quanto coprono i riquadri in alto e in basso, perché il 3D
-  // centri l'albero nella fascia libera.
-  const [margini, setMargini] = useState<{ sopra: number; sotto: number } | null>(null);
-  useEffect(() => {
-    const el = radice.current;
-    if (!el) return;
-    const misura = () => {
-      const h = el.clientHeight || 1;
-      if (el.clientWidth >= h) return setMargini(null);
-      const alto = el.querySelector(".gi-hud-alto")?.getBoundingClientRect();
-      const basso = el.querySelector(".gi-hud-basso")?.getBoundingClientRect();
-      const top = el.getBoundingClientRect().top;
-      const sopra = alto ? Math.min(0.45, (alto.bottom - top) / h) : 0.3;
-      const sotto = basso ? Math.min(0.4, (top + h - basso.top) / h) : 0.22;
-      setMargini((m) => (m && Math.abs(m.sopra - sopra) < 0.01 && Math.abs(m.sotto - sotto) < 0.01 ? m : { sopra, sotto }));
-    };
-    const ro = new ResizeObserver(misura);
-    ro.observe(el);
-    el.querySelectorAll(".gi-hud-alto, .gi-hud-basso").forEach((x) => ro.observe(x));
-    return () => ro.disconnect();
-  }, []);
-
-  // Strumenti della demo: umore e azione di prova, solo nella scena.
-  const [prova, setProva] = useState<{ umore: string | null; azione: string | null; alberi: number | null }>({
+  // Strumenti della demo: umore, azione e fascia di prova, solo nella scena.
+  const [prova, setProva] = useState<{ umore: string | null; azione: string | null; fascia: Fascia | null }>({
     umore: null,
     azione: null,
-    alberi: null,
+    fascia: null,
   });
   useEffect(() => {
     const ascolta = (e: Event) => {
@@ -180,26 +199,104 @@ export function Immersivo(p: PropsImmersivo) {
       setProva((x) => ({
         umore: d.umore !== undefined ? d.umore : x.umore,
         azione: d.azione !== undefined ? d.azione : x.azione,
-        alberi: d.alberi !== undefined ? d.alberi : x.alberi,
+        fascia: d.fascia !== undefined ? d.fascia : x.fascia,
       }));
     };
     window.addEventListener(EVENTO_PROVA, ascolta);
     return () => window.removeEventListener(EVENTO_PROVA, ascolta);
   }, []);
 
-  // All'arrivo, se c'è una lettera da aprire, l'albero lo fa notare.
-  const [reazione] = useState(() =>
-    p.appenaNato ? { tipo: "festa" as const, n: 1 } : p.nonLette > 0 ? { tipo: "lettera" as const, n: 1 } : null,
-  );
-  const vista = useSyncExternalStore(iscriviVista, leggiVista, () => "3d" as const);
-  const cambiaVista = () => {
-    try {
-      localStorage.setItem(CHIAVE_VISTA, vista === "3d" ? "2d" : "3d");
-      // Chi rimette il 3D a mano vuole riprovarlo, anche se prima era lento.
-      sessionStorage.removeItem(CHIAVE_LENTO);
-    } catch {}
-    window.dispatchEvent(new Event(EVENTO_VISTA));
-  };
+  // La giornata: l'attività di adesso e, ogni pochi minuti, la successiva della fascia.
+  const fascia = prova.fascia ?? p.fascia;
+  const attivita = p.palinsesto[fascia];
+  const [passi, setPassi] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setPassi((n) => n + 1), CAMBIO_ATTIVITA_MS);
+    return () => clearInterval(t);
+  }, []);
+  const att = attivita[(p.indice + passi) % attivita.length];
+  const dopo = attivita[(p.indice + passi + 1) % attivita.length];
+
+  // Dopo una decisione ci pensa su per qualche minuto.
+  const grezzoPensiero = useSyncExternalStore(iscriviPensiero, leggiPensiero, () => null);
+  const pensiero = temaDelPensiero(grezzoPensiero);
+  const finePensiero = pensiero?.fino ?? 0;
+  useEffect(() => {
+    if (!finePensiero) return;
+    // Allo scadere si torna alla giornata.
+    const t = window.setTimeout(() => window.dispatchEvent(new Event(EVENTO_PENSIERO)), finePensiero - Date.now() + 50);
+    return () => clearTimeout(t);
+  }, [finePensiero]);
+
+  // La decisione si vede: zoom su di lui mentre decidi, poi risponde in un fumetto.
+  const [zoomRisposta, setZoomRisposta] = useState(false);
+  useEffect(() => {
+    const timer: number[] = [];
+    const decisa = (e: Event) => {
+      const { risposta } = (e as CustomEvent<DettaglioDecisione>).detail;
+      const breve = risposta.length > 42 ? `${risposta.slice(0, 40)}…` : risposta;
+      setAperto(null);
+      setZoomRisposta(true);
+      timer.push(window.setTimeout(() => voce({ tipo: "dice", testo: `«${breve}»… Ci penso su!`, durata: 4.2 }), 700));
+      timer.push(window.setTimeout(() => setZoomRisposta(false), 5400));
+      try {
+        localStorage.setItem(CHIAVE_PENSIERO, JSON.stringify({ fino: Date.now() + MINUTI_PENSIEROSO * 60_000, tema: breve }));
+      } catch {}
+      window.dispatchEvent(new Event(EVENTO_PENSIERO));
+    };
+    window.addEventListener(EVENTO_DECISIONE, decisa);
+    return () => {
+      timer.forEach(clearTimeout);
+      window.removeEventListener(EVENTO_DECISIONE, decisa);
+    };
+  }, []);
+  const zoom = zoomRisposta || (aperto === "buongiorno" && !!p.domandaAperta);
+
+  // All'arrivo dice la cosa importante; poi reagisce a quello che fa la persona.
+  const arrivo = useRef({ nato: !!p.appenaNato, posta: p.nonLette > 0 });
+  useEffect(() => {
+    const { nato, posta } = arrivo.current;
+    const t = window.setTimeout(() => {
+      if (nato) voce({ tipo: "dice", testo: "Eccomi! Sono appena nato!", durata: 4 });
+      else if (posta) voce({ tipo: "dice", testo: "Psst! C'è posta per te!", durata: 3.6 });
+    }, 1600);
+    const reagisci = (e: Event) => {
+      const tipo = (e as CustomEvent<Reazione>).detail;
+      if (tipo === "festa") voce({ tipo: "dice", testo: aCaso(["Evviva!", "Che bello!", "Grazie!"]), durata: 2.6 });
+      else if (tipo === "saluta") voce({ tipo: "dice", testo: "Letto! Ora ti rispondo.", durata: 3 });
+      else if (tipo === "lettera") voce({ tipo: "dice", testo: "C'è posta per te!", durata: 3 });
+    };
+    window.addEventListener(EVENTO_REAZIONE, reagisci);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener(EVENTO_REAZIONE, reagisci);
+    };
+  }, []);
+
+  // La nuvoletta del pensiero: ogni tanto gli passa per la testa che cosa farà dopo,
+  // il suo umore o la decisione appena presa. Di notte sogna.
+  const testa = useRef({ tema: pensiero?.tema ?? null, dopo: dopo.voglia, umore: prova.umore ?? p.umore, notte: fascia === "notte" });
+  useLayoutEffect(() => {
+    testa.current = { tema: pensiero?.tema ?? null, dopo: dopo.voglia, umore: prova.umore ?? p.umore, notte: fascia === "notte" };
+  });
+  useEffect(() => {
+    let t = 0;
+    const attesa = () => (testa.current.tema ? 15000 + Math.random() * 9000 : 35000 + Math.random() * 40000);
+    const pensa = () => {
+      const x = testa.current;
+      const testo = x.notte
+        ? aCaso(["zzz…", "zzz… ghiande…", "zzz… che sogno…"])
+        : x.tema
+          ? aCaso([`«${x.tema}»… mmh`, "ci sto pensando…", "e se…?", "sì, però…"])
+          : Math.random() < 0.6
+            ? x.dopo
+            : aCaso(PENSIERI_UMORE[x.umore] ?? ["mmh…"]);
+      voce({ tipo: "pensa", testo });
+      t = window.setTimeout(pensa, attesa());
+    };
+    t = window.setTimeout(pensa, 9000);
+    return () => clearTimeout(t);
+  }, []);
 
   const apri = useCallback((id: IdPannello) => setAperto((a) => (a === id ? null : id)), []);
   const chiudi = useCallback(() => {
@@ -356,7 +453,22 @@ export function Immersivo(p: PropsImmersivo) {
   };
 
   const ora = tempo?.ora ?? p.ora;
-  const posa = tempo ? { ...azione(tempo.posa).posa } : p.posa;
+  // Che cosa fa adesso: il time-lapse, poi la prova della demo, poi il pensiero
+  // dopo una decisione, poi la sua giornata. I vestiti (meteo, regali, strada) restano.
+  const indossa = att.posa.indossa;
+  const idInScena = tempo ? tempo.posa : (prova.azione ?? (pensiero ? "pensare" : att.id));
+  const posa: Posa = tempo
+    ? { ...azione(tempo.posa).posa }
+    : idInScena === att.id
+      ? att.posa
+      : { ...azione(idInScena).posa, indossa: [...new Set([...azione(idInScena).posa.indossa, ...indossa])] };
+  const didascalia = tempo
+    ? `${p.nome} vive le sue giornate.`
+    : prova.azione
+      ? `${p.nome} ${azione(prova.azione).etichetta}.`
+      : pensiero
+        ? `${p.nome} ci pensa su: «${pensiero.tema}».`
+        : (att.didascalia ?? `${NOMI_FASCE_FRASE[fascia]} ${p.nome} ${att.etichetta}.`);
   const pannello = PANNELLI.find((x) => x.id === aperto);
 
   // La camera si avvicina all'albero: da germoglio occupa già un terzo della scena,
@@ -371,7 +483,7 @@ export function Immersivo(p: PropsImmersivo) {
       stagione={p.stagione}
       className="h-full"
       chiaveAlbero={tempo ? `tempo-${tempo.posa}` : p.chiave}
-      albero={<Albero posa={posa} giorni={p.giorno} stadio={p.stadio} stagione={p.stagione} innevato={p.meteo.cielo === "neve"} titolo={p.titoloAlbero} />}
+      albero={<Albero posa={posa} giorni={p.giorno} stadio={p.stadio} stagione={p.stagione} innevato={p.meteo.cielo === "neve"} titolo={`${p.nome} ${azione(idInScena).etichetta}`} />}
       palco={
         <>
           <Cassetta daLeggere={p.nonLette} totale={p.totaleLettere} onApri={() => apri("lettere")} />
@@ -389,30 +501,9 @@ export function Immersivo(p: PropsImmersivo) {
       data-hud-nascosto={hudNascosto ? "1" : undefined}
       data-pannello={aperto ?? undefined}
       data-tempo={tempo ? "1" : undefined}
+      data-zoom={zoom ? "1" : undefined}
     >
-      <div className="gi-scena" data-vista={vista}>
-        {vista === "3d" ? (
-          <Scena3D
-            idAlbero={p.idAlbero}
-            nome={p.nome}
-            giorni={p.giorno}
-            strada={p.idStrada}
-            azione={tempo ? tempo.posa : (prova.azione ?? p.idAzione)}
-            umore={prova.umore ?? p.umore}
-            meteo={p.meteo}
-            ora={ora}
-            stagione={p.stagione}
-            reazione={reazione}
-            margini={margini}
-            quanti={prova.alberi ?? 1}
-            onCassetta={() => apri("lettere")}
-            onTaccuino={() => apri("diario")}
-            ripiego={scena2d}
-          />
-        ) : (
-          scena2d
-        )}
-      </div>
+      <div className="gi-scena">{scena2d}</div>
 
       {/* In alto: chi è, dove e quando */}
       <header className="gi-hud gi-hud-alto">
@@ -438,11 +529,6 @@ export function Immersivo(p: PropsImmersivo) {
             </span>
           </p>
           <div className="gi-comandi">
-            <button type="button" className="gi-icona gi-con-testo" onClick={cambiaVista} aria-pressed={vista === "3d"} title="Giardino in 3D o in 2D">
-              <Icona nome="cubo" />
-              <span className="gi-testo">{vista === "3d" ? "2D" : "3D"}</span>
-              <span className="sr-only">{vista === "3d" ? "Passa al giardino in 2D" : "Passa al giardino in 3D"}</span>
-            </button>
             <button type="button" className="gi-icona" onClick={cambiaSuoni} aria-pressed={suoniAccesi} title="Suoni d'ambiente">
               <Icona nome={suoniAccesi ? "suoniSi" : "suoniNo"} />
               <span className="sr-only">Suoni d&apos;ambiente {suoniAccesi ? "accesi" : "spenti"}</span>
@@ -478,7 +564,7 @@ export function Immersivo(p: PropsImmersivo) {
       {/* In basso: che cosa sta facendo, e i pannelli */}
       <div className="gi-hud gi-hud-basso">
         <p className="gi-didascalia" aria-live="polite">
-          {tempo ? `${p.nome} vive le sue giornate.` : prova.azione ? `${p.nome} ${azione(prova.azione).etichetta}.` : p.didascalia}
+          {didascalia}
         </p>
         <nav className="gi-dock" aria-label="Pannelli del giardino">
           {PANNELLI.map((x) => (

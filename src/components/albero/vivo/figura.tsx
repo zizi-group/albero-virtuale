@@ -413,8 +413,16 @@ export function FiguraAlbero({
               ))}
             </text>
           </g>
-          <path d="M-7,-9.6 L0,0 L7,-9.6 Z" fill={CARTA} />
-          <path d="M-7,-8.4 L0,0 L7,-8.4" fill="none" stroke={INCHIOSTRO} strokeWidth={2} strokeLinejoin="round" />
+          <g data-n="fumettoCoda">
+            <path d="M-7,-9.6 L0,0 L7,-9.6 Z" fill={CARTA} />
+            <path d="M-7,-8.4 L0,0 L7,-8.4" fill="none" stroke={INCHIOSTRO} strokeWidth={2} strokeLinejoin="round" />
+          </g>
+          {/* La nuvoletta del pensiero: bollicine al posto della punta */}
+          <g data-n="fumettoBolle" display="none">
+            <circle cx={-2} cy={-3} r={5.5} fill={CARTA} stroke={INCHIOSTRO} strokeWidth={1.8} />
+            <circle cx={-12} cy={9} r={3.6} fill={CARTA} stroke={INCHIOSTRO} strokeWidth={1.6} />
+            <circle cx={-19} cy={18} r={2.2} fill={CARTA} stroke={INCHIOSTRO} strokeWidth={1.4} />
+          </g>
         </g>
       </g>
 

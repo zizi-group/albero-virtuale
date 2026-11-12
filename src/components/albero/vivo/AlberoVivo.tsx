@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { Posa, Stadio, Stagione } from "@/lib/albero/tipi";
 import { ArrediDavanti, ArrediDietro, fotogrammaArredi } from "./arredi";
 import { canaliDaPosa } from "./canali";
@@ -41,6 +41,18 @@ export interface AlberoVivoProps {
   giorni?: number;
   /** Il mestiere: arredi costruiti e cosa fa adesso (vivo/mestiere.ts). Senza, fa quello che dice la posa. */
   mestiere?: StatoMestiere | null;
+}
+
+/**
+ * Per far parlare o pensare l'albero principale della pagina da fuori (il giardino):
+ * `window.dispatchEvent(new CustomEvent(EVENTO_VOCE, { detail: { tipo: "pensa", testo: "…" } }))`.
+ */
+export const EVENTO_VOCE = "linfa-voce";
+export interface DettaglioVoce {
+  tipo: "dice" | "pensa";
+  testo: string;
+  /** Secondi. */
+  durata?: number;
 }
 
 const VENTO: Record<string, number> = { temporale: 1, pioggia: 0.6, neve: 0.45, nuvole: 0.35, sole: 0.25, nebbia: 0.15 };
@@ -138,6 +150,21 @@ export function AlberoVivo({
   useLayoutEffect(() => {
     if (fumetto) motore.current?.misuraFumetto();
   }, [fumetto]);
+
+  // Solo l'albero principale (interattivo e raggiungibile) ascolta le voci del giardino.
+  useEffect(() => {
+    if (!interattivo || !focusabile) return;
+    const ascolta = (e: Event) => {
+      const d = (e as CustomEvent<DettaglioVoce>).detail;
+      const m = motore.current;
+      if (!m || !d?.testo) return;
+      // Un pensiero non interrompe le parole.
+      if (d.tipo === "pensa" && m.parla) return;
+      m.fumetto(d.testo, d.durata ?? (d.tipo === "pensa" ? 3.6 : 3.4), d.tipo === "pensa");
+    };
+    window.addEventListener(EVENTO_VOCE, ascolta);
+    return () => window.removeEventListener(EVENTO_VOCE, ascolta);
+  }, [interattivo, focusabile]);
 
   // Arredi del mestiere: il loro primo fotogramma (poi li muove il motore).
   const lavoro = mestiere ? statoLavoro(mestiere) : null;

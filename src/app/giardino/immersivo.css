@@ -714,3 +714,42 @@
     inset: 0;
   }
 }
+
+/* La decisione del buongiorno: mentre decidi la camera si avvicina a lui,
+   e resta vicina qualche secondo mentre risponde. */
+@layer components {
+  .gi .gi-scena {
+    transition:
+      translate 0.7s cubic-bezier(0.22, 0.8, 0.24, 1),
+      scale 0.8s cubic-bezier(0.22, 0.8, 0.24, 1);
+    transform-origin: var(--albero-x, 50%) 72%;
+  }
+  .gi[data-zoom] .gi-scena {
+    scale: 1.45;
+  }
+  /* Durante lo zoom i riquadri in alto si fanno da parte: il fumetto resta leggibile. */
+  .gi .gi-hud-alto {
+    transition: opacity 0.4s ease;
+  }
+  .gi[data-zoom] .gi-hud-alto {
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* Sul telefono il pannello del buongiorno scende in basso: lui si vede sopra. */
+  @media (max-width: 767px) {
+    .gi[data-zoom] .gi-scena {
+      transform-origin: 50% 38%;
+    }
+    .gi[data-zoom][data-pannello="buongiorno"] .gi-pannello {
+      top: 46%;
+    }
+    .gi[data-zoom][data-pannello="buongiorno"] .gi-scena {
+      translate: 0 -24%;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-movimento="pieno"]) .gi .gi-scena {
+      transition-duration: 0.01s;
+    }
+  }
+}

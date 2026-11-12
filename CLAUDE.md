@@ -75,21 +75,29 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   servono solo al cielo della `Scena`. Il disegno fermo del personaggio sta in
   `vivo/figura.tsx` (senza hook): lo animano `AlberoVivo` nel browser e
   `fermo.ts` lo trasforma in SVG per le immagini fatte sul server.
-- **Giardino in 3D** (0.1, default): `src/components/giardino3d/Scena3D.tsx`
-  carica nel browser il motore three.js di `src/lib/giardino3d/` (JavaScript
-  con JSDoc; API in `src/components/giardino3d/tipi.ts`: `creaGiardino`,
-  `imposta`, `reagisci`, `su`, `distruggi`) con modelli e texture in
-  `public/giardino3d/`. Senza WebGL, o se il motore si ferma, resta la scena
-  2D. Il pulsante «2D/3D» del giardino sceglie la vista (`localStorage`
-  `linfa-vista`). Le reazioni (buongiorno, messaggio, regalo) passano
-  dall'evento `linfa-reazione`; gli strumenti della demo provano umore e
-  azione con `linfa-prova`. Il motore ha 30 modelli in 16 specie (`MODELLI`,
-  scelti dal seme = id dell'albero), un viso per ognuno dei 9 umori più
-  espressioni brevi, routine (sonno di notte, ombrello con la pioggia, freddo,
-  caldo, lampi), le 23 azioni con i loro oggetti, trascinamento e reazioni.
-  Sul telefono in verticale `Immersivo` misura i riquadri e passa `margini`
-  perché l'albero resti nella fascia libera. Guida del motore:
-  `src/lib/giardino3d/README.md`; pagina di prova `prototipi/foresta-3d/giardino.html`.
+- **Progetto 0.2** (Federico, 12/11/2026): `docs/stanze-e-vita.md`. Il gioco
+  si fa in 2D (la stanza); il 3D servirà per la vista d'insieme «la tua
+  foresta» e per la foresta del club. Fase 1 fatta: il giardino è tornato al 2D.
+- **La giornata a fasce** (`src/lib/albero/giornata.ts`): per mattina, giorno,
+  pomeriggio e sera 3 attività pesate (strada, umore, meteo) che non si
+  ripetono rispetto ai due giorni prima; l'azione dell'AI è la principale di
+  una fascia, salvo se l'ha già scelta di recente. Il giardino mostra quella
+  della fascia di adesso (a turno ogni 45 minuti) e durante la visita passa
+  alla successiva ogni 3,5 minuti. Deterministica: seme = id + giorno.
+- **Voci dell'albero** (`EVENTO_VOCE` in `vivo/AlberoVivo.tsx`): il giardino
+  lo fa parlare (fumetto) o pensare (nuvoletta con le bollicine). La
+  nuvoletta compare ogni 35-75 s (che cosa farà dopo, il suo umore).
+  Rispondere al buongiorno manda `linfa-decisione` (`Buongiorno.tsx`): zoom
+  su di lui, risponde in un fumetto, poi è pensieroso 5 minuti
+  (`localStorage` `linfa-pensieroso`). Gli strumenti della demo provano
+  umore, azione e fascia con `linfa-prova`.
+- **Motore 3D** (non più nel giardino, tenuto per le foreste della 0.2):
+  `src/components/giardino3d/Scena3D.tsx` carica il motore three.js di
+  `src/lib/giardino3d/` (JavaScript con JSDoc; API in
+  `src/components/giardino3d/tipi.ts`) con modelli e texture in
+  `public/giardino3d/`: 30 modelli in 16 specie scelti dal seme, visi per i 9
+  umori, routine e le 23 azioni. Guida: `src/lib/giardino3d/README.md`;
+  pagina di prova `prototipi/foresta-3d/giardino.html`.
 - `src/lib/motore/`: `personaggio.ts` (prompt di sistema fisso, eventi),
   `vita.ts` (giornate: parte pura, gira anche in memoria), `scritture.ts`
   (lettere e risposte), `servizio.ts` (collegato a database ed email),

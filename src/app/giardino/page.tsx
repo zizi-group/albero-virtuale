@@ -7,7 +7,8 @@ import { fontModerna } from "@/components/fontModerna";
 import { azione } from "@/lib/albero/azioni";
 import { sblocco } from "@/lib/albero/collezione";
 import { vestiConRegali } from "@/lib/albero/regali";
-import { FRASI_ROUTINE, risolviScena } from "@/lib/albero/scena";
+import { fasciaAdesso, giornataDi, indiceAdesso, voglia } from "@/lib/albero/giornata";
+import { FRASI_ROUTINE, posaDelGiorno, risolviScena } from "@/lib/albero/scena";
 import { classifica, INFO_STRADE, isStrada, NOMI_TRATTI, TRATTI, type PunteggiStrade, type Tratti } from "@/lib/albero/strade";
 import { stadioDa, stagioneDa, type Cielo, type Meteo, type Stagione } from "@/lib/albero/tipi";
 import { meteoAttuale, meteoDiProva, oggiNelFuso } from "@/lib/meteo";
@@ -18,7 +19,7 @@ import { Buongiorno } from "./Buongiorno";
 import { Collezione, type PaginaStagione } from "./Collezione";
 import { Conversazione } from "./Conversazione";
 import { ExtraDelMese } from "./Extra";
-import { Immersivo } from "./Immersivo";
+import { Immersivo, type AttivitaInScena, type PalinsestoScena } from "./Immersivo";
 import "./immersivo.css";
 import { Strumenti } from "./Strumenti";
 
@@ -113,17 +114,11 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
     meteoVero ??
     (albero.last_weather as Meteo | null) ?? { cielo: "nuvole", temperatura: 15, giorno: true, descrizione: "cielo nuvoloso" };
   const scena = risolviScena(meteo, albero.today_action, albero.path);
-  // I regali che ha deciso di usare compaiono nella scena, se li sa già disegnare.
-  const posa = vestiConRegali(scena.posa, doni, meteo);
   const stadio = stadioDa(albero.day_count);
   const stagione = stagioneDa(new Date(`${oggiNelFuso(albero.timezone)}T12:00:00`));
   const strada = isStrada(albero.path) ? albero.path : null;
   const tratti = albero.traits as Tratti;
   const [[primaStrada, primoPunteggio]] = classifica((albero.path_scores ?? {}) as PunteggiStrade);
-  const didascalia =
-    scena.routine && scena.azione.id !== azione(albero.today_action).id
-      ? FRASI_ROUTINE[scena.routine].replace(/^([^:]+):/, `$1: ${albero.name}`)
-      : (albero.today_caption ?? `${albero.name} ${scena.azione.etichetta}.`);
   const elencoLettere = lettere.data ?? [];
   const nonLette = elencoLettere.filter((l) => !l.read_at).length;
   const pagine = diario.data ?? [];
@@ -133,6 +128,37 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
   const oraLocale = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: albero.timezone }).format(adesso));
   const orario = new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit", timeZone: albero.timezone }).format(adesso);
   const ora: Ora = prova ? (meteo.giorno ? "giorno" : "notte") : oraDelGiorno(meteo, oraLocale, stagione);
+
+  // La giornata a fasce (docs/stanze-e-vita.md, sezione 3): tre attività per fascia,
+  // a turno ogni 45 minuti e, durante la visita, ogni pochi minuti.
+  const palinsestoGrezzo = giornataDi({
+    seme: albero.id,
+    giorno: albero.day_count,
+    strada: albero.path,
+    umore: albero.mood,
+    azioneDelGiorno: albero.today_action,
+    azioniRecenti: pagine.filter((x) => x.day_number < albero.day_count).map((x) => x.action),
+    meteo,
+  });
+  const stessoCielo = (albero.last_weather as Meteo | null)?.cielo === meteo.cielo;
+  const inScena = (id: string): AttivitaInScena => ({
+    id,
+    etichetta: azione(id).etichetta,
+    posa: vestiConRegali(posaDelGiorno(id, meteo, albero.path), doni, meteo),
+    voglia: voglia(id),
+    // La frase dell'AI racconta il tempo del suo giorno: la si usa solo se il cielo è lo stesso.
+    didascalia: id === albero.today_action && albero.today_caption && stessoCielo ? albero.today_caption : null,
+  });
+  const palinsesto: PalinsestoScena = {
+    mattina: palinsestoGrezzo.mattina.map(inScena),
+    giorno: palinsestoGrezzo.giorno.map(inScena),
+    pomeriggio: palinsestoGrezzo.pomeriggio.map(inScena),
+    sera: palinsestoGrezzo.sera.map(inScena),
+    notte: [{ ...inScena("dormire"), didascalia: FRASI_ROUTINE.notte.replace(/^([^:]+):/, `$1: ${albero.name}`) }],
+  };
+  const minutiLocali = oraLocale * 60 + adesso.getUTCMinutes();
+  const fascia = fasciaAdesso(oraLocale, meteo.giorno);
+  const indice = indiceAdesso(minutiLocali, palinsesto[fascia].length);
 
   const scheda = (
     <section aria-labelledby="titolo-scheda" className="scheda-albero pagina">
@@ -205,7 +231,8 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
           : "Ne arriva una ogni 30 giorni, più una nei momenti importanti."}
       </p>
       <ul className="mt-4 space-y-4">
-        {elencoLettere.map((l) => (
+        {/* Prima quelle da aprire, poi le lette */}
+        {[...elencoLettere.filter((l) => !l.read_at), ...elencoLettere.filter((l) => l.read_at)].map((l) => (
           <li key={l.id}>
             <Link href={`/giardino/lettere/${l.id}`} className="busta-lista" data-da-leggere={!l.read_at ? "1" : undefined}>
               <span className="busta-lista-francobollo" aria-hidden>
@@ -213,8 +240,8 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
               </span>
               <span className="occhiello block pr-12 text-[0.66rem] text-corteccia">
                 {TIPI_LETTERA[l.kind] ?? "Lettera"} · giorno {l.day_number}
-                {!l.read_at && <span className="text-rosso"> · da aprire</span>}
               </span>
+              <span className="busta-lista-stato">{l.read_at ? "Letta ✓" : "Nuova · da aprire"}</span>
               <span className="mt-1 block pr-12 font-mano text-[1.35rem] leading-tight text-[#2c3348]">{l.subject}</span>
               <span className="busta-lista-sigillo" aria-hidden />
             </Link>
@@ -302,10 +329,10 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
     <main id="contenuto" className={`flex-1 ${fontModerna.variable}`}>
       <Immersivo
         pannelloIniziale={pannelloIniziale}
-        idAlbero={albero.id}
         appenaNato={nuovo}
-        idStrada={strada}
-        idAzione={scena.azione.id}
+        palinsesto={palinsesto}
+        fascia={fascia}
+        indice={indice}
         nome={albero.name}
         citta={albero.city}
         orario={orario}
@@ -319,13 +346,10 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
         ora={ora}
         stagione={stagione}
         stadio={stadio}
-        posa={posa}
         chiave={`${scena.azione.id}-${stadio}`}
-        titoloAlbero={`${albero.name} ${scena.azione.etichetta}`}
         nonLette={nonLette}
         totaleLettere={elencoLettere.length}
         righeDiario={pagine.length}
-        didascalia={didascalia}
         domandaAperta={!!domandaDelMattino && !domandaDelMattino.risposta}
         pannelli={{
           buongiorno: pannelloBuongiorno,

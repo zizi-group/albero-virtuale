@@ -1,7 +1,8 @@
+import type { Fascia } from "@/lib/albero/mestieri";
 import type { Reazione } from "./tipi";
 
 // Le reazioni dell'albero alle cose che fa la persona (rispondere al buongiorno,
-// scrivergli, fargli un regalo): un evento del browser che il giardino 3D ascolta.
+// scrivergli, fargli un regalo): un evento del browser che il giardino ascolta.
 
 export const EVENTO_REAZIONE = "linfa-reazione";
 
@@ -10,8 +11,8 @@ export const EVENTO_PROVA = "linfa-prova";
 export interface DettaglioProva {
   umore?: string | null;
   azione?: string | null;
-  /** Quanti alberi in scena: 1 (il tuo), 3 (Famiglia) o 7 (Foresta). */
-  alberi?: number | null;
+  /** La fascia del giorno, per vedere che cosa farebbe a un'altra ora. */
+  fascia?: Fascia | null;
 }
 export function provaNelGiardino(d: DettaglioProva) {
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent<DettaglioProva>(EVENTO_PROVA, { detail: d }));
