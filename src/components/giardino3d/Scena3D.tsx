@@ -23,6 +23,8 @@ export interface PropsScena3D {
   stagione: Stagione;
   /** Cambia quando bisogna far reagire l'albero (per esempio una lettera nuova). */
   reazione?: { tipo: Reazione; n: number } | null;
+  /** Parti dello schermo coperte dai riquadri (telefono in verticale). */
+  margini?: { sopra: number; sotto: number } | null;
   onCassetta?: () => void;
   onTaccuino?: () => void;
   /** La scena 2D di sempre: si usa se il 3D non parte. */
@@ -74,6 +76,7 @@ export function Scena3D(p: PropsScena3D) {
           azione: q.azione,
           umore: q.umore,
           movimentoRidotto: movimentoRidotto(),
+          ...(q.margini ? { margini: q.margini } : {}),
         };
         const g = creaGiardino(tela.current, opzioni);
         istanza.current = g;
@@ -106,6 +109,11 @@ export function Scena3D(p: PropsScena3D) {
   useEffect(() => {
     istanza.current?.imposta({ meteo, ora, stagione, azione, umore });
   }, [meteo, ora, stagione, azione, umore]);
+
+  const margini = p.margini;
+  useEffect(() => {
+    if (margini) istanza.current?.imposta({ margini });
+  }, [margini]);
 
   const reazione = p.reazione;
   useEffect(() => {

@@ -146,6 +146,28 @@ export function Immersivo(p: PropsImmersivo) {
   const hudNascosto = schermoIntero && calma;
   const [suoniAccesi, setSuoniAccesi] = useState(false);
   const [tempo, setTempo] = useState<{ ora: Ora; posa: string } | null>(null);
+  // Telefono in verticale: quanto coprono i riquadri in alto e in basso, perché il 3D
+  // centri l'albero nella fascia libera.
+  const [margini, setMargini] = useState<{ sopra: number; sotto: number } | null>(null);
+  useEffect(() => {
+    const el = radice.current;
+    if (!el) return;
+    const misura = () => {
+      const h = el.clientHeight || 1;
+      if (el.clientWidth >= h) return setMargini(null);
+      const alto = el.querySelector(".gi-hud-alto")?.getBoundingClientRect();
+      const basso = el.querySelector(".gi-hud-basso")?.getBoundingClientRect();
+      const top = el.getBoundingClientRect().top;
+      const sopra = alto ? Math.min(0.45, (alto.bottom - top) / h) : 0.3;
+      const sotto = basso ? Math.min(0.4, (top + h - basso.top) / h) : 0.22;
+      setMargini((m) => (m && Math.abs(m.sopra - sopra) < 0.01 && Math.abs(m.sotto - sotto) < 0.01 ? m : { sopra, sotto }));
+    };
+    const ro = new ResizeObserver(misura);
+    ro.observe(el);
+    el.querySelectorAll(".gi-hud-alto, .gi-hud-basso").forEach((x) => ro.observe(x));
+    return () => ro.disconnect();
+  }, []);
+
   // Strumenti della demo: umore e azione di prova, solo nella scena.
   const [prova, setProva] = useState<{ umore: string | null; azione: string | null }>({ umore: null, azione: null });
   useEffect(() => {
@@ -371,6 +393,7 @@ export function Immersivo(p: PropsImmersivo) {
             ora={ora}
             stagione={p.stagione}
             reazione={reazione}
+            margini={margini}
             onCassetta={() => apri("lettere")}
             onTaccuino={() => apri("diario")}
             ripiego={scena2d}

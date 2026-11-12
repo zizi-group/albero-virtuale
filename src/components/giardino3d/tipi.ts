@@ -21,6 +21,8 @@ export interface OpzioniGiardino {
   azione: string;
   umore: string;
   movimentoRidotto: boolean;
+  /** Parti dello schermo coperte dai riquadri, in frazioni dell'altezza. */
+  margini?: { sopra: number; sotto: number };
 }
 
 export type Reazione = "saluta" | "lettera" | "festa" | "carezza";
