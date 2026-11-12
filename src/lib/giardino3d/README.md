@@ -44,6 +44,8 @@ Il canvas si dimensiona con il CSS; il motore lo segue con un ResizeObserver.
 | `oggetti.js` | Oggetti 3D delle azioni e delle routine |
 | `modelli.js` | 16 specie e 30 modelli; `modelloDalSeme` |
 | `texture.js` | Foglie, cortecce, guance, stoffe e sprite dipinti su canvas |
+| `club.js` | La foresta del club: `creaForestaClub`, centinaia di alberi leggeri in istanze, due livelli di dettaglio, nomi vicini, bandierina |
+| `clubPosti.js` | Posti stabili della foresta del club e modello dal numero della vista (senza three) |
 
 ## Prestazioni
 
@@ -55,6 +57,32 @@ fatica; pausa con la scheda nascosta. Misure (computer di sviluppo):
 |---|---|---|
 | 1 albero | ≈ 6,3–6,6 ms | non misurato |
 | 7 alberi | ≈ 8,2–8,4 ms | ≈ 4,4 ms |
+
+### Foresta del club (`club.js`)
+
+Una geometria per forma di chioma (8, dal catalogo delle specie) in due
+dettagli: vicino (chiome a bolle, entro ~34 m, al massimo 260 alberi) e
+lontano (icosaedri). Tronco e chioma nella stessa geometria; il colore della
+chioma per istanza, quello del tronco con un attributo per istanza; il vento è
+nel vertex shader. Una mesh sola per tutte le ombre a terra. In tutto 23
+disegni per fotogramma, con 300 o 1000 alberi. I nomi sono `div` sopra la tela
+(al massimo 14 vicini, più il tuo), senza sovrapporsi.
+
+Misure del 12/11/2026 (Chrome headless sul computer di sviluppo, pagina di
+prova `prototipi/foresta-3d/club.html?misura=1`: ms di lavoro per fotogramma
+compresa l'attesa della scheda grafica, mediana; fotogrammi sempre a 120 al
+secondo):
+
+| Scena | 300 alberi | 1000 alberi |
+|---|---|---|
+| 1280×800 | ≈ 3,6–3,9 ms | ≈ 4,3–4,6 ms |
+| 2560×1600 (pixel ×2) | non misurato | ≈ 5,7–6,2 ms |
+| Telefono 390×844 (pixel ×2) | non misurato | ≈ 4,4–4,5 ms |
+| Telefono, processore 4 volte più lento | non misurato | ≈ 3,9–5,1 ms |
+
+Il telefono è emulato (misure, pixel e processore rallentato), non un telefono
+vero. Se dopo l'avvio i fotogrammi restano sopra i 50 ms la pagina passa alla
+mappa 2D (`linfa-club-lento` in `sessionStorage`); senza WebGL parte già 2D.
 
 Pagine di prova (fuori da Next): `prototipi/foresta-3d/giardino.html` (comandi
 per tutto) e `prototipi/foresta-3d/modelli30.html` (foglio dei 30 modelli).

@@ -543,6 +543,10 @@ export function Immersivo(p: PropsImmersivo) {
               <span aria-hidden>?</span>
               <span className="sr-only">Scorciatoie da tastiera</span>
             </button>
+            <Link href="/club" className="gi-icona gi-con-testo" title="La foresta del club">
+              <span aria-hidden>♣</span>
+              <span className="gi-testo">Club</span>
+            </Link>
             <form action="/auth/esci" method="post">
               <button className="gi-icona gi-con-testo" title="Esci">
                 <Icona nome="esci" />

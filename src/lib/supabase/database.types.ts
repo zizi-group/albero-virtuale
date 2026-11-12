@@ -23,7 +23,35 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "diary_entries": {
+            "club_consent": {
+                  Row: {
+                    "granted_at": string,"owner_id": string,"owner_label": string,"revoked_at": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "granted_at"?: string,"owner_id": string,"owner_label"?: string,"revoked_at"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "granted_at"?: string,"owner_id"?: string,"owner_label"?: string,"revoked_at"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"club_examples": {
+                  Row: {
+                    "created_at": string,"day_count": number,"id": string,"name": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"day_count"?: number,"id"?: string,"name": string
+                  }
+                  Update: {
+                    "created_at"?: string,"day_count"?: number,"id"?: string,"name"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"diary_entries": {
                   Row: {
                     "action": string,"body": string,"created_at": string,"day_number": number,"id": string,"lived_on": string,"milestone": boolean,"mood": string | null,"tree_id": string,"weather": Json | null
                   }
@@ -206,10 +234,31 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "club_forest": {
+                  Row: {
+                    "crescita": number | null,"esempio": boolean | null,"modello": number | null,"nome": string | null,"persona": string | null,"seme": string | null,"x": number | null,"z": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                }
           }
           Functions: {
-            [_ in never]: never
+            "club_contatori":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "alberi": number,"esempi": number,"in_foresta": number,"questo_mese": number
+            }[]
+                           },
+"club_frazione":
+{ Args: { "testo": string }; Returns: number
+                           },
+"club_imul":
+{ Args: { "a": number,"b": number }; Returns: number
+                           },
+"club_modello":
+{ Args: { "testo": string }; Returns: number
+                           }
           }
           Enums: {
             [_ in never]: never

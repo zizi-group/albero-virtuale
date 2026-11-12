@@ -1,7 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { daiConsenso, isEtichetta } from "@/lib/club";
 import { cercaCitta } from "@/lib/meteo";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { piantaAlbero } from "@/lib/motore/servizio";
 import { createClient, getUtente } from "@/lib/supabase/server";
 
@@ -38,5 +40,15 @@ export async function azioneSemina(_prima: StatoSemina, form: FormData): Promise
     luogo,
     piano: piano as (typeof PIANI)[number],
   });
+  // La foresta del club: solo con il sì esplicito (casella non spuntata di partenza).
+  if (form.get("club") === "si") {
+    const etichetta = form.get("club_persona");
+    try {
+      await daiConsenso(createAdminClient(), utente.id, isEtichetta(etichetta) ? etichetta : "nessuno");
+    } catch (e) {
+      // l'albero è piantato: il consenso si può dare dopo da /club
+      console.error(e);
+    }
+  }
   redirect("/giardino?nuovo=1");
 }

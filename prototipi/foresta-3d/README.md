@@ -36,6 +36,12 @@ Poi, sulla porta 4317 (diversa dalla 3000 del sito):
 | `/varianti.html` | Sette alberi in fila, con specie, strada e seme |
 | `/ritratto.html` | Ritratto di Linfa su sfondo trasparente, con il link «Scarica il PNG» |
 
+La foresta del club (`club.html`) importa da `/src` e `/node_modules`: si serve
+la radice del repository con `node prototipi/foresta-3d/servi.mjs` e si apre
+`http://localhost:4318/prototipi/foresta-3d/club.html?n=1000` (parametri: `n`
+alberi d'esempio, `misura=1` per i ms con l'attesa della GPU, `ridotto=1`,
+`stagione=autunno`).
+
 - Clic su un albero: saluta (braccio-ramo in avanti, saltello, occhi sorridenti).
 - Il mouse sposta appena la camera.
 - `?vicino`: camera vicina agli alberi. `?foto`: tiene l'ultimo fotogramma nel
