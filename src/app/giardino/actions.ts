@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { sblocco } from "@/lib/albero/collezione";
 import { NOMI_USO } from "@/lib/albero/regali";
 import { INFO_STRADE } from "@/lib/albero/strade";
@@ -9,7 +8,7 @@ import { apriNuovoMese, cambiaPacchetto, faiRegaloDelMese } from "@/lib/motore/e
 import { chiudiSettimana, controllaSblocchi, viviGiorni } from "@/lib/motore/calendario";
 import { nuovoBuongiorno, rispondiAllaPersona, scriviEInviaLettera } from "@/lib/motore/servizio";
 import { NOMI_PACCHETTO } from "@/lib/piani";
-import { createClient, getUtente } from "@/lib/supabase/server";
+import { alberoScelto } from "@/lib/alberi";
 
 export interface Esito {
   ok?: boolean;
@@ -18,14 +17,10 @@ export interface Esito {
   link?: { href: string; testo: string };
 }
 
-/** L'albero della persona collegata: ogni azione lo ricontrolla da sé. */
+/** L'albero che la persona sta guardando: ogni azione ricontrolla che sia suo. */
 async function alberoDellaPersona() {
-  const utente = await getUtente();
-  if (!utente) redirect("/accedi");
-  const supabase = await createClient();
-  const { data } = await supabase.from("trees").select("id, name").eq("owner_id", utente.id).maybeSingle();
-  if (!data) redirect("/pianta");
-  return data;
+  const { albero } = await alberoScelto();
+  return { id: albero.id, name: albero.name };
 }
 
 const errore = (e: unknown): Esito => ({
@@ -40,9 +35,13 @@ export async function azioneDemo(_prima: Esito, form: FormData): Promise<Esito> 
   const albero = await alberoDellaPersona();
   try {
     if (form.get("cosa") === "pacchetto") {
-      const piano = await cambiaPacchetto(albero.id, String(form.get("piano") ?? ""));
+      // Il piano vale per la persona: con più alberi cambia per tutti.
+      const { alberi } = await alberoScelto();
+      let piano = await cambiaPacchetto(albero.id, String(form.get("piano") ?? ""));
+      for (const a of alberi.filter((x) => x.id !== albero.id)) piano = await cambiaPacchetto(a.id, piano);
       revalidatePath("/giardino", "layout");
-      return { ok: true, messaggio: `Ora ${albero.name} ha il pacchetto ${NOMI_PACCHETTO[piano]}. Demo: nessun pagamento.` };
+      const chi = alberi.length > 1 ? "i tuoi alberi hanno" : `${albero.name} ha`;
+      return { ok: true, messaggio: `Ora ${chi} il pacchetto ${NOMI_PACCHETTO[piano]}. Demo: nessun pagamento.` };
     }
     if (form.get("cosa") === "mese") {
       const m = await apriNuovoMese(albero.id);

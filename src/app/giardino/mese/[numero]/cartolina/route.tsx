@@ -2,7 +2,8 @@ import { ImageResponse } from "next/og";
 import { NextResponse, type NextRequest } from "next/server";
 import { datiMese, regaliInUso, scenaDelGiorno, stradaAlGiorno } from "@/lib/motore/extra";
 import { isPremium } from "@/lib/piani";
-import { createClient, getUtente } from "@/lib/supabase/server";
+import { alberiDellaPersona } from "@/lib/alberi";
+import { getUtente } from "@/lib/supabase/server";
 import { svgScena, type Inquadratura } from "./scena";
 
 // La cartolina digitale del mese (Premium): il momento più bello, in formato
@@ -56,10 +57,8 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/giard
   const formato: Formato = request.nextUrl.searchParams.get("formato") === "sfondo" ? "sfondo" : "storia";
   const scarica = request.nextUrl.searchParams.get("scarica") === "1";
 
-  const utente = await getUtente();
-  if (!utente) return NextResponse.redirect(new URL("/accedi", request.nextUrl.origin));
-  const supabase = await createClient();
-  const { data: albero } = await supabase.from("trees").select("*").eq("owner_id", utente.id).maybeSingle();
+  if (!(await getUtente())) return NextResponse.redirect(new URL("/accedi", request.nextUrl.origin));
+  const { supabase, albero } = await alberiDellaPersona();
   if (!albero) return new NextResponse("Nessun albero.", { status: 404 });
   if (!isPremium(albero.plan)) return new NextResponse("La cartolina del mese è un extra del Premium.", { status: 403 });
 

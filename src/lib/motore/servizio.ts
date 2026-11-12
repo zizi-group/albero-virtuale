@@ -106,12 +106,15 @@ export async function piantaAlbero({
   nomePersona,
   luogo,
   piano,
+  stanzaId = null,
 }: {
   ownerId: string;
   nome: string;
   nomePersona: string | null;
   luogo: Luogo;
   piano: "albero" | "premium-annuale" | "premium-mensile";
+  /** La stanza dove abita (fase 5): la sceglie preparaSemina in src/lib/motore/stanze.ts. */
+  stanzaId?: string | null;
 }): Promise<{ id: string; erroreLettera: string | null }> {
   const meteo = await meteoAttuale(luogo.latitudine, luogo.longitudine);
   const tratti = trattiCasuali();
@@ -126,6 +129,7 @@ export async function piantaAlbero({
       longitude: luogo.longitudine,
       timezone: luogo.fusoOrario,
       plan: piano,
+      room_id: stanzaId,
       traits: json(tratti),
       today_action: "guardare-cielo",
       today_caption: `${nome} è appena spuntato e guarda il cielo di ${luogo.citta} per la prima volta.`,

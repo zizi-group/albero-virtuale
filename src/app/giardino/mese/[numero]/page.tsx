@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Albero } from "@/components/albero/Albero";
 import { Scena } from "@/components/albero/Scena";
 import { Intestazione } from "@/components/Intestazione";
@@ -8,7 +8,7 @@ import { azione } from "@/lib/albero/azioni";
 import type { Cielo } from "@/lib/albero/tipi";
 import { datiMese, regaliInUso, scenaDelGiorno, stradaAlGiorno, type DatiMese } from "@/lib/motore/extra";
 import { isPremium } from "@/lib/piani";
-import { createClient, getUtente } from "@/lib/supabase/server";
+import { alberoScelto } from "@/lib/alberi";
 import { PassaAlPremium } from "../../SceltaRegalo";
 import "../../extra.css";
 
@@ -31,11 +31,7 @@ export default async function RiepilogoDelMese({ params }: PageProps<"/giardino/
   const n = Number(numero);
   if (!Number.isInteger(n) || n < 1) notFound();
 
-  const utente = await getUtente();
-  if (!utente) redirect("/accedi");
-  const supabase = await createClient();
-  const { data: albero } = await supabase.from("trees").select("*").eq("owner_id", utente.id).maybeSingle();
-  if (!albero) redirect("/pianta");
+  const { supabase, albero } = await alberoScelto();
 
   const dati = await datiMese(supabase, albero.id, n, albero.name);
   if (!dati) notFound();

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { provaNelGiardino } from "@/components/giardino3d/reazioni";
 import { AZIONI } from "@/lib/albero/azioni";
 import { FASCE, NOMI_FASCE, type Fascia } from "@/lib/albero/mestieri";
@@ -23,7 +23,7 @@ const METEO_DI_PROVA = [
 ];
 
 /** Gli strumenti della demo, in un cassetto discreto in basso a destra. */
-export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoScelto?: string; piano: string }) {
+export function Strumenti({ nome, meteoScelto, piano, altri }: { nome: string; meteoScelto?: string; piano: string; altri?: ReactNode }) {
   const [esito, azione, inCorso] = useActionState<Esito, FormData>(azioneDemo, {});
   const [cosa, setCosa] = useState<"giorni" | "lettera" | "mese" | "pacchetto" | "mattina" | "settimana">("giorni");
   const [aperto, setAperto] = useState(false);
@@ -145,6 +145,8 @@ export function Strumenti({ nome, meteoScelto, piano }: { nome: string; meteoSce
             </button>
           ))}
         </form>
+        {/* Alberi e stanze (fase 5): StrumentiStanze */}
+        {altri}
         <p className="mt-3 mb-1.5 text-sm text-matita" id="meteo-prova">
           Il meteo della scena
         </p>
