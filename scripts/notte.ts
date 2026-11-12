@@ -1,7 +1,7 @@
 // Il motore notturno: per ogni albero fa passare un giorno, poi il calendario
-// (src/lib/motore/calendario.ts): collezione, cartolina della settimana ogni 7
-// giorni, lettera di metà mese per il Premium, fine del mese ogni 30 giorni con
-// il riepilogo e la lettera del mese. La domanda del mattino arriva con la giornata.
+// (src/lib/motore/calendario.ts): collezione, ogni 7 giorni la cartolina e la
+// lettera della settimana in una sola email, fine del mese ogni 30 giorni con
+// il riepilogo. La domanda del mattino arriva con la giornata.
 // In produzione si lancia una volta a notte (cron). In locale: npm run notte
 import "./_env";
 import { createAdminClient } from "../src/lib/supabase/admin";
@@ -17,9 +17,9 @@ async function main() {
       const note: string[] = [];
       if (r.rivelata) note.push(`strada rivelata: ${r.rivelata}`);
       if (r.eventi.sbloccati.length) note.push(`collezione: ${r.eventi.sbloccati.join(", ")}`);
-      if (r.eventi.letteraMetaMese) note.push("lettera di metà mese spedita");
-      if (r.eventi.settimana) note.push(`cartolina della settimana ${r.eventi.settimana.numero} spedita`);
-      if (r.eventi.mese) note.push(`chiuso il mese ${r.eventi.mese.chiuso} («${r.eventi.mese.titolo}»), lettera del mese spedita`);
+      if (r.eventi.settimana)
+        note.push(`settimana ${r.eventi.settimana.numero}: cartolina${r.eventi.settimana.lettera ? " e lettera" : ""} spedite`);
+      if (r.eventi.mese) note.push(`chiuso il mese ${r.eventi.mese.chiuso} («${r.eventi.mese.titolo}»)`);
       console.log(`- ${a.name}: giorno ${r.giorni}${note.length ? `, ${note.join(", ")}` : ""}`);
     } catch (e) {
       console.error(`- ${a.name}: errore`, e instanceof Error ? e.message : e);

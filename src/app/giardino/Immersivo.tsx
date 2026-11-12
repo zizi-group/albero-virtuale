@@ -12,6 +12,7 @@ import { EVENTO_MOVIMENTO, InterruttoreMovimento, movimentoRidotto } from "@/com
 import { EVENTO_PROVA, EVENTO_REAZIONE, type DettaglioProva } from "@/components/giardino3d/reazioni";
 import type { Reazione } from "@/components/giardino3d/tipi";
 import { azione } from "@/lib/albero/azioni";
+import type { TracceScena } from "@/lib/albero/catene";
 import { NOMI_FASCE_FRASE } from "@/lib/albero/giornata";
 import type { Fascia } from "@/lib/albero/mestieri";
 import type { Meteo, Posa, Stadio, Stagione } from "@/lib/albero/tipi";
@@ -79,6 +80,8 @@ export interface AttivitaInScena {
   voglia: string;
   /** La didascalia scritta dall'AI, se è l'azione del giorno. */
   didascalia: string | null;
+  /** Le tracce nella scena mentre la fa: catasta, falò, orto, vasetti, scorte (catene.ts). */
+  tracce: TracceScena;
 }
 export type PalinsestoScena = Record<Fascia, AttivitaInScena[]>;
 
@@ -483,7 +486,17 @@ export function Immersivo(p: PropsImmersivo) {
       stagione={p.stagione}
       className="h-full"
       chiaveAlbero={tempo ? `tempo-${tempo.posa}` : p.chiave}
-      albero={<Albero posa={posa} giorni={p.giorno} stadio={p.stadio} stagione={p.stagione} innevato={p.meteo.cielo === "neve"} titolo={`${p.nome} ${azione(idInScena).etichetta}`} />}
+      albero={
+        <Albero
+          posa={posa}
+          giorni={p.giorno}
+          stadio={p.stadio}
+          stagione={p.stagione}
+          innevato={p.meteo.cielo === "neve"}
+          titolo={`${p.nome} ${azione(idInScena).etichetta}`}
+          tracce={tempo ? undefined : att.tracce}
+        />
+      }
       palco={
         <>
           <Cassetta daLeggere={p.nonLette} totale={p.totaleLettere} onApri={() => apri("lettere")} />

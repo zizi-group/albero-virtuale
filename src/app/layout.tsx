@@ -25,7 +25,7 @@ const mano = Gochi_Hand({
 export const metadata: Metadata = {
   title: "Linfa — Pianta un albero. Lui decide chi diventare.",
   description:
-    "Un albero digitale in abbonamento: vive con il meteo reale della tua città, scrive una pagina di diario al giorno e una lettera via email ogni 30 giorni. All'undicesimo mese ricevi il diario dell'anno.",
+    "Un albero digitale in abbonamento: vive con il meteo reale della tua città, scrive una pagina di diario al giorno e una lettera via email ogni settimana. All'undicesimo mese ricevi il diario dell'anno.",
   appleWebApp: { capable: true, title: "Linfa", statusBarStyle: "black-translucent" },
   icons: { apple: "/icone/linfa-apple.png" },
 };

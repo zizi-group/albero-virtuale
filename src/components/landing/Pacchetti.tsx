@@ -40,8 +40,7 @@ const VOCI_ALBERO: Voce[] = [
   { quando: "subito", testo: "Il bosco con gli amici e le gare di stagione", inArrivo: true },
   { quando: "giorno", testo: "Un'azione scelta tra 23 e una pagina di diario, da una a tre frasi" },
   { quando: "giorno", testo: "Il buongiorno: una domanda a cui rispondi con un tocco", inArrivo: true },
-  { quando: "settimana", testo: "Una cartolina breve dal giardino", inArrivo: true },
-  { quando: "mese", testo: "Una lettera via email ogni 30 giorni, più una in ogni momento importante" },
+  { quando: "settimana", testo: "Una lettera via email con la cartolina dal giardino, più una in ogni momento importante" },
   { quando: "anno", testo: "Il diario dell'anno in PDF illustrato, all'undicesimo mese" },
   { quando: "anno", testo: "Il letargo, se non rinnovi: conserva il diario e si riattiva quando vuoi" },
   { quando: "casa", testo: "La tessera del fan club" },
@@ -49,7 +48,6 @@ const VOCI_ALBERO: Voce[] = [
 
 const VOCI_PREMIUM: Voce[] = [
   { quando: "subito", testo: "L'albero ti scrive anche su WhatsApp", inArrivo: true },
-  { quando: "mese", testo: "Una lettera ogni 15 giorni invece di 30" },
   { quando: "mese", testo: "Un regalo da mandargli, a cui risponde con una lettera" },
   { quando: "mese", testo: "Il riepilogo illustrato del mese" },
   { quando: "mese", testo: "La cartolina del mese, in formato storia e come sfondo del telefono" },

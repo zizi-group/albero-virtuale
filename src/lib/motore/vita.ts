@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { azione, azioniPerMeteo, ID_AZIONI } from "../albero/azioni";
+import { attivitaDelGiorno, FASCE_DI_GIORNO, type Palinsesto } from "../albero/giornata";
 import {
   classifica,
   inclinazioni,
@@ -68,6 +69,13 @@ export interface GiornoDaVivere {
   meteo: MeteoGiorno;
   evento: string | null;
   ammesse: string[];
+  /** La giornata a fasce decisa dal codice (giornata.ts): l'azione del giorno si sceglie tra queste. */
+  palinsesto?: Palinsesto;
+}
+
+/** Il giorno con la sua giornata a fasce: l'AI sceglie l'azione del giorno tra quelle attività. */
+export function conPalinsesto(g: GiornoDaVivere, p: Palinsesto): GiornoDaVivere {
+  return { ...g, palinsesto: p, ammesse: attivitaDelGiorno(p) };
 }
 
 export function aggiungiGiorni(data: string, n: number): string {
@@ -171,6 +179,8 @@ export interface ContestoVita {
   buongiorno?: { giorno: number; domanda: string; risposta: string }[];
   /** Trofei e oggetti della collezione appena sbloccati, di cui non ha ancora parlato. */
   novita?: string[];
+  /** Catene aperte, scorte e tracce nel prato (catene.ts, descriviCatene) e i fatti recenti delle catene. */
+  catene?: string;
 }
 
 export function descriviStato(stato: StatoAlbero): string {
@@ -225,6 +235,7 @@ function descriviContesto(ctx: ContestoVita): string {
       ...ctx.buongiorno.map((b) => `- mattina del giorno ${b.giorno}: «${b.domanda}» La persona ha risposto: «${b.risposta}».`),
     );
   }
+  if (ctx.catene) righe.push(ctx.catene);
   if (ctx.novita?.length) {
     righe.push(
       `Novità della sua collezione, ottenute vivendo: ${ctx.novita.map((n) => `«${n}»`).join(", ")}. Se gli va, ne parla in una frase del diario di uno dei giorni, a modo suo.`,
@@ -258,6 +269,14 @@ export async function viviGiornate(
       (g) =>
         `- giorno ${g.giorno} (${g.data}): meteo ${g.meteo.descrizione}. ${
           g.evento ? `Evento: ${g.evento}` : "Nessun evento particolare."
+        }${
+          g.palinsesto
+            ? ` La sua giornata: ${FASCE_DI_GIORNO.map(
+                (f) => `${f} ${azione(g.palinsesto![f][0]).etichetta} (${g.palinsesto![f][0]})${
+                  g.palinsesto![f].length > 1 ? `, oppure ${g.palinsesto![f].slice(1).join(" o ")}` : ""
+                }`,
+              ).join("; ")}.`
+            : ""
         } Azioni ammesse: ${g.ammesse.join(", ")}.`,
     )
     .join("\n");
@@ -271,9 +290,9 @@ ${elenco}
 
 Restituisci un elemento per ogni giorno, nello stesso ordine, con:
 - giorno: il numero del giorno.
-- azione: una delle azioni ammesse quel giorno (id esatto), coerente con carattere, meteo ed evento. Varia: non ripetere la stessa azione più di due giorni di fila.
+- azione: una delle azioni ammesse quel giorno (id esatto), coerente con carattere, meteo ed evento. Se c'è «la sua giornata», è il momento che racconta meglio il giorno: di solito una delle attività principali, a volte un'alternativa che gli va di più. Varia: non ripetere la stessa azione più di due giorni di fila.
 - umore.
-- diario: da 1 a 3 frasi in prima persona, nella voce dell'albero, al massimo 300 caratteri. Se c'è un evento, il diario ne parla.
+- diario: da 1 a 3 frasi in prima persona, nella voce dell'albero, al massimo 300 caratteri. Se c'è un evento, il diario ne parla. Può nominare le altre attività della giornata e i lavori in corso (il fuoco, l'orto, la marmellata), senza elencarli tutti.
 - didascalia: una frase in terza persona che comincia con «${stato.nome}», al massimo 110 caratteri, da mostrare sotto il suo ritratto (esempio: «${stato.nome} legge giornali finanziari sotto l'ombrello. Nessuno sa perché.»).
 - spinte: per ogni strada un intero da -2 a 5, quanto la giornata lo avvicina a quella strada. Di solito una o due strade positive e le altre a 0. Seguono il carattere e le scelte, con qualche sorpresa ogni tanto.
 - tratti_rafforzati: da 0 a 2 tratti che la giornata ha rafforzato.

@@ -33,10 +33,7 @@ export async function inviaLettera({
   letteraId: string;
 }) {
   const link = `${SITO}/giardino/lettere/${letteraId}`;
-  const paragrafi = testo
-    .split(/\n\s*\n/)
-    .map((p) => `<p style="margin:0 0 16px;">${esc(p).replace(/\n/g, "<br>")}</p>`)
-    .join("");
+  const paragrafi = paragrafiHtml(testo);
 
   const html = `<!doctype html><html lang="it"><body style="margin:0;background:#f3ecdc;font-family:Georgia,serif;color:#23261d;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:36px 14px;background:#f3ecdc;"><tr><td align="center">
@@ -59,9 +56,18 @@ export async function inviaLettera({
   });
 }
 
+/** I paragrafi di una lettera in HTML (una riga vuota separa i paragrafi). */
+function paragrafiHtml(testo: string, margine = 16) {
+  return testo
+    .split(/\n\s*\n/)
+    .map((p) => `<p style="margin:0 0 ${margine}px;">${esc(p).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
 /**
- * La cartolina della settimana: due-tre righe e l'immagine del momento migliore,
- * allegata dentro l'email (cid), così si vede anche senza aprire il sito.
+ * La settimana: la cartolina del momento migliore (allegata dentro l'email,
+ * cid, così si vede anche senza aprire il sito), due-tre righe e, sotto, la
+ * lettera della settimana. Una sola email ogni sette giorni.
  */
 export async function inviaNotaSettimana({
   a,
@@ -70,6 +76,7 @@ export async function inviaNotaSettimana({
   nota,
   numero,
   immagine,
+  lettera = null,
 }: {
   a: string;
   nomeAlbero: string;
@@ -77,8 +84,10 @@ export async function inviaNotaSettimana({
   nota: string;
   numero: number;
   immagine: Buffer | null;
+  /** La lettera della settimana, se l'albero è riuscito a scriverla. */
+  lettera?: { testo: string; id: string } | null;
 }) {
-  const link = `${SITO}/giardino`;
+  const link = lettera ? `${SITO}/giardino/lettere/${lettera.id}` : `${SITO}/giardino`;
   const righe = nota
     .split(/\n\s*\n|\n/)
     .map((p) => `<p style="margin:0 0 10px;">${esc(p)}</p>`)
@@ -93,17 +102,24 @@ export async function inviaNotaSettimana({
 <tr><td>
 <p style="margin:0 0 14px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#3f5a2a;">La settimana ${numero} di ${esc(nomeAlbero)}</p>
 ${figura}
-<div style="font-size:17px;line-height:1.6;">${righe}</div>
-<p style="margin:18px 0 0;"><a href="${link}" style="display:inline-block;background:#3f5a2a;color:#fffaf0;text-decoration:none;padding:11px 20px;border-radius:999px;font-family:Arial,sans-serif;font-size:14px;">Vai nel giardino</a></p>
+<div style="font-size:${lettera ? 15 : 17}px;line-height:1.6;${lettera ? "font-style:italic;color:#5b5a4c;" : ""}">${righe}</div>
+${
+  lettera
+    ? `<hr style="border:none;border-top:1px dashed #d8cba9;margin:22px 0;">
+<p style="margin:0 0 14px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#3f5a2a;">La lettera della settimana</p>
+<div style="font-size:17px;line-height:1.65;">${paragrafiHtml(lettera.testo)}</div>`
+    : ""
+}
+<p style="margin:18px 0 0;"><a href="${link}" style="display:inline-block;background:#3f5a2a;color:#fffaf0;text-decoration:none;padding:11px 20px;border-radius:999px;font-family:Arial,sans-serif;font-size:14px;">${lettera ? "Leggila nel giardino" : "Vai nel giardino"}</a></p>
 </td></tr></table>
-<p style="font-family:Arial,sans-serif;font-size:12px;color:#8a846f;margin-top:16px;">Linfa · una nota ogni sette giorni</p>
+<p style="font-family:Arial,sans-serif;font-size:12px;color:#8a846f;margin-top:16px;">Linfa · una lettera ogni sette giorni</p>
 </td></tr></table></body></html>`;
 
   await smtp().sendMail({
     from: `"${nomeAlbero.replace(/"/g, "")} (Linfa)" <lettere@linfa.local>`,
     to: a,
     subject: oggetto,
-    text: `${nota}\n\nVai nel giardino: ${link}`,
+    text: `${nota}${lettera ? `\n\n— La lettera della settimana —\n\n${lettera.testo}` : ""}\n\nVai nel giardino: ${link}`,
     html,
     attachments: immagine
       ? [{ filename: `settimana-${numero}.png`, content: immagine, cid: "cartolina-settimana@linfa", contentType: "image/png" }]

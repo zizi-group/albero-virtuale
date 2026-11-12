@@ -1,3 +1,4 @@
+import type { TracceScena } from "@/lib/albero/catene";
 import type { Posa, Stadio, Stagione } from "@/lib/albero/tipi";
 import { AlberoVivo } from "./vivo/AlberoVivo";
 import type { StatoMestiere } from "./vivo/mestiere";
@@ -25,6 +26,8 @@ export interface AlberoProps {
    * o passo di cantiere, vedi docs/routine-strade.md). Senza, fa quello che dice la posa.
    */
   mestiere?: StatoMestiere | null;
+  /** Le tracce nella scena (catasta, falò, orto, vasetti, scorte): vedi vivo/tracce.tsx. */
+  tracce?: TracceScena | null;
 }
 
 /** Il personaggio come gruppo SVG, da mettere dentro una scena. */

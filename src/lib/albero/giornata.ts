@@ -1,13 +1,19 @@
 import { AZIONI, azione, type Azione } from "./azioni";
-import { FREDDO_SOTTO } from "./scena";
+import { chiudiGiornata, faiAttivita, haRequisiti, inizioGiorno, pesoCatena, possibile, prossimiPassi, type StatoCatene } from "./catene";
 import { FASCE, fasciaDa, type Fascia } from "./mestieri";
+import { INFO_QUOTIDIANE, type InfoAttivita } from "./quotidiane";
+import { FREDDO_SOTTO } from "./scena";
 import type { Meteo } from "./tipi";
 
 // La giornata dell'albero divisa per fasce (docs/stanze-e-vita.md, sezione 3).
 // Ogni fascia ha 3 attività in ordine: chi entra a orari diversi, o due giorni
 // di fila alla stessa ora, lo trova a fare cose diverse. Tutto è deterministico
 // (seme = id dell'albero + giorno): server e browser vedono la stessa giornata.
-// L'azione scelta dall'AI per il giorno resta l'attività principale di una fascia.
+// Con la memoria (catene.ts) i pesi tengono conto delle catene aperte (×5 per
+// il passo dopo), delle risorse che mancano (×3 per chi le raccoglie), di
+// quello che ha fatto nei tre giorni prima e di quello che non ha mai fatto.
+// La prima attività di ogni fascia è la principale: è quella che lascia le
+// tracce e manda avanti le catene; le altre sono attività libere, senza requisiti.
 
 export type FasciaDiGiorno = Exclude<Fascia, "notte">;
 export const FASCE_DI_GIORNO = FASCE.filter((f): f is FasciaDiGiorno => f !== "notte");
@@ -15,28 +21,17 @@ export const FASCE_DI_GIORNO = FASCE.filter((f): f is FasciaDiGiorno => f !== "n
 /** Quante attività per fascia (la prima è la principale). */
 export const PER_FASCIA = 3;
 
-interface Info {
-  fasce: FasciaDiGiorno[];
-  /** Ferma: scrive, legge, medita. Al massimo una al giorno come principale. */
-  ferma?: boolean;
-  /** Si muove: almeno una al giorno come principale. */
-  movimento?: boolean;
-  umori: string[];
-  /** Che cosa gli passa per la testa quando gli viene voglia di farla (nuvoletta). */
-  voglia: string;
-}
-
 const TUTTE: FasciaDiGiorno[] = ["mattina", "giorno", "pomeriggio", "sera"];
 
 // Solo le azioni di giorno: dormire è la notte, il resto lo decide il meteo.
-const INFO: Record<string, Info> = {
+const INFO: Record<string, InfoAttivita> = {
   "guardare-cielo": { fasce: TUTTE, ferma: true, umori: ["sognante", "pensieroso", "curioso"], voglia: "che nuvole oggi…" },
   leggere: { fasce: ["giorno", "pomeriggio", "sera"], ferma: true, umori: ["pensieroso", "curioso", "assonnato"], voglia: "quel libro mi chiama" },
   "giornale-ombrello": { fasce: ["mattina", "giorno"], ferma: true, umori: ["fiero", "furbo"], voglia: "le notizie della Borsa…" },
   doccia: { fasce: TUTTE, movimento: true, umori: ["allegro", "energico"], voglia: "una bella doccia!" },
-  "prendere-sole": { fasce: ["giorno", "pomeriggio"], umori: ["assonnato", "allegro", "sognante"], voglia: "un po' di sole…" },
+  "prendere-sole": { fasce: ["giorno", "pomeriggio"], noFreddo: true, umori: ["assonnato", "allegro", "sognante"], voglia: "un po' di sole…" },
   passeggiata: { fasce: TUTTE, movimento: true, umori: ["curioso", "energico", "malinconico"], voglia: "due passi?" },
-  sonnellino: { fasce: ["giorno", "pomeriggio"], ferma: true, umori: ["assonnato", "malinconico"], voglia: "un pisolino…" },
+  sonnellino: { fasce: ["giorno", "pomeriggio"], ferma: true, noFreddo: true, umori: ["assonnato", "malinconico"], voglia: "un pisolino…" },
   telefonata: { fasce: ["mattina", "giorno", "pomeriggio"], umori: ["fiero", "furbo", "energico"], voglia: "devo fare una telefonata" },
   corsa: { fasce: ["mattina", "pomeriggio"], movimento: true, umori: ["energico", "allegro", "fiero"], voglia: "voglia di correre!" },
   allenarsi: { fasce: ["mattina", "pomeriggio"], movimento: true, umori: ["energico", "fiero"], voglia: "dieci sollevamenti…" },
@@ -50,8 +45,9 @@ const INFO: Record<string, Info> = {
   "fare-valigia": { fasce: ["mattina", "sera"], movimento: true, umori: ["curioso", "sognante", "energico"], voglia: "e se partissi?" },
   "studiare-mappa": { fasce: ["giorno", "sera"], umori: ["curioso", "sognante"], voglia: "dove andrei…?" },
   ballare: { fasce: ["pomeriggio", "sera"], movimento: true, umori: ["allegro", "energico"], voglia: "che voglia di ballare!" },
-  annaffiarsi: { fasce: ["mattina", "pomeriggio"], movimento: true, umori: ["allegro", "assonnato"], voglia: "un po' d'acqua…" },
+  annaffiarsi: { fasce: ["mattina", "pomeriggio"], movimento: true, noFreddo: true, umori: ["allegro", "assonnato"], voglia: "un po' d'acqua…" },
   "bere-tisana": { fasce: ["mattina", "sera"], umori: ["assonnato", "malinconico", "pensieroso"], voglia: "una tisana calda" },
+  ...INFO_QUOTIDIANE,
 };
 
 export interface ContestoGiornata {
@@ -60,14 +56,21 @@ export interface ContestoGiornata {
   giorno: number;
   strada: string | null;
   umore: string;
-  /** L'azione del giorno scelta dall'AI. */
+  /** L'azione del giorno scelta dall'AI (solo senza memoria: alberi di prima della 0.2). */
   azioneDelGiorno: string | null;
   /** Le azioni scelte dall'AI nei giorni prima (dal diario): se si ripete, non è la principale. */
   azioniRecenti?: string[];
   meteo: Pick<Meteo, "cielo" | "temperatura">;
+  /**
+   * Memoria e risorse all'inizio del giorno (catene.ts, dopo inizioGiorno).
+   * Senza, la giornata si costruisce come nella 0.1, ricostruendo i due giorni prima.
+   */
+  catene?: StatoCatene;
 }
 
 export type Palinsesto = Record<FasciaDiGiorno, string[]>;
+
+const QUOTIDIANA = new Set(Object.keys(INFO_QUOTIDIANE));
 
 /** Un numero da un testo, sempre lo stesso (FNV-1a). */
 function hash(t: string): number {
@@ -92,29 +95,40 @@ function casuale(seme: number): () => number {
 }
 
 /** Le azioni possibili con questo tempo. */
-function ammessa(a: Azione, c: ContestoGiornata): boolean {
-  if (!INFO[a.id]) return false;
-  const bagnato = c.meteo.cielo === "pioggia" || c.meteo.cielo === "temporale";
+export function ammessaColMeteo(a: Azione, meteo: ContestoGiornata["meteo"]): boolean {
+  const info = INFO[a.id];
+  if (!info) return false;
+  const bagnato = meteo.cielo === "pioggia" || meteo.cielo === "temporale";
   if (bagnato) return a.meteo === "pioggia" || a.meteo === "qualsiasi";
   if (a.meteo !== "asciutto" && a.meteo !== "qualsiasi") return false;
-  const freddo = c.meteo.temperatura < FREDDO_SOTTO || c.meteo.cielo === "neve";
-  if (freddo && ["prendere-sole", "sonnellino", "annaffiarsi"].includes(a.id)) return false;
-  if (a.id === "prendere-sole" && c.meteo.cielo !== "sole") return false;
+  const freddo = meteo.temperatura < FREDDO_SOTTO || meteo.cielo === "neve";
+  if (freddo && info.noFreddo) return false;
+  if (a.id === "prendere-sole" && meteo.cielo !== "sole") return false;
   return true;
 }
 
-function peso(a: Azione, f: FasciaDiGiorno, c: ContestoGiornata, recenti: Palinsesto[]): number {
+/** Le regole contro la noia (sezione 3.3): quello che ha fatto nei giorni prima pesa meno. */
+function novita(id: string, f: FasciaDiGiorno, recenti: Palinsesto[], fatte: Set<string> | null, passo: boolean): number {
+  let p = 1;
+  recenti.forEach((r, i) => {
+    // La stessa principale nella stessa fascia al massimo una volta ogni 3 giorni.
+    if (r[f][0] === id) p *= i < 2 ? 0.002 : 0.4;
+    // In un'altra fascia pesa meno, salvo che sia il passo dopo di una catena (annaffiare l'orto per giorni).
+    else if (!passo && FASCE_DI_GIORNO.some((g) => r[g][0] === id)) p *= i === 0 ? 0.3 : 0.6;
+    else if (r[f].includes(id)) p *= 0.7;
+  });
+  if (fatte && !fatte.has(id)) p *= 2;
+  return p;
+}
+
+function peso(a: Azione, f: FasciaDiGiorno, c: ContestoGiornata, recenti: Palinsesto[], fatte: Set<string> | null, passo = false): number {
   const info = INFO[a.id];
-  let p = info.fasce.includes(f) ? 1 : 0.15;
+  // Base (3.3): quotidiana 10, di strada 4. Sono di strada le azioni della 0.1 legate a una strada.
+  let p = (QUOTIDIANA.has(a.id) || !a.strade.length ? 1 : 0.4) * (info.fasce.includes(f) ? 1 : 0.15);
   if (c.strada) p *= a.strade.includes(c.strada as never) ? 3 : a.strade.length ? 0.7 : 1;
   if (info.umori.includes(c.umore)) p *= 1.8;
   if (a.meteo === "pioggia") p *= 1.6; // con la pioggia le cose da pioggia vengono prima
-  // Novità: quello che ha fatto ieri o l'altro ieri nella stessa fascia pesa molto meno.
-  recenti.forEach((r, i) => {
-    if (r[f][0] === a.id) p *= i === 0 ? 0.05 : 0.3;
-    else if (r[f].includes(a.id)) p *= 0.7;
-  });
-  return p;
+  return p * novita(a.id, f, recenti, fatte, passo);
 }
 
 /** Estrae senza ripetere, in base ai pesi. */
@@ -135,58 +149,112 @@ function estrai(pesi: [string, number][], quanti: number, rnd: () => number): st
   return presi;
 }
 
-function costruisci(c: ContestoGiornata, recenti: Palinsesto[]): Palinsesto {
-  const possibili = AZIONI.filter((a) => ammessa(a, c));
+function costruisci(c: ContestoGiornata, recenti: Palinsesto[], inizio: StatoCatene | null): Palinsesto {
+  const possibili = AZIONI.filter((a) => ammessaColMeteo(a, c.meteo));
   const rnd = casuale(hash(`${c.seme}|${c.giorno}`));
+  const fatte = inizio ? new Set(inizio.memoria.fatte) : null;
   const usate = new Set<string>();
+  let st = inizio;
   let ferme = 0;
+  let mosse = 0;
   const out = {} as Palinsesto;
 
-  // L'azione dell'AI va nella fascia che le si addice di più (la prima tra le sue).
-  const scelta = c.azioneDelGiorno && INFO[c.azioneDelGiorno] && possibili.some((a) => a.id === c.azioneDelGiorno) ? c.azioneDelGiorno : null;
+  // Senza memoria (0.1): l'azione dell'AI va in una delle sue fasce.
+  const scelta =
+    !inizio && c.azioneDelGiorno && INFO[c.azioneDelGiorno] && possibili.some((a) => a.id === c.azioneDelGiorno) && !haRequisiti(c.azioneDelGiorno)
+      ? c.azioneDelGiorno
+      : null;
   const fasciaAI = scelta ? INFO[scelta].fasce[Math.floor(rnd() * INFO[scelta].fasce.length)] : null;
 
   for (const f of FASCE_DI_GIORNO) {
-    const pesi: [string, number][] = possibili
-      .filter((a) => !usate.has(a.id))
-      .map((a) => {
-        let p = peso(a, f, c, recenti);
-        if (ferme >= 1 && INFO[a.id].ferma) p *= 0.08;
-        return [a.id, p];
-      });
-    let lista = estrai(pesi, PER_FASCIA, rnd);
+    const passi = new Set(st ? prossimiPassi(st) : []);
+    const pesi = (alternativa: boolean): [string, number][] =>
+      possibili
+        .filter((a) => !usate.has(a.id))
+        .map((a) => {
+          if (alternativa && haRequisiti(a.id)) return [a.id, 0];
+          let p = peso(a, f, c, recenti, fatte, passi.has(a.id));
+          p *= st ? pesoCatena(a.id, st) : haRequisiti(a.id) ? 0 : 1;
+          if (ferme >= 1 && INFO[a.id].ferma) p *= 0.08;
+          // Almeno un'attività di movimento al giorno: se manca, nel pomeriggio diventa molto probabile.
+          if (f === "pomeriggio" && mosse === 0 && INFO[a.id].movimento) p *= 20;
+          return [a.id, p];
+        });
+    const principale = estrai(pesi(false), 1, rnd);
+    const altre = estrai(
+      pesi(true).filter(([id]) => id !== principale[0]),
+      PER_FASCIA - principale.length,
+      rnd,
+    );
+    let lista = [...principale, ...altre];
     if (f === fasciaAI && scelta) {
       // Se l'AI ripete quello che ha già scelto di recente, resta un'alternativa e non la principale.
       const ripete = c.azioniRecenti?.slice(0, 2).includes(scelta);
-      const altre = lista.filter((x) => x !== scelta);
-      lista = (ripete ? [altre[0], scelta, ...altre.slice(1)] : [scelta, ...altre]).filter(Boolean).slice(0, PER_FASCIA);
+      const resto = lista.filter((x) => x !== scelta);
+      lista = (ripete ? [resto[0], scelta, ...resto.slice(1)] : [scelta, ...resto]).filter(Boolean).slice(0, PER_FASCIA);
     }
     out[f] = lista;
-    usate.add(lista[0]);
-    if (INFO[lista[0]]?.ferma) ferme += 1;
-  }
-
-  // Almeno una attività di movimento al giorno come principale.
-  if (!FASCE_DI_GIORNO.some((f) => INFO[out[f][0]]?.movimento)) {
-    const f: FasciaDiGiorno = "pomeriggio";
-    const mov = estrai(
-      possibili.filter((a) => INFO[a.id].movimento && !usate.has(a.id)).map((a) => [a.id, peso(a, f, c, recenti)]),
-      1,
-      rnd,
-    )[0];
-    if (mov) out[f] = [mov, ...out[f].filter((x) => x !== mov)].slice(0, PER_FASCIA);
+    for (const id of lista) usate.add(id);
+    const p0 = lista[0];
+    if (INFO[p0]?.ferma) ferme += 1;
+    if (INFO[p0]?.movimento) mosse += 1;
+    if (st && p0) st = faiAttivita(st, p0, c.giorno);
   }
   return out;
 }
 
 /**
  * Il palinsesto del giorno: per ogni fascia, 3 attività (la prima è la principale).
- * Tiene conto dei due giorni prima, ricostruiti con lo stesso seme, per non ripetersi.
+ * Con la memoria usa la storia vera dei tre giorni prima; senza, la ricostruisce
+ * con lo stesso seme per i due giorni prima.
  */
 export function giornataDi(c: ContestoGiornata): Palinsesto {
-  const ieri2 = costruisci({ ...c, giorno: c.giorno - 2, azioneDelGiorno: null }, []);
-  const ieri = costruisci({ ...c, giorno: c.giorno - 1, azioneDelGiorno: null }, [ieri2]);
-  return costruisci(c, [ieri, ieri2]);
+  if (c.catene) return costruisci(c, c.catene.memoria.storia.map((s) => s.p), c.catene);
+  const ieri2 = costruisci({ ...c, giorno: c.giorno - 2, azioneDelGiorno: null }, [], null);
+  const ieri = costruisci({ ...c, giorno: c.giorno - 1, azioneDelGiorno: null }, [ieri2], null);
+  return costruisci(c, [ieri, ieri2], null);
+}
+
+/** Le attività di una giornata, una volta sola (per l'AI che sceglie l'azione del giorno). */
+export function attivitaDelGiorno(p: Palinsesto): string[] {
+  return [...new Set(FASCE_DI_GIORNO.flatMap((f) => p[f]))];
+}
+
+/**
+ * L'AI ha scelto l'azione del giorno tra le attività della giornata: se è
+ * un'alternativa diventa la principale della sua fascia. Poi controlla che ogni
+ * principale si possa ancora fare (le risorse cambiano): se no, la scambia con
+ * un'alternativa.
+ */
+export function conLaScelta(p: Palinsesto, scelta: string | null, inizio: StatoCatene, giorno: number): Palinsesto {
+  const out = Object.fromEntries(FASCE_DI_GIORNO.map((f) => [f, [...p[f]]])) as Palinsesto;
+  if (scelta) {
+    const f = FASCE_DI_GIORNO.find((x) => out[x].includes(scelta));
+    if (f) out[f] = [scelta, ...out[f].filter((x) => x !== scelta)];
+  }
+  let st = inizio;
+  for (const f of FASCE_DI_GIORNO) {
+    const i = out[f].findIndex((id) => possibile(id, st));
+    if (i > 0) out[f] = [out[f][i], ...out[f].filter((_, k) => k !== i)];
+    if (out[f][0] && possibile(out[f][0], st)) st = faiAttivita(st, out[f][0], giorno);
+  }
+  return out;
+}
+
+/**
+ * Il giardino col meteo di adesso (o di prova): toglie quello che con questo
+ * tempo non si fa; se una fascia resta vuota, la riempie come farebbe il motore.
+ */
+export function adattaAlMeteo(p: Palinsesto, c: ContestoGiornata): Palinsesto {
+  const ok = (id: string) => azione(id).id === id && ammessaColMeteo(azione(id), c.meteo);
+  if (FASCE_DI_GIORNO.every((f) => p[f].every(ok))) return p;
+  const ricambio = giornataDi({ ...c, catene: undefined, azioneDelGiorno: null });
+  const out = {} as Palinsesto;
+  for (const f of FASCE_DI_GIORNO) {
+    const tenute = p[f].filter(ok);
+    out[f] = [...tenute, ...ricambio[f].filter((x) => !tenute.includes(x))].slice(0, PER_FASCIA);
+  }
+  return out;
 }
 
 /** La fascia di adesso: di notte (col buio vero) dorme. */
@@ -220,4 +288,49 @@ export const NOMI_FASCE_FRASE: Record<Fascia, string> = {
 /** Per i controlli: l'etichetta di un'attività del palinsesto. */
 export function etichetta(id: string): string {
   return azione(id).etichetta;
+}
+
+// ——— Più giorni di fila (motore notturno e simulazione) ———
+
+export interface GiornoAFasce {
+  giorno: number;
+  meteo: Pick<Meteo, "cielo" | "temperatura">;
+  /** L'umore del giorno (di solito quello della sera prima). */
+  umore: string;
+}
+
+export interface GiornateAFasce {
+  palinsesti: Palinsesto[];
+  /** Lo stato all'inizio di ogni giorno (dopo le braci che si spengono e la pioggia). */
+  inizi: StatoCatene[];
+  /** Da salvare: lo stato all'inizio dell'ultimo giorno, con la sua giornata in memoria.oggi. */
+  fine: StatoCatene;
+}
+
+/**
+ * Vive in fila i giorni: per ognuno la giornata dalla memoria, poi la chiude
+ * (tracce, risorse, catene) prima di passare al giorno dopo. `scelte`: le
+ * azioni del giorno scelte dall'AI, una per giorno (o null).
+ * `stato` è quello salvato: se contiene la giornata di ieri, la chiude prima.
+ */
+export function pianificaGiornate(
+  seme: string,
+  strada: string | null,
+  stato: StatoCatene,
+  giorni: GiornoAFasce[],
+  scelte?: (string | null)[],
+): GiornateAFasce {
+  let st = chiudiGiornata(stato);
+  const palinsesti: Palinsesto[] = [];
+  const inizi: StatoCatene[] = [];
+  giorni.forEach((g, i) => {
+    st = inizioGiorno(st, g.giorno, g.meteo.cielo);
+    let p = giornataDi({ seme, giorno: g.giorno, strada, umore: g.umore, azioneDelGiorno: null, meteo: g.meteo, catene: st });
+    if (scelte) p = conLaScelta(p, scelte[i] ?? null, st, g.giorno);
+    palinsesti.push(p);
+    inizi.push(st);
+    st = { memoria: { ...st.memoria, oggi: { giorno: g.giorno, p } }, risorse: st.risorse };
+    if (i < giorni.length - 1) st = chiudiGiornata(st);
+  });
+  return { palinsesti, inizi, fine: st };
 }

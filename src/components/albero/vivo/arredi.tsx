@@ -3,6 +3,7 @@ import type { Strada } from "@/lib/albero/strade";
 import { ATTREZZI, type Attrezzo, type Canali } from "./canali";
 import { CONTORNO, disegnaOggetto, INCHIOSTRO } from "./disegni";
 import type { Attributi } from "./fotogramma";
+import { AttrezzoQuotidiano } from "./tracce";
 
 // Gli arredi che l'albero costruisce nel prato e gli attrezzi del mestiere.
 // Coordinate del personaggio (terreno a y = 262, l'albero a casa ha il centro
@@ -211,6 +212,9 @@ function Attrezzo({ a }: { a: Attrezzo }): ReactNode {
           <path d="M-7,4 L7,4 L5,16 Q0,21 -5,16 Z" fill="#8a8f96" stroke="#5a5a52" />
         </g>
       );
+    default:
+      // Gli attrezzi delle attività quotidiane della 0.2.
+      return <AttrezzoQuotidiano a={a} />;
   }
 }
 

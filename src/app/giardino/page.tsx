@@ -7,13 +7,13 @@ import { fontModerna } from "@/components/fontModerna";
 import { azione } from "@/lib/albero/azioni";
 import { sblocco } from "@/lib/albero/collezione";
 import { vestiConRegali } from "@/lib/albero/regali";
-import { fasciaAdesso, giornataDi, indiceAdesso, voglia } from "@/lib/albero/giornata";
+import { faiAttivita, statoAllaFascia, statoDaDatabase, tracceDa } from "@/lib/albero/catene";
+import { adattaAlMeteo, FASCE_DI_GIORNO, fasciaAdesso, giornataDi, indiceAdesso, voglia, type FasciaDiGiorno } from "@/lib/albero/giornata";
 import { FRASI_ROUTINE, posaDelGiorno, risolviScena } from "@/lib/albero/scena";
 import { classifica, INFO_STRADE, isStrada, NOMI_TRATTI, TRATTI, type PunteggiStrade, type Tratti } from "@/lib/albero/strade";
 import { stadioDa, stagioneDa, type Cielo, type Meteo, type Stagione } from "@/lib/albero/tipi";
 import { meteoAttuale, meteoDiProva, oggiNelFuso } from "@/lib/meteo";
 import type { RecapMese } from "@/lib/motore/extra";
-import { isPremium } from "@/lib/piani";
 import { createClient, getUtente } from "@/lib/supabase/server";
 import { Buongiorno } from "./Buongiorno";
 import { Collezione, type PaginaStagione } from "./Collezione";
@@ -36,6 +36,7 @@ const SIMBOLI: Record<Cielo, string> = {
 
 const TIPI_LETTERA: Record<string, string> = {
   benvenuto: "Benvenuto",
+  settimanale: "Lettera della settimana",
   mensile: "Lettera del mese",
   "meta-mese": "Lettera di metà mese",
   momento: "Un momento importante",
@@ -131,7 +132,9 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
 
   // La giornata a fasce (docs/stanze-e-vita.md, sezione 3): tre attività per fascia,
   // a turno ogni 45 minuti e, durante la visita, ogni pochi minuti.
-  const palinsestoGrezzo = giornataDi({
+  // Con la memoria (catene.ts) la giornata è quella decisa dal motore notturno, adattata al
+  // meteo di adesso; gli alberi di prima della 0.2 la ricostruiscono dal seme.
+  const contestoGiornata = {
     seme: albero.id,
     giorno: albero.day_count,
     strada: albero.path,
@@ -139,21 +142,31 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
     azioneDelGiorno: albero.today_action,
     azioniRecenti: pagine.filter((x) => x.day_number < albero.day_count).map((x) => x.action),
     meteo,
-  });
+  };
+  const catene = statoDaDatabase(albero.memoria, albero.risorse);
+  const giornataSalvata = catene.memoria.oggi?.giorno === albero.day_count ? catene.memoria.oggi.p : null;
+  const palinsestoGrezzo = giornataSalvata ? adattaAlMeteo(giornataSalvata, contestoGiornata) : giornataDi(contestoGiornata);
+  // Le tracce nella scena a ogni fascia: le principali delle fasce prima hanno lasciato le loro;
+  // le alternative si vedono dopo la principale della loro fascia.
+  const tracceAlle = (f: FasciaDiGiorno, i: number) => {
+    const st = statoAllaFascia(catene, palinsestoGrezzo, albero.day_count, f);
+    const principale = palinsestoGrezzo[f][0];
+    return tracceDa(i > 0 && principale ? faiAttivita(st, principale, albero.day_count) : st);
+  };
+  const tracceDiSera = tracceAlle("sera", 1);
   const stessoCielo = (albero.last_weather as Meteo | null)?.cielo === meteo.cielo;
-  const inScena = (id: string): AttivitaInScena => ({
+  const inScena = (id: string, f: FasciaDiGiorno | "notte" = "notte", i = 0): AttivitaInScena => ({
     id,
     etichetta: azione(id).etichetta,
     posa: vestiConRegali(posaDelGiorno(id, meteo, albero.path), doni, meteo),
     voglia: voglia(id),
     // La frase dell'AI racconta il tempo del suo giorno: la si usa solo se il cielo è lo stesso.
     didascalia: id === albero.today_action && albero.today_caption && stessoCielo ? albero.today_caption : null,
+    tracce: f === "notte" ? tracceDiSera : tracceAlle(f, i),
   });
+  const perFascia = (f: FasciaDiGiorno) => palinsestoGrezzo[f].map((id, i) => inScena(id, f, i));
   const palinsesto: PalinsestoScena = {
-    mattina: palinsestoGrezzo.mattina.map(inScena),
-    giorno: palinsestoGrezzo.giorno.map(inScena),
-    pomeriggio: palinsestoGrezzo.pomeriggio.map(inScena),
-    sera: palinsestoGrezzo.sera.map(inScena),
+    ...(Object.fromEntries(FASCE_DI_GIORNO.map((f) => [f, perFascia(f)])) as Record<FasciaDiGiorno, AttivitaInScena[]>),
     notte: [{ ...inScena("dormire"), didascalia: FRASI_ROUTINE.notte.replace(/^([^:]+):/, `$1: ${albero.name}`) }],
   };
   const minutiLocali = oraLocale * 60 + adesso.getUTCMinutes();
@@ -226,9 +239,7 @@ export default async function Giardino({ searchParams }: PageProps<"/giardino">)
       <p className="gi-nota">
         {elencoLettere.length} {elencoLettere.length === 1 ? "lettera" : "lettere"}
         {nonLette > 0 ? `, ${nonLette} da aprire` : ""}.{" "}
-        {isPremium(albero.plan)
-          ? "Con il Premium ne arriva una ogni 15 giorni, più una nei momenti importanti."
-          : "Ne arriva una ogni 30 giorni, più una nei momenti importanti."}
+Ne arriva una ogni 7 giorni, con la cartolina della settimana, più una nei momenti importanti.
       </p>
       <ul className="mt-4 space-y-4">
         {/* Prima quelle da aprire, poi le lette */}

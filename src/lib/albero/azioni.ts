@@ -1,3 +1,4 @@
+import { QUOTIDIANE } from "./quotidiane";
 import type { Strada } from "./strade";
 import type { Braccio, Posa } from "./tipi";
 
@@ -34,7 +35,8 @@ const base: Posa = {
 
 const posa = (p: Partial<Posa>): Posa => ({ ...base, ...p });
 
-export const AZIONI: Azione[] = [
+/** Le 23 azioni della 0.1. */
+const DI_PARTENZA: Azione[] = [
   {
     id: "guardare-cielo",
     etichetta: "guarda il cielo",
@@ -311,6 +313,9 @@ export const AZIONI: Azione[] = [
     posa: posa({ occhi: "chiusi", bocca: "sorriso", sx: giu(-45), dx: tiene(18), oggetti: ["tazza"] }),
   },
 ];
+
+/** Tutte: quelle della 0.1 e le attività quotidiane della 0.2 (quotidiane.ts). */
+export const AZIONI: Azione[] = [...DI_PARTENZA, ...QUOTIDIANE];
 
 const PER_ID = new Map(AZIONI.map((a) => [a.id, a]));
 

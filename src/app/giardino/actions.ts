@@ -63,12 +63,12 @@ export async function azioneDemo(_prima: Esito, form: FormData): Promise<Esito> 
       revalidatePath("/giardino");
       return {
         ok: true,
-        messaggio: `Settimana ${s.numero} chiusa (giorni ${s.primo}–${s.ultimo}): la cartolina «${s.oggetto}» è partita per email.`,
+        messaggio: `Settimana ${s.numero} chiusa (giorni ${s.primo}–${s.ultimo}): la cartolina «${s.oggetto}»${s.lettera ? " e la lettera della settimana sono partite" : " è partita"} per email.`,
         link: { href: MAILPIT, testo: "Apri la casella di prova" },
       };
     }
     if (form.get("cosa") === "lettera") {
-      const l = await scriviEInviaLettera(albero.id, "mensile");
+      const l = await scriviEInviaLettera(albero.id, "settimanale");
       revalidatePath("/giardino");
       return { ok: true, messaggio: `${albero.name} ti ha scritto: «${l.subject}». La trovi qui sotto e nella casella di prova.` };
     }
@@ -83,10 +83,9 @@ export async function azioneDemo(_prima: Esito, form: FormData): Promise<Esito> 
     if (r.lettera) messaggio += " Ti ha scritto una lettera.";
     const nuovi = r.eventi.sbloccati.map((id) => sblocco(id)?.nome).filter(Boolean);
     if (nuovi.length) messaggio += ` Nella collezione: ${nuovi.join(", ")}.`;
-    if (r.eventi.letteraMetaMese) messaggio += " È arrivata la lettera di metà mese.";
-    if (r.eventi.mese) messaggio += ` Finito il mese ${r.eventi.mese.chiuso}: c'è la lettera del mese.`;
+    if (r.eventi.mese) messaggio += ` Finito il mese ${r.eventi.mese.chiuso}.`;
     if (r.eventi.settimana) {
-      messaggio += ` La cartolina della settimana ${r.eventi.settimana.numero} è partita per email.`;
+      messaggio += ` La cartolina della settimana ${r.eventi.settimana.numero}${r.eventi.settimana.lettera ? ", con la lettera," : ""} è partita per email.`;
       return { ok: true, messaggio, link: { href: MAILPIT, testo: "Apri la casella di prova" } };
     }
     return { ok: true, messaggio };

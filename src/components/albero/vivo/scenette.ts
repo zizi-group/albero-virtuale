@@ -19,6 +19,8 @@ export interface Palco {
   figura: Figura;
   /** Il suo posto (spostamento dal punto di partenza, se l'hai trascinato altrove). */
   casa?: number;
+  /** Quanto è stretto il prato delle tracce (vivo/tracce.tsx, stringiPrato): 1 sul computer. */
+  stringi?: number;
 }
 
 export type NomeScenetta = "sole" | "pioggia" | "freddo" | "passeggiata" | "notte" | "leggere" | "correre" | "generica";

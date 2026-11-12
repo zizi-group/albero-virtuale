@@ -2,6 +2,8 @@ import { createAdminClient } from "../supabase/admin";
 import type { Database, Json } from "../supabase/database.types";
 import { INFO_STRADE, isStrada, trattiCasuali, type PunteggiStrade, type Tratti } from "../albero/strade";
 import { azione } from "../albero/azioni";
+import { descriviCatene, statoDaDatabase } from "../albero/catene";
+import { pianificaGiornate } from "../albero/giornata";
 import { sblocco } from "../albero/collezione";
 import { regalo } from "../albero/regali";
 import { meteoAttuale, oggiNelFuso, previsioni, type Luogo } from "../meteo";
@@ -10,6 +12,7 @@ import { scriviBuongiorno, scriviRisposta, scriviTestoLettera, type TipoLettera 
 import {
   aggiungiGiorni,
   applicaEsiti,
+  conPalinsesto,
   preparaGiorni,
   viviGiornate,
   type Buongiorno,
@@ -188,9 +191,21 @@ export async function faiPassareGiorni(alberoId: string, n: number) {
   ctx.buongiorno = (risposte ?? []).map((r) => ({ giorno: r.day_number, domanda: r.question, risposta: r.answer ?? "" }));
   ctx.novita = (novita ?? []).map((u) => sblocco(u.item)?.nome).filter((n): n is string => !!n);
 
+  // Le giornate a fasce (giornata.ts, catene.ts): il codice le decide dalla memoria,
+  // l'AI sceglie tra quelle attività l'azione del giorno e la racconta.
+  const inizio = statoDaDatabase(riga.memoria, riga.risorse);
+  const fasce = giorni.map((g) => ({ giorno: g.giorno, meteo: g.meteo, umore: stato.umore }));
+  const bozza = pianificaGiornate(alberoId, stato.strada, inizio, fasce);
+  const giorniAI = giorni.map((g, i) => conPalinsesto(g, bozza.palinsesti[i]));
+  ctx.catene = descriviCatene(bozza.inizi[0]);
+  const fatti = bozza.inizi[0].memoria.registro.slice(-4);
+  if (fatti.length) ctx.catene += `
+Ultimi fatti dei suoi lavori: ${fatti.map((f) => `giorno ${f.giorno} ${f.testo}`).join("; ")}.`;
+
   const domani = prev.find((p) => p.data === aggiungiGiorni(stato.dataSemina, ultimoGiorno + 1));
-  const { esiti, buongiorno } = await viviGiornate(stato, giorni, ctx, { meteo: domani?.descrizione });
-  const { stato: nuovo, pagine, rivelata, momento } = applicaEsiti(stato, giorni, esiti);
+  const { esiti, buongiorno } = await viviGiornate(stato, giorniAI, ctx, { meteo: domani?.descrizione });
+  const { stato: nuovo, pagine, rivelata, momento } = applicaEsiti(stato, giorniAI, esiti);
+  const giornate = pianificaGiornate(alberoId, stato.strada, inizio, fasce, esiti.map((e) => e.azione));
   const ultima = pagine[pagine.length - 1];
 
   const { error: errDiario } = await db()
@@ -222,6 +237,8 @@ export async function faiPassareGiorni(alberoId: string, n: number) {
       today_action: ultima.azione,
       today_caption: ultima.didascalia,
       last_weather: json(ultima.meteo),
+      risorse: json(giornate.fine.risorse),
+      memoria: json(giornate.fine.memoria),
       updated_at: new Date().toISOString(),
     })
     .eq("id", alberoId);
@@ -322,12 +339,18 @@ async function giorniDallUltimaLettera(alberoId: string, tipo: TipoLettera, oggi
   return data?.[0] ? oggi - data[0].day_number : Infinity;
 }
 
-/** L'albero scrive una lettera, la salva e la spedisce per email. */
-export async function scriviEInviaLettera(alberoId: string, tipo: TipoLettera, motivo?: string) {
+const PAGINE_PER_LETTERA: Partial<Record<TipoLettera, number>> = { mensile: 30, "meta-mese": 15, settimanale: 7 };
+
+/**
+ * L'albero scrive una lettera, la salva e la spedisce per email. Con
+ * `spedisci: false` la salva soltanto: la lettera della settimana parte
+ * nella stessa email della cartolina (calendario.ts).
+ */
+export async function scriviEInviaLettera(alberoId: string, tipo: TipoLettera, motivo?: string, spedisci = true) {
   const { riga, stato } = await caricaStato(alberoId);
-  const ctx = await contesto(alberoId, tipo === "mensile" ? 30 : tipo === "meta-mese" ? 15 : 6);
+  const ctx = await contesto(alberoId, PAGINE_PER_LETTERA[tipo] ?? 6);
   const { oggetto, testo } = await scriviTestoLettera(stato, tipo, ctx, motivo);
-  return salvaEInviaLettera(riga, tipo, oggetto, testo);
+  return salvaEInviaLettera(riga, tipo, oggetto, testo, spedisci);
 }
 
 /** Salva una lettera già scritta e la spedisce per email (se l'email non parte, la lettera resta). */
@@ -336,6 +359,7 @@ export async function salvaEInviaLettera(
   tipo: TipoLettera | "regalo",
   oggetto: string,
   testo: string,
+  spedisci = true,
 ) {
   const { data: lettera, error } = await db()
     .from("letters")
@@ -343,6 +367,7 @@ export async function salvaEInviaLettera(
     .select("*")
     .single();
   if (error || !lettera) throw new Error(`Lettera non salvata: ${error?.message}`);
+  if (!spedisci) return lettera;
 
   const email = await emailDelProprietario(riga.owner_id);
   if (email) {

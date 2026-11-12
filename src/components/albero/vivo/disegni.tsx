@@ -372,4 +372,7 @@ export const PARTICELLE: Record<TipoParticella, { d: string; fill: string; strok
   stella: { d: "M0,-7 L1.6,-1.6 L7,0 L1.6,1.6 L0,7 L-1.6,1.6 L-7,0 L-1.6,-1.6Z", fill: "#f2c14e" },
   risata: { d: "M0,-5 L7,-8 M1,0 L9,0 M0,5 L7,8", fill: "none", stroke: INCHIOSTRO, sw: 1.8, opacita: 0.8 },
   ghianda: { d: "M-4,-1 Q-4,7 0,8 Q4,7 4,-1Z M-5,-1 Q0,-7 5,-1Z", fill: "#c08a3a", stroke: "#6b4a2b", sw: 0.8 },
+  scintilla: { d: "M0,-4 L1.2,-1.2 L4,0 L1.2,1.2 L0,4 L-1.2,1.2 L-4,0 L-1.2,-1.2Z", fill: "#ffb02e" },
+  succo: { d: "M0,-5 Q4.2,1 0,4.5 Q-4.2,1 0,-5Z", fill: "#8e3b6e" },
+  fumo: { d: "M-8,3 a4.5,4.5 0 0,1 1,-8 a6,6 0 0,1 10.5,-1 a4.5,4.5 0 0,1 4,8 Z", fill: "#9a968c", opacita: 0.55 },
 };

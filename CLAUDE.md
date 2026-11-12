@@ -47,14 +47,16 @@ Tutto in italiano: codice (nomi), testi, commit, report.
 | `npm run build` | Build di produzione |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Tipi delle route + `tsc` |
-| `npm run notte` | Motore notturno: un giorno per ogni albero, poi il calendario (collezione, cartolina della settimana, lettere, fine del mese) |
-| `npm run simula -- --giorni 7 [--lettera]` | Albero in memoria, senza database: per provare prompt e motore |
+| `npm run notte` | Motore notturno: un giorno per ogni albero, poi il calendario (collezione, cartolina e lettera della settimana, fine del mese) |
+| `npm run simula -- --giorni 7 [--lettera] [--senza-ai] [--meteo-finto]` | Albero in memoria, senza database: per provare prompt e motore. Stampa le giornate a fasce, le catene e il controllo delle ripetizioni; `--senza-ai` solo codice (gratis), `--meteo-finto` senza Open-Meteo |
 | `supabase gen types typescript --local > src/lib/supabase/database.types.ts` | Tipi dopo una migrazione |
 
 ## Dove sta cosa
 
 - `src/lib/albero/`: vocabolario visivo e crescita (`tipi.ts`), libreria delle
-  23 azioni con la compatibilità col meteo (`azioni.ts`), tratti e strade
+  azioni con la compatibilità col meteo (`azioni.ts`: le 23 della 0.1 più le
+  30 attività quotidiane della 0.2 di `quotidiane.ts`), risorse (`risorse.ts`)
+  e catene con la memoria dell'albero (`catene.ts`), tratti e strade
   (`strade.ts`), regole delle abitudini col meteo (`scena.ts`), catalogo dei
   regali e quando compaiono nella scena (`regali.ts`), collezione di trofei,
   oggetti, vestiti e stagioni con le sue regole (`collezione.ts`).
@@ -77,13 +79,36 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   `fermo.ts` lo trasforma in SVG per le immagini fatte sul server.
 - **Progetto 0.2** (Federico, 12/11/2026): `docs/stanze-e-vita.md`. Il gioco
   si fa in 2D (la stanza); il 3D servirà per la vista d'insieme «la tua
-  foresta» e per la foresta del club. Fase 1 fatta: il giardino è tornato al 2D.
+  foresta» e per la foresta del club. Fasi 1 e 2 fatte: giardino 2D, giornata
+  a fasce, lettera settimanale, risorse e catene, 30 attività quotidiane.
 - **La giornata a fasce** (`src/lib/albero/giornata.ts`): per mattina, giorno,
-  pomeriggio e sera 3 attività pesate (strada, umore, meteo) che non si
-  ripetono rispetto ai due giorni prima; l'azione dell'AI è la principale di
-  una fascia, salvo se l'ha già scelta di recente. Il giardino mostra quella
-  della fascia di adesso (a turno ogni 45 minuti) e durante la visita passa
-  alla successiva ogni 3,5 minuti. Deterministica: seme = id + giorno.
+  pomeriggio e sera 3 attività pesate (sezione 3.3: base quotidiana/di strada,
+  strada, umore, meteo, catena, novità). La prima è la principale: lascia le
+  tracce e manda avanti le catene; le altre sono libere, senza requisiti. La
+  decide il motore notturno dalla memoria (`pianificaGiornate`) e la salva in
+  `trees.memoria.oggi`; l'AI sceglie tra quelle attività l'azione del giorno e
+  la racconta. Regole contro la noia: la stessa principale nella stessa fascia
+  al massimo una volta ogni 3 giorni, una sola attività ferma, almeno una di
+  movimento. Il giardino mostra la fascia di adesso (a turno ogni 45 minuti,
+  durante la visita la successiva ogni 3,5 minuti), adattata al meteo vero
+  (`adattaAlMeteo`). Deterministica: seme = id + giorno. Senza memoria (alberi
+  di prima della 0.2) si ricostruisce dal seme come nella fase 1.
+- **Risorse e catene** (`risorse.ts`, `catene.ts`, `trees.risorse`,
+  `trees.memoria`): legna, bacche, semi, acqua… da 0 a 9, mai comprate. Le
+  catene del fuoco, dell'orto e della marmellata: il passo dopo pesa ×5, chi
+  raccoglie una risorsa che manca ×3, il primo passo ×2; dopo 10 giorni senza
+  un passo la catena si lascia perdere. La memoria è lo stato all'INIZIO del
+  giorno `oggi.giorno`: il giardino calcola le tracce di ogni fascia
+  (`statoAllaFascia`), il motore chiude la giornata prima di vivere la dopo
+  (`chiudiGiornata`). La pioggia spegne le braci e annaffia l'orto. I fatti
+  delle catene (`memoria.registro`) entrano nel prompt e nella lettera.
+- **Attività animate e tracce** (`vivo/attivita.ts`, `vivo/tracce.tsx`): ogni
+  attività quotidiana è una scena come quelle dei mestieri (posto, postura,
+  lavoro vero la prima volta, ciclo) montata con i gesti di `vivo/gesti.ts`;
+  tra un ciclo e l'altro gli intermezzi (`INTERMEZZI`). Le tracce (catasta,
+  falò con le braci, orto, vasetti, mucchio di foglie, scorte) si passano ad
+  `Albero` con `tracce`; sugli schermi stretti il prato si stringe attorno
+  all'albero (`stringiPrato`). Il motore riconosce l'attività dalla posa.
 - **Voci dell'albero** (`EVENTO_VOCE` in `vivo/AlberoVivo.tsx`): il giardino
   lo fa parlare (fumetto) o pensare (nuvoletta con le bollicine). La
   nuvoletta compare ogni 35-75 s (che cosa farà dopo, il suo umore).
@@ -104,8 +129,8 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   `email.ts` (SMTP di Mailpit), `ai.ts` (unico punto che chiama Claude),
   `extra.ts` (extra mensili del Premium: mesi dell'albero, regalo del mese,
   riepilogo, cambio pacchetto della demo), `calendario.ts` (quello che succede
-  dopo le giornate: `viviGiorni` = giornate + collezione, lettera di metà mese,
-  settimana, fine del mese).
+  dopo le giornate: `viviGiorni` = giornate + collezione, settimana con
+  cartolina e lettera, fine del mese).
 - `src/lib/cartolina/`: caratteri per `next/og` e la cartolina della settimana
   (`settimana.tsx`, PNG 1200×900 allegato all'email). Il paesaggio delle
   cartoline è `src/app/giardino/mese/[numero]/cartolina/scena.ts`.
@@ -125,9 +150,12 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   innocuo, nessuna strada delude, niente persone o marchi reali, politica,
   religione o contenuti inadatti. Si cambiano lì, non nei singoli prompt.
 - L'AI sceglie solo azioni della libreria: una nuova azione si aggiunge in
-  `azioni.ts` (posa) e, se serve, con oggetti o indumenti nuovi in
-  `vivo/disegni.tsx` e `vivo/figura.tsx`; la sua scenetta in
-  `vivo/scenette.ts` (senza scenetta usa la posa viva con gesti a sorpresa).
+  `azioni.ts` (posa) o, se è un'attività quotidiana, in `quotidiane.ts` (posa,
+  fasce, umori, voglia) con le sue risorse e catene in `catene.ts` (`EFFETTI`,
+  `CATENE`); la sua scenetta in `vivo/attivita.ts` (con i gesti di
+  `vivo/gesti.ts` e gli oggetti in `vivo/tracce.tsx`) o in `vivo/scenette.ts`
+  (senza scenetta usa la posa viva con gesti a sorpresa). La posa deve essere
+  diversa da tutte le altre: il pupazzo riconosce l'attività dalla posa.
 - **Extra del Premium** (regalo, riepilogo, cartolina): solo per i piani
   Premium; chi ha l'Albero vede un invito garbato, mai un blocco. Il mese
   dell'albero dura 30 giorni vissuti (`tree_months`); nella demo «Inizio mese»
@@ -138,11 +166,14 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   vivere). La scrive la giornata precedente nella stessa chiamata ad Haiku
   (`viviGiornate`), oppure `scriviBuongiorno` alla semina e con «Mattina» della
   demo. La risposta arriva all'AI come consiglio: l'albero decide da solo.
-- **Il calendario** (`calendario.ts`, dopo ogni giornata): ogni 7 giorni la
-  cartolina della settimana per email a tutti (`tree_weeks`, Haiku per nota e
-  momento migliore, immagine con `next/og` allegata nell'email); lettera ogni
-  30 giorni per tutti a fine mese, e per il Premium anche quella di metà mese
-  al 15° giorno (`meta-mese`): una ogni 15 giorni. Lettere sempre su Opus.
+- **Il calendario** (`calendario.ts`, dopo ogni giornata): ogni 7 giorni
+  vissuti, per tutti i piani, una sola email con la cartolina della settimana
+  (`tree_weeks`, Haiku per nota e momento migliore, immagine con `next/og`
+  allegata) e la lettera della settimana (Federico, 12/11/2026: `settimanale`,
+  su Opus, `tree_weeks.letter_id`), che racconta anche le catene e gli
+  sblocchi. Ha preso il posto della lettera di fine mese e di metà mese
+  (`mensile` e `meta-mese` restano solo per le lettere già scritte). A fine
+  mese il mese si chiude senza lettera. Lettere sempre su Opus.
 - **Collezione** (tutti i piani): trofei, oggetti, vestiti e album delle
   stagioni si sbloccano vivendo, mai comprando (`unlocks`). Le regole sono nel
   codice (`collezione.ts`), mai decise dall'AI; le novità entrano una volta nel

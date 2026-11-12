@@ -107,6 +107,31 @@ export const BASE_CANALI = {
   scoiattoloX: -200,
   scoiattoloSu: 0,
   scoiattoloDorme: 0,
+  // Le attività della 0.2 (vivo/attivita.ts) e le tracce nella scena (vivo/tracce.tsx).
+  /** Le fiamme del falò, 0-1 (si moltiplica per «costruzione» mentre lo accende). */
+  fuoco: 0,
+  pentola: 0,
+  ciotola: 0,
+  cespuglio: 0,
+  tinozza: 0,
+  /** Il filo del bucato con i panni stesi. */
+  filo: 0,
+  pozza: 0,
+  /** Il secchio posato per terra e quanta acqua c'è dentro. */
+  secchio: 0,
+  acqua: 0,
+  /** L'uccellino che arriva sul ramo, e dove sta (x del mondo). */
+  uccello: 0,
+  uccelloX: 260,
+  uccelloY: 40,
+  /** Le stelle unite col dito, 0-1. */
+  costellazione: 0,
+  /** Quello che l'attività aggiunge alle tracce (cresce con «costruzione»). */
+  legnaIn: 0,
+  mucchioIn: 0,
+  vasettiIn: 0,
+  /** Lo stadio dell'orto a cui porta l'attività (-1 = resta com'è). */
+  ortoA: -1,
 };
 
 export type Canale = keyof typeof BASE_CANALI;
@@ -206,6 +231,22 @@ export const ATTREZZI = [
   "penna",
   "livella",
   "pala",
+  // Attività della 0.2: disegnati in vivo/tracce.tsx.
+  "rastrello",
+  "scopa",
+  "zappa",
+  "secchio",
+  "cesto",
+  "bastoncini",
+  "spiedo",
+  "mestolo",
+  "sacchetto",
+  "vasetto",
+  "annaffiatoio",
+  "anello",
+  "sasso",
+  "carota",
+  "corda",
 ] as const;
 export type Attrezzo = (typeof ATTREZZI)[number];
 /** Il valore del canale attrSx/attrDx per un attrezzo (0 = mano vuota). */

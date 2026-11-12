@@ -1,12 +1,15 @@
 import type { Oggetto, Posa } from "@/lib/albero/tipi";
 import { EVENTO_MOVIMENTO, movimentoRidotto } from "@/components/Movimento";
 import { braccioLibero, canaliDaPosa, DISCRETI, DOVE, figuraDaPosa, NOMI_CANALI, TERRA, type Canali, type Figura, type Lato } from "./canali";
-import type { Clip, OpzioniParticella, Regia, TipoParticella } from "./copione";
+import { Copione, type Clip, type OpzioniParticella, type Regia, type TipoParticella } from "./copione";
 import { PARTICELLE } from "./disegni";
 import { aMondo, fotogramma, statoIniziale, type Attributi, type StatoVivo } from "./fotogramma";
 import { Repertorio, stradaDa, umoreDa } from "./frasi";
 import * as I from "./interazioni";
-import { SCENETTE, scegliScenetta, type NomeScenetta, type Palco } from "./scenette";
+import { azioneDaPosa, SCENETTE, scegliScenetta, type NomeScenetta, type Palco } from "./scenette";
+import { intermezzo, scenaDellAttivita } from "./attivita";
+import { stringiPrato, type StatoScena } from "./tracce";
+import { alzati, cammina } from "./gesti";
 import { baseAlLavoro, canaliDelMestiere, ciclo, entrata, scenaDelMestiere, statoLavoro, type ScenaLavoro, type StatoMestiere } from "./mestiere";
 
 // Il motore dell'albero vivo: un orologio unico per tutti gli alberi della pagina,
@@ -100,6 +103,8 @@ export interface OpzioniMotore {
   onCiclo?: () => void;
   /** Il mestiere: arredi e cosa fa adesso (vivo/mestiere.ts). */
   mestiere?: StatoMestiere | null;
+  /** Le tracce nella scena (vivo/tracce.tsx): con queste le attività quotidiane hanno i loro oggetti. */
+  scena?: StatoScena | null;
 }
 
 interface Particella {
@@ -173,6 +178,11 @@ export class Motore implements Regia {
   private lavoro: { id: string; scena: ScenaLavoro } | null = null;
   /** È già al suo posto di lavoro (il prossimo giro è il ciclo, non l'arrivo). */
   private alPosto = false;
+  /** Il lavoro è un'attività quotidiana (non un mestiere): tra un ciclo e l'altro, gli intermezzi. */
+  private quotidiana = false;
+  private dopoIntermezzo = true;
+  /** La posa di adesso (quella della pagina). */
+  private posa: Posa;
   private figura: Figura;
   private scenetta: NomeScenetta;
   private chiavePosa: string;
@@ -220,8 +230,10 @@ export class Motore implements Regia {
     this.o = o;
     this.mestiere = o.mestiere ?? null;
     this.chiaveMestiere = JSON.stringify(this.mestiere);
-    this.lavoro = scenaDelMestiere(this.mestiere);
     this.s.lavoro = this.mestiere ? statoLavoro(this.mestiere) : null;
+    this.s.scena = o.scena ?? null;
+    this.posa = o.posa;
+    this.lavoro = this.scegliLavoro(o.posa);
     this.basePosa = { ...canaliDaPosa(o.posa), ...canaliDelMestiere(this.mestiere) };
     this.base = this.basePosa;
     this.figura = figuraDaPosa(o.posa);
@@ -352,6 +364,8 @@ export class Motore implements Regia {
     const p1 = new DOMPoint(r0.left, r0.top).matrixTransform(inv);
     const p2 = new DOMPoint(r0.right, r0.bottom).matrixTransform(inv);
     this.limiti = { sx: Math.min(p1.x, p2.x), dx: Math.max(p1.x, p2.x), su: Math.min(p1.y, p2.y), giu: Math.max(p1.y, p2.y) };
+    // Il prato delle tracce si stringe sugli schermi stretti (a passi, per non ridisegnare a ogni pixel).
+    this.s.stringi = Math.round(stringiPrato(this.limiti.sx, this.limiti.dx) * 20) / 20;
     this.ctmInv = inv;
     this.ctmSporco = false;
   }
@@ -385,13 +399,21 @@ export class Motore implements Regia {
       spazioSx: lim(120 + this.casa - margine - this.limiti.sx, 0, 170),
       figura: this.figura,
       casa: this.casa,
+      stringi: this.s.stringi,
     };
+  }
+
+  /** Il mestiere, se c'è; altrimenti l'attività quotidiana della posa, se ha una scenetta sua. */
+  private scegliLavoro(posa: Posa): { id: string; scena: ScenaLavoro } | null {
+    const m = scenaDelMestiere(this.mestiere);
+    this.quotidiana = !m;
+    return m ?? (this.s.scena ? scenaDellAttivita(azioneDaPosa(posa)) : null);
   }
 
   private nuovaScenetta(): Clip {
     this.clipScenetta = true;
     if (this.lavoro) {
-      // Il mestiere: la prima volta va al suo posto (e fa il lavoro del cantiere), poi ripete il ciclo.
+      // Il mestiere o l'attività: la prima volta va al suo posto (e fa il lavoro vero), poi ripete il ciclo.
       const p = this.palco();
       const al = baseAlLavoro(this.lavoro.scena, this.basePosa, p);
       if (!this.alPosto) {
@@ -400,10 +422,22 @@ export class Motore implements Regia {
         return entrata(this.lavoro.scena, { ...this.basePosa, x: 0 }, p);
       }
       this.base = al;
+      // Tra un ciclo e l'altro, ogni tanto, un intermezzo breve (docs/stanze-e-vita.md, 5.5).
+      if (this.quotidiana && !this.dopoIntermezzo && this.rnd() < 0.3) {
+        this.dopoIntermezzo = true;
+        const c = new Copione(al);
+        intermezzo(this.lavoro.scena, c, p, al);
+        return c.fine(0.4);
+      }
+      this.dopoIntermezzo = false;
       return ciclo(this.lavoro.scena, al, p);
     }
     this.base = this.basePosa;
     return SCENETTE[this.scenetta](this.base, this.palco());
+  }
+
+  pensa(testo: string, durata = 3.4) {
+    this.fumetto(testo, durata, true);
   }
 
   frase(gruppo: string): string {
@@ -498,18 +532,46 @@ export class Motore implements Regia {
     const chiave = JSON.stringify(posa);
     if (chiave === this.chiavePosa) return;
     this.chiavePosa = chiave;
+    this.posa = posa;
     const nuova = canaliDaPosa(posa);
     this.figura = figuraDaPosa(posa);
     this.scenetta = scegliScenetta(posa);
     this.repertorio.aggiorna(stradaDa(this.figura.indossa), umoreDa(posa, this.scenetta));
     this.basePosa = { ...nuova, ...canaliDelMestiere(null) };
+    // Un'attività quotidiana nuova: ci va camminando, come per un mestiere.
+    const prima = this.lavoro?.id ?? null;
+    this.lavoro = this.scegliLavoro(posa);
+    const cambiata = this.quotidiana && (this.lavoro?.id ?? null) !== prima;
+    if (cambiata) this.alPosto = false;
     this.base = this.lavoro ? baseAlLavoro(this.lavoro.scena, this.basePosa, this.palco()) : this.basePosa;
     this.emettitori = {};
     if (this.aria) return;
     const foto = { ...(this.ov ? this.vBase : this.v) };
-    this.clip = I.cambio(foto, this.base, this.palco());
+    if (cambiata && this.lavoro) {
+      this.alPosto = true;
+      this.clip = entrata(this.lavoro.scena, foto, this.palco());
+    } else if (Math.abs(foto.x - this.base.x) > 4) this.clip = this.aPiedi(foto, this.base);
+    else this.clip = I.cambio(foto, this.base, this.palco());
     this.clipT = 0;
     this.clipScenetta = false;
+  }
+
+  /** Torna a piedi alla posa nuova (dopo un'attività lontana da casa), senza scivolare. */
+  private aPiedi(foto: Canali, base: Canali): Clip {
+    const p = this.palco();
+    const c = new Copione(foto);
+    c.vai(0.01, { attrSx: 0, attrDx: 0 }, "scatto");
+    if (foto.seduto > 0.5) alzati(c, p);
+    cammina(c, p, base.x, 0);
+    const bersagli: Partial<Canali> = {};
+    for (const k of NOMI_CANALI) if (!DISCRETI.has(k) && k !== "x" && Math.abs(c.valoreA(k) - base[k]) > 1e-3) bersagli[k] = base[k];
+    c.vai(0.5, bersagli);
+    return c.chiudi();
+  }
+
+  /** Le tracce nella scena cambiano (la pagina passa all'attività dopo, o alla fascia dopo). */
+  impostaScena(scena: StatoScena | null) {
+    this.s.scena = scena;
   }
 
   /** Cambia il mestiere o quello che sta facendo: ci va camminando dal punto in cui è. */
@@ -518,8 +580,8 @@ export class Motore implements Regia {
     if (chiave === this.chiaveMestiere) return;
     this.chiaveMestiere = chiave;
     this.mestiere = m;
-    this.lavoro = scenaDelMestiere(m);
     this.s.lavoro = m ? statoLavoro(m) : null;
+    this.lavoro = this.scegliLavoro(this.posa);
     this.alPosto = false;
     if (this.aria) return;
     const foto = { ...(this.ov ? this.vBase : this.v), ...canaliDelMestiere(m) };

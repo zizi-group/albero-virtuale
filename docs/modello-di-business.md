@@ -26,7 +26,7 @@ preventivi dell'albero vero e degli oggetti fisici.
 | Azioni di ogni albero | tutte quelle della libreria | tutte | tutte |
 | Azioni di gruppo | — | 10 | 10 + 10 di foresta |
 | Forme di gruppo | — | famiglia, impresa, banda del bosco | tutte, più la foresta con nome e insegna |
-| Lettere all'anno | 12 | 24, anche di gruppo | 24 + lettere della foresta |
+| Lettere | una a settimana, con la cartolina (Federico, 12/11/2026) | una a settimana, anche di gruppo | una a settimana + lettere della foresta |
 | Libro | PDF | PDF + diario stampato | PDF + libro della foresta rilegato (un vero libricino) |
 | Extra mensili (regalo, riepilogo, cartolina) | — | sì | sì |
 | A casa | tessera | tessere + adesivi + miniatura | tessere + adesivi dei 7 alberi + miniatura del tuo albero preferito (materiale riciclato) + maglietta con il tuo albero + certificato con la mappa del boschetto vero |
@@ -197,6 +197,15 @@ soltanto. I soldi non comprano posizioni.
 
   Il margine del Premium scende quindi di circa 2 € l'anno, più voce e
   WhatsApp. Da ricalcolare quando ci sono i preventivi.
+- **Lettera settimanale (Federico, 12/11/2026): la stima dei costi AI va
+  rifatta.** Una lettera ogni 7 giorni vissuti per tutti i piani, su Opus,
+  nella stessa email della cartolina, al posto di quella di fine mese e di
+  metà mese: da 1-2 a circa 4 lettere al mese per albero, quindi la voce
+  «lettere» dell'AI cresce di 2-4 volte. La riga AI della tabella qui sopra
+  non ne tiene conto: il costo vero si misura con le prime settimane della
+  demo (nessuna cifra nuova finché non c'è la misura). Da decidere per
+  Famiglia e Foresta: una lettera a settimana per ogni albero o una sola per
+  il gruppo.
 
 ## Proiezione del primo anno
 

@@ -284,3 +284,24 @@ persone o marchi reali.
 
 Le keyframe `l-*` di `globals.css` non servono più all'albero; la `Scena` usa
 ancora quelle del cielo (nuvole, pioggia, neve, stelle, lampo).
+
+## Le attività quotidiane della 0.2 (fase 2, 12/11/2026)
+
+Le 30 attività quotidiane di `src/lib/albero/quotidiane.ts` hanno ognuna la
+sua scena in `vivo/attivita.ts`, costruita come quelle dei mestieri: un posto
+nel prato, una postura, a volte un lavoro vero la prima volta (il fuoco che si
+accende, l'aiuola che si zappa, i rami che vanno sulla catasta: il canale
+`costruzione` va da 0 a 1) e un ciclo con varianti. I mattoncini sono i gesti
+di `vivo/gesti.ts` (sezione «Gesti della 0.2»); gli oggetti e le tracce nel
+prato sono in `vivo/tracce.tsx`, con i loro canali in `vivo/canali.ts` (fuoco,
+pentola, cespuglio, uccellino, stelle, tracce che crescono). Tra un ciclo e
+l'altro, 3 volte su 10, un intermezzo breve (`INTERMEZZI`: beve, si
+stiracchia, sbadiglia, si gratta, sorride a un oggetto, sistema qualcosa,
+saluta lo scoiattolo, starnutisce, si siede, pensa nella nuvoletta).
+
+Il motore riconosce l'attività dalla posa (`azioneDaPosa`) e la recita solo se
+la pagina passa le tracce (`tracce` su `Albero`) o se l'attività ha bisogno dei
+suoi oggetti. Col movimento ridotto niente salti né scosse: corre camminando,
+salta alzandosi sulle punte. Sugli schermi stretti il prato si stringe attorno
+all'albero (`stringiPrato`): gli oggetti si avvicinano e si rimpiccioliscono,
+l'albero no.

@@ -1,5 +1,6 @@
 import { ANCA, BOCCA_Y, OCCHIO, OSSA, SPALLA, TERRA, type Canali, type Figura, type Lato } from "./canali";
 import { fotogrammaArredi, fotogrammaAttrezzi, type StatoLavoro } from "./arredi";
+import { fotogrammaScena, type StatoScena } from "./tracce";
 import { SCHIUMA } from "./disegni";
 
 // Da canali a attributi SVG. La stessa funzione disegna la posa ferma sul server
@@ -30,6 +31,10 @@ export interface StatoVivo {
   ridotto: boolean;
   /** Il mestiere: arredi nel prato e attrezzi in mano (null = niente mestiere). */
   lavoro: StatoLavoro | null;
+  /** Le tracce nella scena e gli oggetti delle attività quotidiane (null = niente). */
+  scena: StatoScena | null;
+  /** Quanto è stretto il prato delle tracce (1 sul computer, meno sul telefono: vivo/tracce.tsx). */
+  stringi: number;
 }
 
 export function statoIniziale(): StatoVivo {
@@ -51,6 +56,8 @@ export function statoIniziale(): StatoVivo {
     guardaW: 0,
     ridotto: false,
     lavoro: null,
+    scena: null,
+    stringi: 1,
   };
 }
 
@@ -327,13 +334,12 @@ export function fotogramma(v: Canali, f: Figura, s: StatoVivo): Attributi {
     // Non è un nodo: la posizione della mano, per far partire vapore e gocce dagli oggetti.
     A[`_mano${L}`] = { x: `${hx}`, y: `${hy}` };
     // Gli attrezzi del mestiere stanno fuori dal corpo (sopra gli arredi): stessa mano, trasformazioni composte.
-    if (s.lavoro) A[`attr${L}`] = { transform: `${A.corpo.transform} ${A.busto.transform} translate(${n(hx)} ${n(hy)}) rotate(${n(v[`${lato}Ogg`])})` };
+    if (s.lavoro || s.scena) A[`attr${L}`] = { transform: `${A.corpo.transform} ${A.busto.transform} translate(${n(hx)} ${n(hy)}) rotate(${n(v[`${lato}Ogg`])})` };
   }
 
-  if (s.lavoro) {
-    fotogrammaArredi(v, s.lavoro, A, t);
-    fotogrammaAttrezzi(v, A);
-  }
+  if (s.lavoro) fotogrammaArredi(v, s.lavoro, A, t);
+  if (s.scena) fotogrammaScena(v, s.scena, A, t, s.stringi);
+  if (s.lavoro || s.scena) fotogrammaAttrezzi(v, A);
 
   return A;
 }

@@ -151,14 +151,14 @@ isOneToOne: false
                   ]
                 },"tree_weeks": {
                   Row: {
-                    "best_day": number,"caption": string,"created_at": string,"emailed_at": string | null,"first_day": number,"id": string,"last_day": number,"note": string,"number": number,"subject": string,"tree_id": string
+                    "best_day": number,"caption": string,"created_at": string,"emailed_at": string | null,"first_day": number,"id": string,"last_day": number,"letter_id": string | null,"note": string,"number": number,"subject": string,"tree_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "best_day": number,"caption": string,"created_at"?: string,"emailed_at"?: string | null,"first_day": number,"id"?: string,"last_day": number,"note": string,"number": number,"subject": string,"tree_id": string
+                    "best_day": number,"caption": string,"created_at"?: string,"emailed_at"?: string | null,"first_day": number,"id"?: string,"last_day": number,"letter_id"?: string | null,"note": string,"number": number,"subject": string,"tree_id": string
                   }
                   Update: {
-                    "best_day"?: number,"caption"?: string,"created_at"?: string,"emailed_at"?: string | null,"first_day"?: number,"id"?: string,"last_day"?: number,"note"?: string,"number"?: number,"subject"?: string,"tree_id"?: string
+                    "best_day"?: number,"caption"?: string,"created_at"?: string,"emailed_at"?: string | null,"first_day"?: number,"id"?: string,"last_day"?: number,"letter_id"?: string | null,"note"?: string,"number"?: number,"subject"?: string,"tree_id"?: string
                   }
                   Relationships: [
                     {
@@ -171,14 +171,14 @@ isOneToOne: false
                   ]
                 },"trees": {
                   Row: {
-                    "biography": NonNullable<Json>,"city": string,"created_at": string,"day_count": number,"id": string,"last_weather": Json | null,"latitude": number,"longitude": number,"mood": string,"name": string,"owner_id": string,"owner_name": string | null,"path": string | null,"path_scores": NonNullable<Json>,"plan": string,"planted_at": string,"timezone": string,"today_action": string,"today_caption": string | null,"traits": NonNullable<Json>,"updated_at": string
+                    "biography": NonNullable<Json>,"city": string,"created_at": string,"day_count": number,"id": string,"last_weather": Json | null,"latitude": number,"longitude": number,"memoria": NonNullable<Json>,"mood": string,"name": string,"owner_id": string,"owner_name": string | null,"path": string | null,"path_scores": NonNullable<Json>,"plan": string,"planted_at": string,"risorse": NonNullable<Json>,"timezone": string,"today_action": string,"today_caption": string | null,"traits": NonNullable<Json>,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "biography"?: NonNullable<Json>,"city": string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude": number,"longitude": number,"mood"?: string,"name": string,"owner_id": string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits": NonNullable<Json>,"updated_at"?: string
+                    "biography"?: NonNullable<Json>,"city": string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude": number,"longitude": number,"memoria"?: NonNullable<Json>,"mood"?: string,"name": string,"owner_id": string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"risorse"?: NonNullable<Json>,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits": NonNullable<Json>,"updated_at"?: string
                   }
                   Update: {
-                    "biography"?: NonNullable<Json>,"city"?: string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude"?: number,"longitude"?: number,"mood"?: string,"name"?: string,"owner_id"?: string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits"?: NonNullable<Json>,"updated_at"?: string
+                    "biography"?: NonNullable<Json>,"city"?: string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude"?: number,"longitude"?: number,"memoria"?: NonNullable<Json>,"mood"?: string,"name"?: string,"owner_id"?: string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"risorse"?: NonNullable<Json>,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits"?: NonNullable<Json>,"updated_at"?: string
                   }
                   Relationships: [
                     

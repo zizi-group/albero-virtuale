@@ -37,6 +37,8 @@ interface Chiave {
 export interface Regia {
   emetti(tipo: TipoParticella, x: number, y: number, opzioni?: OpzioniParticella): void;
   fumetto(testo: string, durata?: number): void;
+  /** La nuvoletta del pensiero (a puntini), se il motore la sa disegnare. */
+  pensa?(testo: string, durata?: number): void;
   /** Frase pescata dal repertorio (per umore, strada, situazione). */
   frase(gruppo: string): string;
   readonly ridotto: boolean;
@@ -55,7 +57,10 @@ export type TipoParticella =
   | "risata"
   | "ghianda"
   | "vapore"
-  | "sudore";
+  | "sudore"
+  | "scintilla"
+  | "succo"
+  | "fumo";
 
 export interface OpzioniParticella {
   vx?: number;

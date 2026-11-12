@@ -46,8 +46,8 @@ const PACCHETTI: Pacchetto[] = [
         voci: [
           "Un'azione e una pagina di diario al giorno",
           "Il buongiorno: una domanda da un tocco",
-          "La cartolina della settimana, via email",
-          "12 lettere all'anno, più una nei momenti importanti",
+          "La cartolina e la lettera della settimana, via email",
+          "Più una lettera nei momenti importanti",
         ],
       },
       {
@@ -71,7 +71,7 @@ const PACCHETTI: Pacchetto[] = [
         voci: [
           "3 alberi digitali che si conoscono, ognuno con la sua strada",
           "Gruppo a scelta: famiglia, impresa o banda del bosco di Don Ghianda",
-          "24 lettere all'anno, anche di gruppo",
+          "Una lettera a settimana, anche di gruppo",
         ],
       },
       {
@@ -104,7 +104,7 @@ const PACCHETTI: Pacchetto[] = [
     gruppi: [
       {
         titolo: "Tutto quello della Famiglia, per 7 alberi, e in più",
-        voci: ["7 alberi digitali: una foresta con nome e insegna", "Tutti i gruppi insieme", "Le lettere della foresta, oltre alle 24"],
+        voci: ["7 alberi digitali: una foresta con nome e insegna", "Tutti i gruppi insieme", "Le lettere della foresta, oltre a quelle della settimana"],
       },
       {
         titolo: "10 azioni di gruppo + 10 di foresta",

@@ -1,28 +1,27 @@
 import { azione } from "../albero/azioni";
-import { nuoviSblocchi, type DatiCollezione, type PaginaCollezione } from "../albero/collezione";
+import { fattiDellaSettimana, leggiMemoria } from "../albero/catene";
+import { nuoviSblocchi, sblocco, type DatiCollezione, type PaginaCollezione } from "../albero/collezione";
 import type { Cielo } from "../albero/tipi";
 import { pngSettimana } from "../cartolina/settimana";
 import type { MeteoGiorno } from "../meteo";
-import { isPremium } from "../piani";
 import type { Database } from "../supabase/database.types";
 import { inviaNotaSettimana } from "./email";
-import { apriNuovoMese, meseCorrente, meseFinito, regaliInUso, scenaDelGiorno, stradaAlGiorno, type RigaMese } from "./extra";
+import { apriNuovoMese, meseCorrente, meseFinito, regaliInUso, scenaDelGiorno, stradaAlGiorno } from "./extra";
 import { caricaStato, db, emailDelProprietario, faiPassareGiorni, scriviEInviaLettera } from "./servizio";
 import { scriviNotaSettimana } from "./scritture";
 
 // Il calendario dell'albero: quello che succede dopo le giornate vissute.
 // - Collezione: trofei, oggetti, vestiti e stagioni (regole in albero/collezione.ts).
-// - Lettere: ogni 30 giorni per tutti (fine del mese), ogni 15 per il Premium
-//   (in più quella di metà mese). Sempre su Opus.
-// - Settimana: ogni 7 giorni una nota breve per email con la cartolina del
-//   momento migliore (modello piccolo), per tutti i piani.
+// - Settimana: ogni 7 giorni vissuti, per tutti i piani, una sola email con la
+//   cartolina del momento migliore (nota e momento sul modello piccolo) e la
+//   lettera della settimana (Opus). La lettera settimanale (Federico,
+//   12/11/2026) prende il posto di quella di fine mese e di metà mese.
+// - Fine del mese: il mese si chiude (extra del Premium), senza lettera.
 // Lo usano il motore notturno e gli strumenti della demo.
 
 type RigaDiario = Database["public"]["Tables"]["diary_entries"]["Row"];
 
 export const GIORNI_DELLA_SETTIMANA = 7;
-/** Il giorno del mese in cui il Premium riceve la lettera di metà mese (con quella di fine mese: una ogni 15 giorni). */
-export const GIORNO_META_MESE = 15;
 
 /** Fa passare i giorni e poi fa scattare quello che il calendario prevede. */
 export async function viviGiorni(alberoId: string, n: number) {
@@ -34,57 +33,32 @@ export async function viviGiorni(alberoId: string, n: number) {
 
 export interface EventiDelCalendario {
   sbloccati: string[];
-  letteraMetaMese: string | null;
-  settimana: { numero: number; oggetto: string } | null;
-  mese: { chiuso: number; titolo: string; lettera: string | null } | null;
+  settimana: { numero: number; oggetto: string; lettera: string | null } | null;
+  mese: { chiuso: number; titolo: string } | null;
 }
 
 /** Quello che succede dopo aver vissuto i giorni da `da` ad `a` (compresi). */
 export async function eventiDelCalendario(alberoId: string, da: number, a: number): Promise<EventiDelCalendario> {
-  const eventi: EventiDelCalendario = { sbloccati: [], letteraMetaMese: null, settimana: null, mese: null };
+  void da;
+  const eventi: EventiDelCalendario = { sbloccati: [], settimana: null, mese: null };
   eventi.sbloccati = await controllaSblocchi(alberoId);
 
-  const { riga } = await caricaStato(alberoId);
   const mese = await meseCorrente(alberoId);
-
-  if (await serveLetteraMetaMese(alberoId, riga.plan, mese, da, a)) {
-    eventi.letteraMetaMese = (await scriviEInviaLettera(alberoId, "meta-mese")).id;
-  }
 
   const inizioSettimana = await primoGiornoDellaSettimana(alberoId);
   if (a - inizioSettimana + 1 >= GIORNI_DELLA_SETTIMANA) {
     try {
       eventi.settimana = await chiudiSettimana(alberoId);
     } catch (e) {
-      console.error("[linfa] cartolina della settimana non spedita:", e);
+      console.error("[linfa] settimana non chiusa:", e);
     }
   }
 
   if (meseFinito(mese, a)) {
     const m = await apriNuovoMese(alberoId);
-    const lettera = await scriviEInviaLettera(alberoId, "mensile");
-    eventi.mese = { chiuso: m.chiuso, titolo: m.titolo, lettera: lettera.id };
+    eventi.mese = { chiuso: m.chiuso, titolo: m.titolo };
   }
   return eventi;
-}
-
-/** Premium: la lettera di metà mese, se il 15° giorno del mese cade fra quelli appena vissuti e non è già partita. */
-async function serveLetteraMetaMese(alberoId: string, piano: string, mese: RigaMese, da: number, a: number) {
-  const giorno = giornoMetaMese(piano, mese);
-  if (giorno === null || giorno < da || giorno > a) return false;
-  const { data } = await db()
-    .from("letters")
-    .select("id")
-    .eq("tree_id", alberoId)
-    .eq("kind", "meta-mese")
-    .gte("day_number", mese.first_day)
-    .limit(1);
-  return !data?.length;
-}
-
-/** Il giorno della lettera di metà mese: solo per il Premium (l'Albero ha la lettera ogni 30 giorni). */
-export function giornoMetaMese(piano: string, mese: Pick<RigaMese, "first_day">): number | null {
-  return isPremium(piano) ? mese.first_day + GIORNO_META_MESE - 1 : null;
 }
 
 // ——— La collezione ———
@@ -145,7 +119,8 @@ export async function primoGiornoDellaSettimana(alberoId: string): Promise<numbe
 
 /**
  * Chiude la settimana: l'albero sceglie il momento migliore e scrive due-tre
- * righe (modello piccolo), la cartolina si disegna e parte per email.
+ * righe (modello piccolo), la cartolina si disegna, l'albero scrive la lettera
+ * della settimana (Opus) e tutto parte nella stessa email.
  */
 export async function chiudiSettimana(alberoId: string) {
   const { riga, stato } = await caricaStato(alberoId);
@@ -219,12 +194,41 @@ export async function chiudiSettimana(alberoId: string) {
     console.error("[linfa] cartolina della settimana non disegnata:", e);
   }
 
+  // La lettera della settimana (Opus): se non si riesce a scriverla, la cartolina parte lo stesso.
+  let lettera: { id: string; subject: string; body: string } | null = null;
+  try {
+    const { data: sblocchi } = await db()
+      .from("unlocks")
+      .select("item")
+      .eq("tree_id", alberoId)
+      .gte("day_number", primo)
+      .lte("day_number", riga.day_count);
+    const fatti = [
+      ...fattiDellaSettimana(leggiMemoria(riga.memoria), primo, riga.day_count),
+      ...(sblocchi ?? []).map((u) => sblocco(u.item)?.nome).filter((n): n is string => !!n).map((n) => `nella collezione è entrato «${n}»`),
+    ];
+    lettera = await scriviEInviaLettera(alberoId, "settimanale", fatti.join("; ") || undefined, false);
+    await db().from("tree_weeks").update({ letter_id: lettera.id }).eq("id", settimana.id);
+  } catch (e) {
+    console.error("[linfa] lettera della settimana non scritta:", e);
+  }
+
   const email = await emailDelProprietario(riga.owner_id);
   if (email) {
-    await inviaNotaSettimana({ a: email, nomeAlbero: riga.name, oggetto, nota, numero, immagine });
-    await db().from("tree_weeks").update({ emailed_at: new Date().toISOString() }).eq("id", settimana.id);
+    const ora = new Date().toISOString();
+    await inviaNotaSettimana({
+      a: email,
+      nomeAlbero: riga.name,
+      oggetto: lettera?.subject ?? oggetto,
+      nota,
+      numero,
+      immagine,
+      lettera: lettera ? { testo: lettera.body, id: lettera.id } : null,
+    });
+    await db().from("tree_weeks").update({ emailed_at: ora }).eq("id", settimana.id);
+    if (lettera) await db().from("letters").update({ emailed_at: ora }).eq("id", lettera.id);
   }
-  return { numero, oggetto, primo, ultimo: riga.day_count, giorni: pagine.length, immagine: !!immagine };
+  return { numero, oggetto, primo, ultimo: riga.day_count, giorni: pagine.length, immagine: !!immagine, lettera: lettera?.id ?? null };
 }
 
 /** Senza l'AI: il giorno importante più recente, o la pagina più lunga. */

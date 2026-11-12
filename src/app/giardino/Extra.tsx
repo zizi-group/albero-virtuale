@@ -58,8 +58,7 @@ export function ExtraDelMese({ nome, piano, mese, regaloDelMese, ultimoChiuso }:
             </li>
           </ul>
           <p className="mt-6 max-w-2xl leading-snug">
-            Ti scrive una lettera ogni 15 giorni invece di 30, e a fine anno arriva il diario stampato, da tenere in
-            mano. Premium annuale:{" "}
+            A fine anno arriva il diario stampato, da tenere in mano. Premium annuale:{" "}
             <b className="font-titolo text-lg font-normal">{alMese(PREMIUM_ANNUALE.netto)} + IVA al mese</b>.{" "}
             <span className="text-matita">
               Si paga {PREMIUM_ANNUALE.netto} + IVA all&apos;anno ({PREMIUM_ANNUALE.pubblico} IVA inclusa).

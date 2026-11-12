@@ -2,13 +2,17 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { Posa, Stadio, Stagione } from "@/lib/albero/tipi";
-import { ArrediDavanti, ArrediDietro, fotogrammaArredi } from "./arredi";
+import type { TracceScena } from "@/lib/albero/catene";
+import { ArrediDavanti, ArrediDietro, AttrezziMano, fotogrammaArredi } from "./arredi";
+import { scenaDellAttivita } from "./attivita";
 import { canaliDaPosa } from "./canali";
 import { PALETTE } from "./disegni";
 import { FiguraAlbero, primoFotogramma } from "./figura";
 import type { Attributi } from "./fotogramma";
 import { canaliDelMestiere, statoLavoro, type StatoMestiere } from "./mestiere";
 import { Motore, N_PARTICELLE } from "./motore";
+import { azioneDaPosa } from "./scenette";
+import { fotogrammaScena, TracceDavanti, TracceDietro, type StatoScena } from "./tracce";
 import "./vivo.css";
 
 // L'albero vivo: un pupazzo snodato in SVG. Il server disegna la posa ferma
@@ -41,6 +45,12 @@ export interface AlberoVivoProps {
   giorni?: number;
   /** Il mestiere: arredi costruiti e cosa fa adesso (vivo/mestiere.ts). Senza, fa quello che dice la posa. */
   mestiere?: StatoMestiere | null;
+  /**
+   * Le tracce nella scena (catene.ts): catasta, falò, orto, vasetti, scorte.
+   * Con le tracce le attività quotidiane vanno al loro posto e usano i loro
+   * oggetti; senza, si disegnano solo per le attività che ne hanno bisogno.
+   */
+  tracce?: TracceScena | null;
 }
 
 /**
@@ -90,6 +100,7 @@ export function AlberoVivo({
   onCiclo,
   giorni,
   mestiere = null,
+  tracce,
 }: AlberoVivoProps) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const radice = useRef<SVGGElement>(null);
@@ -103,9 +114,18 @@ export function AlberoVivo({
   const medio = PALETTE[stagione][1];
   const chiavePosa = JSON.stringify(posa);
   const chiaveMestiere = JSON.stringify(mestiere);
+  // Lo strato delle tracce: c'è se la pagina passa le tracce o se la posa è un'attività con i suoi oggetti.
+  const lavoro = mestiere ? statoLavoro(mestiere) : null;
+  const scena: StatoScena | null =
+    tracce !== undefined || scenaDellAttivita(azioneDaPosa(posa))
+      ? { tracce: tracce ?? {}, scoiattoloDelMestiere: !!lavoro?.scoiattolo }
+      : null;
+  const chiaveScena = JSON.stringify(scena);
   const opzioni = useRef<Opzioni>({ posa, vento, freddo, foglia: medio, onCiclo, mestiere });
+  const scenaRef = useRef<StatoScena | null>(scena);
 
   useLayoutEffect(() => {
+    scenaRef.current = scena;
     opzioni.current = { posa, vento, freddo, foglia: medio, onCiclo, mestiere };
     motore.current?.aggiornaOpzioni(conCielo(opzioni.current, cielo.current));
   });
@@ -124,6 +144,7 @@ export function AlberoVivo({
       chiave: tieni ? `linfa:albero:${window.location.pathname}:${id}` : null,
       onFumetto: setFumetto,
       mestiere: opzioni.current.mestiere,
+      scena: scenaRef.current,
       ...conCielo(opzioni.current, cielo.current),
     });
     motore.current = m;
@@ -137,8 +158,16 @@ export function AlberoVivo({
     const m = motore.current;
     if (!m) return;
     m.aggiornaNodi();
+    m.impostaScena(scenaRef.current);
     m.impostaPosa(opzioni.current.posa);
   }, [chiavePosa, stadio, stagione, innevato]);
+
+  useLayoutEffect(() => {
+    const m = motore.current;
+    if (!m) return;
+    m.aggiornaNodi();
+    m.impostaScena(scenaRef.current);
+  }, [chiaveScena]);
 
   useLayoutEffect(() => {
     const m = motore.current;
@@ -166,10 +195,11 @@ export function AlberoVivo({
     return () => window.removeEventListener(EVENTO_VOCE, ascolta);
   }, [interattivo, focusabile]);
 
-  // Arredi del mestiere: il loro primo fotogramma (poi li muove il motore).
-  const lavoro = mestiere ? statoLavoro(mestiere) : null;
+  // Arredi del mestiere e tracce: il loro primo fotogramma (poi li muove il motore).
   const arredi: Attributi = {};
-  if (lavoro) fotogrammaArredi({ ...canaliDaPosa(posa), ...canaliDelMestiere(mestiere) }, lavoro, arredi, 0);
+  const primi = { ...canaliDaPosa(posa), ...canaliDelMestiere(mestiere) };
+  if (lavoro) fotogrammaArredi(primi, lavoro, arredi, 0);
+  if (scena) fotogrammaScena(primi, scena, arredi, 0);
 
   return (
     <FiguraAlbero
@@ -187,8 +217,29 @@ export function AlberoVivo({
       radice={radice}
       nParticelle={N_PARTICELLE}
       giorni={giorni}
-      dietro={lavoro ? <ArrediDietro lavoro={lavoro} A={arredi} /> : null}
-      davanti={lavoro ? <ArrediDavanti lavoro={lavoro} A={arredi} /> : null}
+      dietro={
+        lavoro || scena ? (
+          <>
+            {scena && <TracceDietro scena={scena} A={arredi} scoiattolo={!scena.scoiattoloDelMestiere} />}
+            {lavoro && <ArrediDietro lavoro={lavoro} A={arredi} />}
+          </>
+        ) : null
+      }
+      davanti={
+        lavoro || scena ? (
+          <>
+            {scena && <TracceDavanti A={arredi} />}
+            {lavoro ? (
+              <ArrediDavanti lavoro={lavoro} A={arredi} />
+            ) : (
+              <g className="lv-arredi">
+                <AttrezziMano lato="Sx" A={arredi} />
+                <AttrezziMano lato="Dx" A={arredi} />
+              </g>
+            )}
+          </>
+        ) : null
+      }
     />
   );
 }

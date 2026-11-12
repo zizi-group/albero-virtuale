@@ -733,6 +733,8 @@ export function entrata(scena: ScenaLavoro, b: Canali, p: Palco): Clip {
   const arrivo = scena.postura(l, b);
   const inizio: Canali = { ...b, costruzione: scena.lavoro ? 0 : 1 };
   const c = new Copione(inizio);
+  // Gli attrezzi di quello che faceva prima spariscono (scatto: non passano dagli altri).
+  c.vai(0.01, { attrSx: 0, attrDx: 0 }, "scatto");
   c.pausa(0.3);
   if (!scena.parteDaSe) {
     if (b.seduto > 0.5 && !l.seduto) alzati(c, p);

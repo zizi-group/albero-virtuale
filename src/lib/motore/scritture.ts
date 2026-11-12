@@ -13,7 +13,9 @@ import {
 
 // Le cose che l'albero scrive di suo pugno: lettere e risposte.
 
-export type TipoLettera = "benvenuto" | "mensile" | "meta-mese" | "momento";
+// «mensile» e «meta-mese» restano per le lettere già scritte: dal 12/11/2026 la
+// lettera è una a settimana per tutti («settimanale»), con la cartolina.
+export type TipoLettera = "benvenuto" | "settimanale" | "mensile" | "meta-mese" | "momento";
 
 const SchemaLettera = z.object({
   oggetto: z.string(),
@@ -23,6 +25,12 @@ const SchemaLettera = z.object({
 const ISTRUZIONI: Record<TipoLettera, (s: StatoAlbero, motivo?: string) => string> = {
   benvenuto: (s, meteo) =>
     `È il giorno della semina: ${s.nome} è appena spuntato in un prato a ${s.citta}${meteo ? ` (oggi: ${meteo})` : ""}. Scrive la sua prima lettera alla persona che l'ha piantato: si presenta, racconta il primo impatto con il mondo con un dettaglio concreto sul tempo di oggi, e ammette che non sa ancora chi diventerà. Lunghezza: da 80 a 140 parole.`,
+  settimanale: (s, settimana) =>
+    `È la lettera della settimana: ${s.nome} scrive alla persona ogni sette giorni vissuti, e la lettera arriva insieme alla cartolina della settimana. Racconta i giorni usando il diario: sceglie uno o due episodi concreti (non elenca tutto), con un dettaglio che si vede.${
+      settimana ? ` Nella settimana: ${settimana}. Se gli va, ne parla a modo suo.` : ""
+    } ${
+      s.strada ? "Accenna a come va la sua strada." : "Lascia un piccolo indizio sulla strada che sta prendendo, senza dirla."
+    } Chiude con una domanda alla persona. Lunghezza: da 100 a 170 parole.`,
   mensile: (s) =>
     `È la lettera del mese. ${s.nome} racconta il periodo usando il diario: sceglie due o tre episodi (non elenca tutto), dice come si sente cambiato e ${
       s.strada ? "parla della strada che ha preso" : "lascia un indizio sulla strada che sta prendendo, senza dirla"

@@ -4,13 +4,54 @@ Progetto del 12/11/2026, dalle indicazioni di Federico. I numeri marcati
 «proposta» si decidono insieme; quelli segnati «da decidere» aspettano una
 risposta (sezione 16).
 
-> **A che punto siamo (12/11/2026).** Fase 1 fatta, sulle 23 azioni di oggi:
-> giornata a fasce con pesi e regole contro la noia (`src/lib/albero/giornata.ts`),
-> nuvoletta del pensiero, decisione del buongiorno con zoom, fumetto e 5 minuti
-> da pensieroso, lettere chiuse e aperte distinte, giardino di nuovo in 2D.
-> Gli intermezzi con gesti nuovi arrivano con la libreria dei gesti (fase 2):
-> per ora tra un'attività e l'altra ci sono i pensieri e i gesti a sorpresa
-> della posa viva.
+> **A che punto siamo (12/11/2026).** Fase 1 fatta: giornata a fasce con pesi
+> e regole contro la noia (`src/lib/albero/giornata.ts`), nuvoletta del
+> pensiero, decisione del buongiorno con zoom, fumetto e 5 minuti da
+> pensieroso, lettere chiuse e aperte distinte, giardino di nuovo in 2D.
+>
+> **Fase 2 fatta** (branch `0.1.2-catene-e-lettera-settimanale`):
+> - **Lettera settimanale** (sezione 12): ogni 7 giorni vissuti, per tutti i
+>   piani, su Opus, nella stessa email della cartolina (`calendario.ts`,
+>   `chiudiSettimana`; tipo `settimanale`, `tree_weeks.letter_id`). Niente più
+>   lettera di fine mese e di metà mese. La stima dei costi AI in
+>   `modello-di-business.md` è segnata da rifare.
+> - **Risorse e catene** (sezione 4): `risorse.ts` (le 10 risorse, 0-9),
+>   `catene.ts` (catene del fuoco, dell'orto e della marmellata, effetti delle
+>   attività, memoria), colonne `trees.risorse` e `trees.memoria`. Il motore
+>   notturno decide la giornata dalla memoria e l'AI sceglie tra quelle
+>   attività l'azione del giorno. Pesi della sezione 3.3 applicati: base
+>   quotidiana/di strada (1 e 0,4), catena ×5 per il passo dopo, ×3 per chi
+>   raccoglie quello che manca, ×2 per cominciare una catena, novità (×2 mai
+>   fatta; la stessa principale nella stessa fascia al massimo una volta ogni 3
+>   giorni). La pioggia spegne le braci e annaffia l'orto; una catena ferma da
+>   10 giorni si lascia perdere. Tracce nella scena: catasta, cerchio del falò
+>   con le braci, orto in 4 stadi, vasetti sulla mensola, mucchio di foglie,
+>   sassi, ghiande, cesto, secchio, verdure.
+> - **30 attività quotidiane nuove** (sezione 5.1, `quotidiane.ts`) con la loro
+>   scenetta (`vivo/attivita.ts`) e una sequenza di gesti diversa per ognuna;
+>   **39 gesti nuovi** in `vivo/gesti.ts` (chinarsi, raccogliere, posare,
+>   portare, versare, mescolare, zappare, rastrellare, spazzare, strofinare,
+>   strizzare, intrecciare, tirare, impilare, lanciare, indicare, contare sulle
+>   dita, soffiare, bere, assaggiare, annusare, sbadigliare, stiracchiarsi,
+>   starnutire, fischiare, ridere, scrollarsi, tremare, inchinarsi, applaudire,
+>   salutare, guardare lontano, sfregare i bastoncini, saltare, annuire, dire
+>   di no, mano al mento, grattarsi la corteccia); 15 attrezzi nuovi; oggetti
+>   animati (il fuoco che crepita, la pentola, il cespuglio, il filo del
+>   bucato, la tinozza, la pozzanghera, l'uccellino, le stelle unite col dito,
+>   lo scoiattolo) ed effetti nuovi (scintille, fumo, succo). I 10 intermezzi
+>   della sezione 5.5 tra un ciclo e l'altro (30% delle volte).
+> - Sul telefono il prato delle tracce si stringe attorno all'albero.
+> - Prove: `npm run simula -- --giorni 30 --senza-ai --meteo-finto` su 8 semi:
+>   fuoco, orto e marmellata si chiudono (da 1 a 3 volte la marmellata, fino a
+>   3 il fuoco, fino a 2 l'orto; un seme su otto non ne chiude nessuna in 30
+>   giorni), 0-1 volte la stessa principale nella stessa fascia entro 3
+>   giorni, al massimo 2-3 giorni di fila con la stessa attività. Nel giardino
+>   le 30 attività girano senza errori, computer e telefono, movimento pieno e
+>   ridotto.
+> - Restano per le fasi dopo: le altre ~145 attività (fase 8), gli oggetti che
+>   le attività richiedono (fase 3), il fattore impresa ×4 (fase 4:
+>   `fattoreImpresa` in `imprese.ts`), le catene del quadro, della banda e del
+>   torneo, la sorpresa garantita a settimana.
 
 Questo documento non butta via niente di quello che c'è: estende i mestieri
 delle strade (`docs/routine-strade.md`, `src/lib/albero/mestieri.ts`: 7 strade,
@@ -27,7 +68,7 @@ delle strade (`docs/routine-strade.md`, `src/lib/albero/mestieri.ts`: 7 strade,
 | Un'azione al giorno, spesso «scrive» | Una giornata in 4 fasce, scelta tra ~175 attività pesate, collegate in catene, senza ripetersi |
 | La decisione del buongiorno non si vede | Zoom su Pino, fumetto con la risposta, poi pensieroso per qualche minuto |
 | Niente pensieri visibili | La nuvoletta del pensiero: che cosa vorrebbe fare, che cosa gli manca |
-| Lettere ogni 30 giorni (15 nel Premium) | **Una lettera a settimana per tutti** (Federico, 12/11/2026), insieme alla cartolina |
+| Lettere ogni 30 giorni (15 nel Premium) | **Una lettera a settimana per tutti** (Federico, 12/11/2026), insieme alla cartolina (fatto, fase 2) |
 | Collezione di 25 voci | Catalogo di ~200 voci, sbloccate dalle decisioni di Pino, con il momento dello sblocco |
 | Arredi nel prato del mestiere | Stanze arredabili: regali, oggetti trovati e costruzioni di Pino |
 | Ogni albero per conto suo | Carisma e influenzabilità: un albero forte trascina gli altri nelle sue imprese |
