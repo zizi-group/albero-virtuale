@@ -49,6 +49,7 @@ Tutto in italiano: codice (nomi), testi, commit, report.
 | `npm run typecheck` | Tipi delle route + `tsc` |
 | `npm run notte` | Motore notturno: un giorno per ogni albero, poi il calendario (collezione, cartolina della settimana, lettere, fine del mese) |
 | `npm run simula -- --giorni 7 [--lettera]` | Albero in memoria, senza database: per provare prompt e motore |
+| `npm run simula -- --alberi 3 --giorni 60 [--senza-ai] [--prove 300]` | Più alberi nella stessa stanza: imprese, contagio, attività di gruppo; `--prove` dà le statistiche senza AI |
 | `supabase gen types typescript --local > src/lib/supabase/database.types.ts` | Tipi dopo una migrazione |
 
 ## Dove sta cosa
@@ -100,6 +101,15 @@ Tutto in italiano: codice (nomi), testi, commit, report.
   una fascia, salvo se l'ha già scelta di recente. Il giardino mostra quella
   della fascia di adesso (a turno ogni 45 minuti) e durante la visita passa
   alla successiva ogni 3,5 minuti. Deterministica: seme = id + giorno.
+- **Imprese e contagio** (fase 4 della 0.2, motore puro): `imprese.ts`
+  (imprese principali dai mestieri e libere dalle catene, capo, sostenitori,
+  ruoli, crescita, `fattoreImpresa` ×4 per i pesi della giornata),
+  `contagio.ts` (`giornoDellaStanza`: contagio, abbandoni, punti alla strada,
+  cambio di strada spegnibile con `CAMBIO_STRADA.attivo`, rivalità),
+  `gruppo.ts` (attività di gruppo). Carisma e influenzabilità in `strade.ts`
+  (`nascita`), colonne `trees.carisma` e `trees.influenzabilita`, tabelle
+  `ventures` e `venture_members`. Numeri e prove: sezione 7.3 di
+  `docs/stanze-e-vita.md`.
 - **Voci dell'albero** (`EVENTO_VOCE` in `vivo/AlberoVivo.tsx`): il giardino
   lo fa parlare (fumetto) o pensare (nuvoletta con le bollicine). La
   nuvoletta compare ogni 35-75 s (che cosa farà dopo, il suo umore).

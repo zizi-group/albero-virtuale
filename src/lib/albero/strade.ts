@@ -129,3 +129,53 @@ export function stradaRivelata(p: PunteggiStrade): Strada | null {
 export function isStrada(s: string | null | undefined): s is Strada {
   return !!s && (STRADE as readonly string[]).includes(s);
 }
+
+// ── Carisma e influenzabilità (docs/stanze-e-vita.md, sezione 7.1) ──────────
+// Due numeri fissi, 5-95, decisi alla nascita accanto ai tratti. Non si
+// vedono mai come numeri: si capiscono dal comportamento con gli altri alberi.
+
+export interface Carattere {
+  /** Quanto trascina gli altri nelle sue imprese. */
+  carisma: number;
+  /** Quanto si lascia trascinare. */
+  influenzabilita: number;
+}
+
+const limita = (v: number) => Math.max(5, Math.min(95, Math.round(v)));
+
+/**
+ * Carisma e influenzabilità dai tratti, più un po' di caso (±10).
+ * Carisma: media di ambizione, socievolezza ed energia.
+ * Influenzabilità: alta con socievolezza e pigrizia, bassa con ambizione e furbizia.
+ * Con `caso = 0` il calcolo è fisso: serve agli alberi già nati.
+ */
+export function carattereDa(t: Tratti, caso: () => number = Math.random, ampiezza = 10): Carattere {
+  const scarto = () => (ampiezza ? (caso() * 2 - 1) * ampiezza : 0);
+  const carisma = (t.ambizione + t.socievolezza + t.energia) / 3;
+  const influenzabilita = (t.socievolezza + t.pigrizia + (100 - t.ambizione) + (100 - t.furbizia)) / 4;
+  return { carisma: limita(carisma + scarto()), influenzabilita: limita(influenzabilita + scarto()) };
+}
+
+/** Per gli alberi nati prima della 0.2: lo stesso calcolo, senza caso. */
+export function carattereDaiTratti(t: Tratti): Carattere {
+  return carattereDa(t, () => 0.5, 0);
+}
+
+/** Tratti, carisma e influenzabilità di un albero che nasce. */
+export function nascita(rnd: () => number = Math.random): { tratti: Tratti } & Carattere {
+  const tratti = trattiCasuali(rnd);
+  return { tratti, ...carattereDa(tratti, rnd) };
+}
+
+/** Come lo racconta il diario: mai numeri, solo il comportamento. */
+export function descriviCarattere(c: Carattere): string {
+  const car =
+    c.carisma >= 70 ? "trascina gli altri con entusiasmo, ha sempre un piano e qualcuno lo segue" :
+    c.carisma <= 30 ? "non cerca di convincere nessuno, fa le sue cose per conto suo" :
+    "ogni tanto coinvolge gli altri, senza insistere";
+  const inf =
+    c.influenzabilita >= 70 ? "dice di sì a quasi tutti, si lascia coinvolgere facilmente" :
+    c.influenzabilita <= 30 ? "è testardo: difficile fargli cambiare idea" :
+    "si lascia convincere solo se l'idea gli piace davvero";
+  return `${car}; ${inf}`;
+}

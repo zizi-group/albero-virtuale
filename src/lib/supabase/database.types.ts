@@ -191,14 +191,14 @@ isOneToOne: false
                   ]
                 },"trees": {
                   Row: {
-                    "biography": NonNullable<Json>,"city": string,"created_at": string,"day_count": number,"id": string,"last_weather": Json | null,"latitude": number,"longitude": number,"mood": string,"name": string,"owner_id": string,"owner_name": string | null,"path": string | null,"path_scores": NonNullable<Json>,"plan": string,"planted_at": string,"timezone": string,"today_action": string,"today_caption": string | null,"traits": NonNullable<Json>,"updated_at": string
+                    "biography": NonNullable<Json>,"carisma": number,"city": string,"created_at": string,"day_count": number,"id": string,"influenzabilita": number,"last_weather": Json | null,"latitude": number,"longitude": number,"mood": string,"name": string,"owner_id": string,"owner_name": string | null,"path": string | null,"path_scores": NonNullable<Json>,"plan": string,"planted_at": string,"timezone": string,"today_action": string,"today_caption": string | null,"traits": NonNullable<Json>,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "biography"?: NonNullable<Json>,"city": string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude": number,"longitude": number,"mood"?: string,"name": string,"owner_id": string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits": NonNullable<Json>,"updated_at"?: string
+                    "biography"?: NonNullable<Json>,"carisma"?: number,"city": string,"created_at"?: string,"day_count"?: number,"id"?: string,"influenzabilita"?: number,"last_weather"?: Json | null,"latitude": number,"longitude": number,"mood"?: string,"name": string,"owner_id": string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits": NonNullable<Json>,"updated_at"?: string
                   }
                   Update: {
-                    "biography"?: NonNullable<Json>,"city"?: string,"created_at"?: string,"day_count"?: number,"id"?: string,"last_weather"?: Json | null,"latitude"?: number,"longitude"?: number,"mood"?: string,"name"?: string,"owner_id"?: string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits"?: NonNullable<Json>,"updated_at"?: string
+                    "biography"?: NonNullable<Json>,"carisma"?: number,"city"?: string,"created_at"?: string,"day_count"?: number,"id"?: string,"influenzabilita"?: number,"last_weather"?: Json | null,"latitude"?: number,"longitude"?: number,"mood"?: string,"name"?: string,"owner_id"?: string,"owner_name"?: string | null,"path"?: string | null,"path_scores"?: NonNullable<Json>,"plan"?: string,"planted_at"?: string,"timezone"?: string,"today_action"?: string,"today_caption"?: string | null,"traits"?: NonNullable<Json>,"updated_at"?: string
                   }
                   Relationships: [
                     

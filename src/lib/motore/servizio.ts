@@ -1,6 +1,6 @@
 import { createAdminClient } from "../supabase/admin";
 import type { Database, Json } from "../supabase/database.types";
-import { INFO_STRADE, isStrada, trattiCasuali, type PunteggiStrade, type Tratti } from "../albero/strade";
+import { INFO_STRADE, isStrada, nascita, type PunteggiStrade, type Tratti } from "../albero/strade";
 import { azione } from "../albero/azioni";
 import { voce } from "../albero/oggetti";
 import { regalo } from "../albero/regali";
@@ -114,7 +114,8 @@ export async function piantaAlbero({
   piano: "albero" | "premium-annuale" | "premium-mensile";
 }): Promise<{ id: string; erroreLettera: string | null }> {
   const meteo = await meteoAttuale(luogo.latitudine, luogo.longitudine);
-  const tratti = trattiCasuali();
+  // Tratti, carisma e influenzabilità alla nascita (0.2, sezione 7.1).
+  const { tratti, carisma, influenzabilita } = nascita();
   const { data: albero, error } = await db()
     .from("trees")
     .insert({
@@ -127,6 +128,8 @@ export async function piantaAlbero({
       timezone: luogo.fusoOrario,
       plan: piano,
       traits: json(tratti),
+      carisma,
+      influenzabilita,
       today_action: "guardare-cielo",
       today_caption: `${nome} è appena spuntato e guarda il cielo di ${luogo.citta} per la prima volta.`,
       last_weather: json(meteo),
