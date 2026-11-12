@@ -36,6 +36,7 @@ export { SPECIE } from "./modelli.js";
  * @property {string} [azione] una delle 23 azioni (src/lib/albero/azioni.ts)
  * @property {"curioso"|"allegro"|"pensieroso"|"assonnato"|"furbo"|"fiero"|"sognante"|"energico"|"malinconico"} [umore]
  * @property {boolean} [movimentoRidotto]
+ * @property {{ sopra: number, sotto: number }} [margini] parti dello schermo coperte dai riquadri (frazioni dell'altezza): l'albero si centra nella fascia libera. Se mancano: sul telefono in verticale 0.30 sopra e 0.22 sotto, altrove 0
  */
 
 /** Dove stanno gli alberi: il principale al centro, gli altri a ventaglio dietro. @param {number} n */
@@ -109,6 +110,7 @@ export function creaGiardino(canvas, opzioni) {
     if (p.meteo?.cielo) mondo.cielo = p.meteo.cielo;
     if (p.meteo?.temperatura !== undefined) mondo.temperatura = p.meteo.temperatura;
     if (p.ora) mondo.ora = p.ora;
+    if (p.margini) { margini = p.margini; inquadra(); }
     const cambiaStagione = p.stagione && p.stagione !== mondo.stagione;
     if (p.stagione) mondo.stagione = p.stagione;
     ambiente.imposta({ ora: mondo.ora, cielo: mondo.cielo, stagione: mondo.stagione, temperatura: mondo.temperatura });
@@ -119,7 +121,7 @@ export function creaGiardino(canvas, opzioni) {
       a.comp.mondoCambiato();
     }
   }
-  imposta({ ...opzioni, stagione: undefined });
+  imposta({ ...opzioni, stagione: undefined, margini: undefined }); // i margini li usa la camera, più sotto
   for (const a of alberi) {
     a.comp.umore(opzioni.umore ?? "curioso");
     a.comp.azione(opzioni.azione ?? "");
@@ -127,6 +129,8 @@ export function creaGiardino(canvas, opzioni) {
 
   // ---------------------------------------------------------------- Camera
   const BERSAGLIO = new THREE.Vector3(0, 1.45, 0.2);
+  /** @type {{ sopra: number, sotto: number } | undefined} */
+  let margini = opzioni.margini;
   const POSIZIONE = new THREE.Vector3();
   function inquadra() {
     const w = canvas.clientWidth || canvas.width, h = canvas.clientHeight || canvas.height;
@@ -140,7 +144,8 @@ export function creaGiardino(canvas, opzioni) {
     const tg = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     const s = alberi[0].albero.scala.scale.x;
     const alto = alberi[0].albero.altezza * s;
-    const quota0 = camera.aspect < 0.8 ? 0.38 : 0.43;
+    const verticale = camera.aspect < 0.8;
+    const quota0 = verticale ? 0.35 : 0.43;
     let dist = alto / quota0 / (2 * tg);
     if (lista.length > 1) dist = Math.max(dist, 5.4 / (tg * camera.aspect), 12);
     // poco sopra l'altezza degli occhi dell'albero, guardando appena in giù
@@ -148,6 +153,11 @@ export function creaGiardino(canvas, opzioni) {
     POSIZIONE.set(0, 1.0 * s + 0.75 + dist * 0.07, BERSAGLIO.z + dist);
     camera.position.copy(POSIZIONE);
     camera.lookAt(BERSAGLIO);
+    // l'albero al centro della fascia libera fra i riquadri della pagina
+    const m = margini ?? (verticale ? { sopra: 0.3, sotto: 0.22 } : { sopra: 0, sotto: 0 });
+    const centro = m.sopra + (1 - m.sopra - m.sotto) / 2;
+    if (Math.abs(centro - 0.5) > 0.001) camera.setViewOffset(w, h, 0, -(centro - 0.5) * h, w, h);
+    else camera.clearViewOffset();
   }
   inquadra();
   const osservatore = new ResizeObserver(inquadra);

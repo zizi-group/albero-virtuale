@@ -18,8 +18,10 @@ const g = creaGiardino(canvas, {
   azione: "leggere",                           // una delle 23 di src/lib/albero/azioni.ts
   umore: "curioso",                            // 9 umori
   movimentoRidotto: false,
+  margini: { sopra: 0.3, sotto: 0.22 },     // facoltativo: riquadri della pagina sopra e sotto
 });
 g.imposta({ ora: "notte" });          // qualsiasi parte, con transizioni morbide
+                                      // anche g.imposta({ margini }) se cambiano i riquadri
 g.reagisci("lettera");                // saluta, lettera, festa, carezza
 const togli = g.su("tocca-albero", ({ id }) => …); // pronto, tocca-albero, tocca-cassetta, tocca-taccuino, trascina-albero
 g.letteraLetta();                     // la bandierina della cassetta torna giù
