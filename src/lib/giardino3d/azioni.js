@@ -104,9 +104,11 @@ export const AZIONI = {
     durata: 12,
     inizia: (c) => {
       c.dati.g = c.davanti(O.giornale(), 0.82, 0.3);
-      c.dati.o = c.inMano(1, O.ombrello(["#e04a3a", "#3a8ad0", "#f0b828"][Math.floor(Math.random() * 3)]));
+      // la mano resta sotto la chioma; il manico è lungo e inclinato verso il centro
+      const alto = Math.max(0.85, (c.albero.altezza * c.albero.scala.scale.x - 1.1) / 1.5);
+      c.dati.o = c.inMano(1, O.ombrello(["#e04a3a", "#3a8ad0", "#f0b828"][Math.floor(Math.random() * 3)], alto));
       c.dati.o.position.set(0, 0.05, 0);
-      c.dati.o.userData.diritto = [0, 0, 0.12];
+      c.dati.o.userData.diritto = [0, 0, 0.18];
       c.viso.breve({ sguardoY: -0.5, sorriso: 0.35, storta: 0.3, guance: 0.5 }, 11.5);
     },
     posa: (p, t, c) => {
@@ -234,8 +236,10 @@ export const AZIONI = {
     posa: (p, t, c) => {
       const k = busta(t, 11, 0.5, 0.6);
       const su = (Math.sin(t * 3.2) + 1) / 2;
-      p.bracci[0].alza = p.bracci[1].alza = (-0.3 + 1.9 * su) * k;
-      p.bracci[0].avanti = p.bracci[1].avanti = 0.35 * k;
+      // alzate in avanti, alternate: le mani restano davanti al tronco, sotto la chioma
+      const su2 = (Math.sin(t * 3.2 + Math.PI) + 1) / 2;
+      p.bracci[0].alza = (-0.35 + 0.75 * su) * k; p.bracci[1].alza = (-0.35 + 0.75 * su2) * k;
+      p.bracci[0].avanti = (0.5 + 0.8 * su) * k; p.bracci[1].avanti = (0.5 + 0.8 * su2) * k;
       p.seduto = 0.25 * (1 - su) * k;
       p.allunga = 0.03 * su * k;
       if (Math.floor(t / 2.5) !== c.dati.g) { c.dati.g = Math.floor(t / 2.5); c.emetti("goccia", 1); }

@@ -99,12 +99,12 @@ export function giornale() {
   return g;
 }
 
-export function ombrello(/** @type {string} */ colore = "#e04a3a") {
+export function ombrello(/** @type {string} */ colore = "#e04a3a", alto = 0.85) {
   const g = new THREE.Group();
-  g.add(tubo([[0, -0.1, 0], [0, 0.85, 0]], 0.014, 0.014, mat("#3a2a1a"), 4, 6));
+  g.add(tubo([[0, -0.1, 0], [0, alto, 0]], 0.014, 0.014, mat("#3a2a1a"), 4, 6));
   const manico = tubo([[0, -0.1, 0], [0, -0.16, 0], [0.05, -0.18, 0], [0.07, -0.12, 0]], 0.014, 0.014, mat("#3a2a1a"), 8, 6);
   const tela = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.28, 16, 1, true), new THREE.MeshStandardMaterial({ color: colore, roughness: 0.6, side: THREE.DoubleSide }));
-  tela.position.y = 0.78;
+  tela.position.y = alto - 0.07;
   g.add(manico, tela);
   return g;
 }
