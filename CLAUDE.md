@@ -160,7 +160,7 @@ completo è nel file di regia `Progetti lavorativi GitHub/CLAUDE.md`, che esiste
 solo sul PC di Federico: questa sezione basta per lavorare anche dalle sessioni
 cloud e dalle routine.
 
-- **Versione in corso: 0.1** (Federico, 12/11/2026). La copia di `main` di una
+- **Versione in corso: 0.1.1** (12/11/2026: giardino in 3D nel gioco; tag `v0.1`). La copia di `main` di una
   versione è un branch con il solo numero (per esempio `1.0`): non ci si fanno
   commit. Le versioni maggiori e minori le decide solo Federico.
 - **Versione di correzione dopo ogni merge** (Federico, 26/10/2026): ogni
