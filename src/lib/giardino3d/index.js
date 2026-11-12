@@ -53,10 +53,12 @@ const AZIONI_DELLA_STRADA = {
 };
 
 /** Dove stanno gli alberi: il principale al centro, gli altri a ventaglio dietro. @param {number} n */
-function posti(n) {
+function posti(n, stretto = false) {
   const out = [{ x: 0, z: 0.3 }];
   const giro = [[-2.3, -0.5], [2.3, -0.5], [-4.1, -1.5], [4.1, -1.5], [-1.3, -2.5], [1.4, -2.6]];
-  for (let i = 1; i < n; i++) out.push({ x: giro[i - 1][0], z: giro[i - 1][1] });
+  // sul telefono in verticale il ventaglio si stringe (gli alberi restano a 1,5 m l'uno dall'altro)
+  const k = stretto ? 0.65 : 1;
+  for (let i = 1; i < n; i++) out.push({ x: giro[i - 1][0] * k, z: giro[i - 1][1] });
   return out;
 }
 
@@ -83,7 +85,9 @@ export function creaGiardino(canvas, opzioni) {
 
   const scena = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(38, 1, 0.5, 140);
-  const dove = posti(lista.length);
+  const stretto = (canvas.clientWidth || canvas.width) / Math.max(1, canvas.clientHeight || canvas.height) < 0.8;
+  const dove = posti(lista.length, stretto);
+  const giroCompagni = stretto ? 0.45 : 1; // quanto si allontana un compagno da casa, in x
   const mondo = {
     cielo: opzioni.meteo?.cielo ?? "sole",
     ora: opzioni.ora ?? "giorno",
@@ -101,7 +105,7 @@ export function creaGiardino(canvas, opzioni) {
     if (i > 0) albero.scala.scale.multiplyScalar(0.82);
     scena.add(albero.radice);
     // ogni albero resta in una zona che la camera vede
-    const limiti = i === 0 ? { x0: -1.0, x1: 1.0, z0: -1.3, z1: 0.8 } : { x0: dove[i].x - 1, x1: dove[i].x + 1, z0: dove[i].z - 0.8, z1: dove[i].z + 0.6 };
+    const limiti = i === 0 ? { x0: -1.0, x1: 1.0, z0: -1.3, z1: 0.8 } : { x0: dove[i].x - giroCompagni, x1: dove[i].x + giroCompagni, z0: dove[i].z - 0.8, z1: dove[i].z + 0.6 };
     const comp = creaComportamento(albero, { scena, casa: dove[i], cassetta: ambiente.cassetta.gruppo.position, ridotto, mondo, camera: camera.position, limiti });
     const ombra = new THREE.Mesh(geoOmbra, alone);
     ombra.rotation.x = -Math.PI / 2;
@@ -199,7 +203,10 @@ export function creaGiardino(canvas, opzioni) {
     let dist = alto / quota0 / (2 * tg);
     // che ci stiano anche i compagni ai lati (sul telefono i più lontani possono uscire un poco)
     if (n > 1) {
-      const meta = (n <= 3 ? 3.4 : 5.2) * (verticale ? 0.7 : 1);
+      // tutti interi nella larghezza, con un margine del 4% per lato: il compagno più
+      // lontano, più quanto può spostarsi, più mezza chioma con le braccia
+      const bordo = Math.max(...dove.slice(1).map((d) => Math.abs(d.x))) + giroCompagni + 1.0;
+      const meta = verticale ? bordo / 0.92 : n <= 3 ? 3.4 : 5.2;
       dist = Math.max(dist, meta / (tg * camera.aspect));
     }
     // poco sopra l'altezza degli occhi dell'albero, guardando appena in giù
