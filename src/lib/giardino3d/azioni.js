@@ -157,8 +157,8 @@ export const AZIONI = {
     durata: 14,
     inizia: (c) => { c.viso.parla(3, true); c.emetti("nota", 2); },
     percorso: (t) => {
-      const a = (t / 14) * Math.PI * 2;
-      return { x: Math.sin(a) * 1.2, z: (1 - Math.cos(a)) * -0.6, vel: 0.6 };
+      const a = (t / 9) * Math.PI * 2;
+      return { x: Math.sin(a) * 1.1, z: 0.2 + Math.cos(a) * 0.2, vel: 0.6 };
     },
     posa: (p) => {
       // mani dietro la schiena
@@ -176,30 +176,30 @@ export const AZIONI = {
       p.piega = 0.15 * k;
       p.bracci[0].alza = p.bracci[1].alza = -0.6 * k;
       p.bracci[0].avanti = p.bracci[1].avanti = 0.6 * k;
-      if (k > 0.8) c.viso.breve("dorme", 0.3);
-      if (t - c.dati.z > 2.4 && k > 0.8) { c.dati.z = t; c.emetti("zzz", 1); }
+      c.viso.breve("dorme", 0.3);
+      if (t - c.dati.z > 2.2) { c.dati.z = t; c.emetti("zzz", 1); }
     },
   },
   sonnellino: {
     durata: 9,
-    inizia: (c) => { c.dati.z = 0; c.viso.breve("sbadiglia", 1.6); },
+    inizia: (c) => { c.dati.z = -2; },
     posa: (p, t, c) => {
-      const k = busta(t - 1.2, 7.8, 0.8, 0.6);
+      const k = busta(t, 9, 0.6, 0.6);
       p.seduto = k;
       p.inchino = (0.22 + Math.sin(t * 0.8) * 0.06) * k;
       p.bracci[0].avanti = p.bracci[1].avanti = 1.0 * k;
       p.bracci[0].alza = p.bracci[1].alza = -0.4 * k;
-      if (k > 0.7) c.viso.breve({ dorme: 1, sorriso: 0.3 }, 0.3);
-      if (t - c.dati.z > 2.2 && k > 0.7) { c.dati.z = t; c.emetti("zzz", 1); }
+      c.viso.breve("dorme", 0.3);
+      if (t - c.dati.z > 2.2) { c.dati.z = t; c.emetti("zzz", 1); }
     },
   },
   telefonata: {
     durata: 11,
     inizia: (c) => {
       const tel = c.inMano(1, O.telefono());
-      tel.position.set(0.02, 0.06, 0.06);
-      tel.scale.multiplyScalar(1.5);
-      tel.userData.diritto = [0, -1.3, 0];
+      tel.position.set(0.02, 0.08, 0.1);
+      tel.scale.multiplyScalar(1.9);
+      tel.userData.diritto = [0, -0.45, 0]; // girato quasi verso di noi: si vede lo schermo
       c.viso.parla(10.5);
     },
     posa: (p, t, c) => {
@@ -216,8 +216,9 @@ export const AZIONI = {
     durata: 12,
     inizia: (c) => c.viso.breve({ sorpresa: 0.2, aperta: 0.55, sorriso: 1.1, guance: 1.2 }, 11.5),
     percorso: (t) => {
-      const a = (t / 6) * Math.PI * 2;
-      return { x: Math.sin(a) * 1.3, z: (Math.cos(a) - 1) * 0.7, vel: 1.5 };
+      // avanti e indietro di lato, con una curva verso la camera: mai di schiena
+      const a = (t / 4) * Math.PI * 2;
+      return { x: Math.sin(a) * 1.2, z: 0.25 + Math.cos(a) * 0.25, vel: 1.6 };
     },
     posa: (p, t, c) => {
       p.bracci[0].alza = p.bracci[1].alza = 0.2;

@@ -12,6 +12,11 @@ import * as O from "./oggetti.js";
  * @typedef {{ giro: number, salto: number, seduto: number, inchino: number, piega: number, allunga: number, bracci: [Braccio, Braccio], gambe: [number, number], divarica: number }} Posa
  */
 
+/** Attività in cui l'albero dorme (occhi chiusi, zzz, respiro lento). */
+const DORME = new Set(["dormi", "dormire", "sonnellino", "meditare"]);
+/** Intermezzi brevi fra una ripetizione e l'altra dell'azione del giorno. */
+const INTERMEZZI = ["stiracchia", "sbadiglia", "canticchia", "guarda-cielo", "fermo"];
+
 /** Quanto si può alzare un braccio che tiene un oggetto (oltre, la mano entra nella chioma). */
 const ALZA_MAX = 0.3;
 
@@ -303,6 +308,7 @@ export function creaComportamento(albero, op) {
   let prossimaMicro = 3 + Math.random() * 3;
   let sveglia = false;
   let contaAttivita = 0;
+  let ultima = "";
   let giro = 0;
   /** @type {THREE.Vector2 | null} */
   let meta = null;
@@ -348,13 +354,15 @@ export function creaComportamento(albero, op) {
   /** L'angolo che lo gira verso la camera, da dove sta. */
   const versoCamera = () => Math.atan2(op.camera.x - pos.x, op.camera.z - pos.y);
 
-  /** @param {string} nome */
-  function avvia(nome) {
+  /** @param {string} nome @param {number} [durata] per accorciare un intermezzo */
+  function avvia(nome, durata) {
     if (att) { att.a.fine?.(att.ctx); libera(); }
-    const a = ROUTINE[nome] ?? AZIONI[nome];
-    if (!a) { att = null; return; }
+    const base = ROUTINE[nome] ?? AZIONI[nome];
+    if (!base) { att = null; return; }
+    const a = durata && durata < base.durata ? { ...base, durata } : base;
     const ctx = contesto({});
     att = { nome, a, t: 0, ctx };
+    ultima = nome;
     if (a.cammina) {
       // un punto nella radura, lontano dalla cassetta e dal taccuino
       for (let k = 0; k < 20; k++) {
@@ -376,11 +384,20 @@ export function creaComportamento(albero, op) {
     if (m.ora === "notte") return avvia("dormi");
     if (sveglia) { sveglia = false; return avvia(Math.random() < 0.5 ? "stiracchia" : "sbadiglia"); }
     const piove = m.cielo === "pioggia" || m.cielo === "temporale";
-    if (piove && azione !== "giornale-ombrello" && Math.random() < 0.65) return avvia("ripara");
+    const conAzione = !!(azione && AZIONI[azione]);
+    // con un'azione del giorno: l'azione occupa quasi tutto il tempo e, fra una
+    // ripetizione e l'altra, c'è solo un intermezzo breve (pochi secondi)
+    if (conAzione) {
+      const eraAzione = ultima === azione;
+      if (!eraAzione || Math.random() < 0.35) return avvia(azione);
+      if (piove && azione !== "giornale-ombrello") return avvia("ripara", 3.5);
+      if (m.temperatura > 28) return avvia("fa-vento", 3);
+      return avvia(INTERMEZZI[Math.floor(Math.random() * INTERMEZZI.length)], 3.2);
+    }
+    if (piove && Math.random() < 0.65) return avvia("ripara");
     if (m.temperatura > 28 && Math.random() < 0.35) return avvia("fa-vento");
     // torna verso casa se si è allontanato
     if (pos.distanceTo(casa) > 1.6 && Math.random() < 0.7) { meta = casa.clone(); att = { nome: "torna", a: ROUTINE.cammina, t: 0, ctx: contesto({}) }; return; }
-    if (azione && AZIONI[azione] && (contaAttivita % 2 === 1 || Math.random() < 0.3)) return avvia(azione);
     const gusti = GUSTI[umore] ?? GUSTI.curioso;
     const lista = Object.entries(gusti);
     let x = Math.random() * lista.reduce((s, [, w]) => s + w, 0);
@@ -398,7 +415,7 @@ export function creaComportamento(albero, op) {
       ctx.dati.versoCassetta = THREE.MathUtils.clamp(Math.atan2(d.x, d.y) - versoCamera(), -0.6, 0.6); // si gira, ma il viso resta verso di noi
     }
     // svegliarsi di soprassalto se dormiva
-    if (att?.nome === "dormi") { att.a.fine?.(att.ctx); libera(); att = null; }
+    if (DORME.has(att?.nome ?? "")) { att?.a.fine?.(att.ctx); libera(); att = null; }
     reaz = { nome, r, t: 0, ctx };
     r.inizia(ctx);
     if (nome === "saluta" || nome === "carezza") albero.viso.guarda(0, 0.15); // ci guarda negli occhi
@@ -411,7 +428,13 @@ export function creaComportamento(albero, op) {
     /** @param {string} u */
     umore(u) { umore = u; albero.viso.umore(u); },
     /** @param {string} a */
-    azione(a) { azione = a; if (att && AZIONI[att.nome]) att.t = att.a.durata; },
+    azione(a) {
+      const nuova = a !== azione;
+      azione = a;
+      // parte subito (la posa si fonde in meno di un secondo), tranne di notte o se è in mano
+      if (nuova && a && AZIONI[a] && !preso && !caduta && op.mondo.ora !== "notte") { reaz = null; avvia(a); }
+      else if (nuova && att && AZIONI[att.nome]) att.t = att.a.durata;
+    },
     /** Il mondo è cambiato (ora, meteo): interrompe le attività che non c'entrano più. */
     mondoCambiato() {
       const notte = op.mondo.ora === "notte";
@@ -442,6 +465,8 @@ export function creaComportamento(albero, op) {
       casa.set(THREE.MathUtils.clamp(pos.x, op.limiti.x0, op.limiti.x1), THREE.MathUtils.clamp(pos.y, op.limiti.z0, op.limiti.z1));
     },
     get preso() { return preso; },
+    /** L'attività in corso (azione o routine). */
+    get attivita() { return att?.nome ?? ""; },
     /** Posizione sul prato (x, z): si può spostare per non sovrapporsi agli altri. */
     get posizione() { return pos; },
     get casa() { return casa; },
@@ -515,6 +540,10 @@ export function creaComportamento(albero, op) {
         }
       }
       if (camminando) {
+        // al massimo di lato rispetto alla camera, mai di schiena
+        const rel = Math.atan2(Math.sin(giro - versoCamera()), Math.cos(giro - versoCamera()));
+        const lim = velPasso < 0.8 ? 1.15 : 1.45; // camminando piano resta quasi di fronte
+        giro = versoCamera() + THREE.MathUtils.clamp(rel, -lim, lim);
         fasePasso += dt * 9 * velPasso;
         p.gambe = [Math.sin(fasePasso) * 0.55, -Math.sin(fasePasso) * 0.55];
         p.salto = Math.abs(Math.sin(fasePasso)) * 0.05;
@@ -545,7 +574,7 @@ export function creaComportamento(albero, op) {
 
       // micro-espressioni dell'umore
       prossimaMicro -= dt;
-      if (prossimaMicro <= 0 && !reaz && att?.nome !== "dormi") {
+      if (prossimaMicro <= 0 && !reaz && !DORME.has(att?.nome ?? "")) {
         prossimaMicro = 5 + Math.random() * 5;
         const lista = MICRO[umore] ?? MICRO.curioso;
         const m = lista[Math.floor(Math.random() * lista.length)];
@@ -631,7 +660,7 @@ export function creaComportamento(albero, op) {
     a.corpo.rotation.x = ora.inchino;
     a.corpo.rotation.z = ora.piega;
     // respiro: lento quando dorme
-    const lento = att?.nome === "dormi" ? 0.55 : 1;
+    const lento = DORME.has(att?.nome ?? "") ? 0.55 : 1;
     const r = Math.sin(t * 1.6 * lento);
     a.busto.scale.set(1 - 0.006 * r, 1 + 0.012 * r + ora.allunga, 1 - 0.006 * r);
     a.chioma.scale.setScalar(1 + 0.025 * r);
