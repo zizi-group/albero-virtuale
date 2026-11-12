@@ -11,6 +11,13 @@ risposta (sezione 16).
 > Gli intermezzi con gesti nuovi arrivano con la libreria dei gesti (fase 2):
 > per ora tra un'attività e l'altra ci sono i pensieri e i gesti a sorpresa
 > della posa viva.
+>
+> **Fase 4 (12/11/2026, sul motore puro).** Imprese in `src/lib/albero/imprese.ts`,
+> contagio e rivalità in `contagio.ts`, attività di gruppo in `gruppo.ts`,
+> carisma e influenzabilità in `strade.ts` (`nascita`, `carattereDa`), migrazione
+> `20261112120000_imprese_contagio.sql`. Si provano con `npm run simula --
+> --alberi 3` (sezione 7.3). Il collegamento al database e al giardino arriva
+> con le stanze (fase 5).
 
 Questo documento non butta via niente di quello che c'è: estende i mestieri
 delle strade (`docs/routine-strade.md`, `src/lib/albero/mestieri.ts`: 7 strade,
@@ -440,6 +447,27 @@ dell'impresa principale di ogni strada.
 Imprese libere (non legate a una strada, più rare, aperte da catene): l'orto
 comunitario, la cucina del bosco, la squadra di calcio, il coro, il teatro.
 
+**Nel codice** (`src/lib/albero/imprese.ts`, fase 4):
+
+- `TIPI_IMPRESA`: le 7 principali (livelli, cantieri e attività sono quelli di
+  `MESTIERI`, più nome, oggetti e ruoli della tabella) e le 5 libere, ognuna
+  con la catena che la apre (`orto`, `marmellata`, `palla`, `concerto`,
+  `storie`). Livelli, cantieri e attività delle libere sono una **proposta**.
+- Lo stato di un'impresa (`Impresa`): capo, sostenitori con ruolo e giorno di
+  entrata, passi di cantiere fatti. Il livello è 1 più i cantieri finiti.
+- Crescita (proposta, `LAVORO_CAPO` e `LAVORO_SOSTENITORE`): ogni giorno il capo
+  aggiunge 0,2 passi e ogni sostenitore 0,1. Da solo un passo ogni 5 giorni
+  (il livello 2 dell'imprenditore in circa 20 giorni, il 3 in circa 35); con
+  due sostenitori il doppio più veloce.
+- **Per i pesi della giornata**: `fattoreImpresa(attivita, albero, imprese)`
+  restituisce ×4 (`MOLTIPLICATORE_IMPRESA`) se l'attività è di un'impresa di
+  cui l'albero è capo o sostenitore. Vale per gli id dei mestieri e delle
+  libere e, finché la giornata usa le 23 azioni di oggi, per le azioni della
+  strada dell'impresa. `giornata.ts` non è cambiato: lo collega la fase 2.
+- Chi ha una strada fonda l'impresa principale della sua strada; se nella
+  stanza c'è già, ci entra come sostenitore (il capo resta chi l'ha fondata).
+  Un albero può essere capo della sua impresa e sostenitore di **una** altra.
+
 **La banda del bosco** resta la caricatura del boss da film: cappello,
 gessato, «affari» di ghiande, riunioni di «famiglia». Niente parole o simboli
 della mafia vera, niente violenza, niente accenti presi in giro (regola già in
@@ -459,6 +487,12 @@ Ogni albero nasce con due numeri fissi, 5-95, accanto ai sette tratti di oggi:
 Gli alberi già nati li ricevono calcolati dai loro tratti (nessun dato perso).
 Non si vedono come numeri: si capiscono dal comportamento, e il diario li
 racconta («Ulivetta dice sempre di sì a tutti. Anche a me.»).
+
+Nel codice (`strade.ts`): `nascita()` dà tratti, carisma e influenzabilità
+di un albero nuovo (±10 di caso); `carattereDaiTratti()` è lo stesso calcolo
+senza caso, usato dalla migrazione per gli alberi già nati.
+Influenzabilità = media di socievolezza, pigrizia, 100 − ambizione e
+100 − furbizia. `descriviCarattere()` lo dice a parole nel prompt, mai in numeri.
 
 ### 7.2 Il contagio
 
@@ -489,6 +523,46 @@ con un albero testardo (20) quasi mai.
   delude: anche il poeta diventato furfante resta un personaggio simpatico.
 - Due capi carismatici nella stessa stanza: **rivalità** buffa (attività di
   gruppo «chi ha più ombra», gara tra imprese), mai cattiveria.
+
+### 7.3 Com'è fatto e che cosa dà la simulazione (fase 4)
+
+`giornoDellaStanza()` in `src/lib/albero/contagio.ts`, una volta al giorno per
+stanza, prima delle giornate: fondazioni, rivalità, abbandoni, contagio,
+punti alla strada, cambio di strada, lavoro delle imprese, attività di gruppo.
+`raccontaFatti()` ne fa frasi per ognuno degli alberi coinvolti, che entrano
+nel prompt della giornata (`GiornoDaVivere.fattiStanza`) perché il diario le
+racconti; `applicaStanza()` (`vita.ts`) aggiunge i punti e il cambio di strada
+allo stato. Tutti i numeri sono in `CONTAGIO` e `CAMBIO_STRADA`:
+
+| Parametro | Valore (proposta) | Perché |
+|---|---|---|
+| Formula | 0,12 × carisma × influenzabilità^1,5 × affinità × (1 + 0,2 per sostenitore) | L'esponente 1,5 sull'influenzabilità (con 1 il testardo entrerebbe un giorno su 46) |
+| Affinità | ×1,5 stessa strada o vicina, ×0,5 lontana, ×1 le altre | Vicine: filosofo-poeta, filosofo-viaggiatore, artista-poeta, artista-viaggiatore, imprenditore-furfante, imprenditore-sportivo, sportivo-viaggiatore. Lontane: filosofo-sportivo, poeta-sportivo, poeta-imprenditore, filosofo-furfante, artista-imprenditore |
+| Abbandono | 0,02 × (1,5 − influenzabilità) × (1,5 − carisma del capo) × affinità (×0,25 stessa strada, ×0,5 vicina, ×2 lontana) | Chi è poco convinto se ne va, con garbo |
+| Punti alla strada | +1 o +2 al giorno alla strada del capo (2 × influenzabilità, arrotondato), solo prima della rivelazione | Il germoglio influenzabile tende alla strada del capo |
+| Cambio di strada | dopo 60 giorni da sostenitore, 1% al giorno × influenzabilità; `CAMBIO_STRADA.attivo = false` lo spegne | **Da confermare** (16, punto 7) |
+| Rivalità | due capi con carisma ≥ 60 nella stessa stanza: non si reclutano a vicenda e ogni tanto si sfidano | Mai cattiveria |
+| Attività di gruppo | ~30% dei giorni con almeno due alberi (`PROBABILITA_GRUPPO`), compleanno sempre | 19 attività in `gruppo.ts` (sezione 5.4 più le due della rivalità) |
+
+Risultati di `npm run simula -- --alberi 3 --giorni 60 --caratteri 90/30,50/85,50/20 --strade furfante,-,- --prove 300 --seme 1`
+(300 stanze, senza AI, 12/11/2026):
+
+- capo 90 → albero influenzabile 85: entra **un giorno su 10** in cui può
+  entrare; in 284 stanze su 300 entra almeno una volta, in media il giorno 10;
+- capo 90 → albero testardo 20: **un giorno su 91**; entra almeno una volta
+  in 120 stanze su 300, in media il giorno 28 (quasi mai giorno per giorno,
+  ma in due mesi capita a circa 4 stanze su 10);
+- con 4 alberi (carismi 85 e 75): circa una sfida tra rivali e 18 attività
+  di gruppo ogni 60 giorni;
+- le imprese crescono: in 60 giorni circa 5 cantieri finiti per stanza, e
+  quasi tutte le imprese fondate nelle prime settimane arrivano al livello 3
+  (le giornate finte rivelano la strada presto; con l'AI la rivelazione
+  arriva quando arriva);
+- in 200 giorni un poeta influenzabile (85) nella banda di un capo 90 cambia
+  strada in circa 4 stanze su 10 (0,41 cambi a stanza). Se è troppo, si
+  abbassa `CAMBIO_STRADA.probabilita`.
+
+I numeri esatti cambiano col seme: si rifanno con `--prove` dopo ogni ritocco.
 
 ## 8. Le animazioni: perché non sembri sempre la stessa cosa
 
@@ -687,7 +761,7 @@ dell'albero, iniziali se consentite, specie del modello, posizione).
 | 1 | **Pino vivo nel 2D**: giornata a 4 fasce con i pesi e l'anti-noia sulle attività che ci sono già, intermezzi, nuvoletta, decisione con zoom e fumetto, lettere chiuse e aperte distinte; il giardino torna al 2D | niente |
 | 2 | Lettera settimanale; risorse e catene quotidiane (fuoco, orto, marmellata); prime 30 attività nuove; ~20 gesti nuovi | 16.2 |
 | 3 | Catalogo degli oggetti e momento dello sblocco; regali che diventano oggetti; le prime 60 voci disegnate | 16.6 |
-| 4 | Imprese e contagio (carisma, influenzabilità, ruoli); attività di gruppo | 16.7 |
+| 4 | Imprese e contagio (carisma, influenzabilità, ruoli); attività di gruppo — **motore puro fatto** (12/11/2026), il database lo collega la fase 5 | 16.7 |
 | 5 | Stanze: database, posti, arredo, sblocco, trasloco | 16.3, 16.5, 16.8 |
 | 6 | La tua foresta 3D con i numeri | 16.1 |
 | 7 | La foresta del club 3D con consenso | 16.4 |

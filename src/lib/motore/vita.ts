@@ -2,6 +2,7 @@ import { z } from "zod";
 import { azione, azioniPerMeteo, ID_AZIONI } from "../albero/azioni";
 import {
   classifica,
+  descriviCarattere,
   inclinazioni,
   INFO_STRADE,
   NOMI_TRATTI,
@@ -41,6 +42,9 @@ export interface StatoAlbero {
   biografia: FattoBiografia[];
   /** I regali ricevuti dalla persona (Premium: uno al mese). */
   regali?: RegaloRicevuto[];
+  /** Fissi alla nascita (0.2, sezione 7.1): quanto trascina e quanto si lascia trascinare. */
+  carisma?: number;
+  influenzabilita?: number;
 }
 
 export interface RegaloRicevuto {
@@ -68,6 +72,8 @@ export interface GiornoDaVivere {
   meteo: MeteoGiorno;
   evento: string | null;
   ammesse: string[];
+  /** Quello che succede nella sua stanza con gli altri alberi (imprese, contagio, attività di gruppo). */
+  fattiStanza?: string[];
 }
 
 export function aggiungiGiorni(data: string, n: number): string {
@@ -188,6 +194,11 @@ export function descriviStato(stato: StatoAlbero): string {
       : "Strada: non ancora rivelata (la sta cercando).",
     `Umore recente: ${stato.umore}.`,
   ];
+  if (stato.carisma != null && stato.influenzabilita != null) {
+    righe.push(
+      `Con gli altri alberi: ${descriviCarattere({ carisma: stato.carisma, influenzabilita: stato.influenzabilita })}. Non dirlo mai come un numero: si vede da come si comporta.`,
+    );
+  }
   if (stato.biografia.length) {
     righe.push(
       "Fatti della sua vita da ricordare:",
@@ -258,7 +269,7 @@ export async function viviGiornate(
       (g) =>
         `- giorno ${g.giorno} (${g.data}): meteo ${g.meteo.descrizione}. ${
           g.evento ? `Evento: ${g.evento}` : "Nessun evento particolare."
-        } Azioni ammesse: ${g.ammesse.join(", ")}.`,
+        }${g.fattiStanza?.length ? ` Nella sua stanza: ${g.fattiStanza.join(" ")}` : ""} Azioni ammesse: ${g.ammesse.join(", ")}.`,
     )
     .join("\n");
 
@@ -273,7 +284,7 @@ Restituisci un elemento per ogni giorno, nello stesso ordine, con:
 - giorno: il numero del giorno.
 - azione: una delle azioni ammesse quel giorno (id esatto), coerente con carattere, meteo ed evento. Varia: non ripetere la stessa azione più di due giorni di fila.
 - umore.
-- diario: da 1 a 3 frasi in prima persona, nella voce dell'albero, al massimo 300 caratteri. Se c'è un evento, il diario ne parla.
+- diario: da 1 a 3 frasi in prima persona, nella voce dell'albero, al massimo 300 caratteri. Se c'è un evento, il diario ne parla. Se nella sua stanza è successo qualcosa con gli altri alberi (un'impresa, qualcuno che entra o esce, una cosa fatta insieme), il diario lo racconta a modo suo, con i loro nomi: con affetto e ironia, mai con cattiveria.
 - didascalia: una frase in terza persona che comincia con «${stato.nome}», al massimo 110 caratteri, da mostrare sotto il suo ritratto (esempio: «${stato.nome} legge giornali finanziari sotto l'ombrello. Nessuno sa perché.»).
 - spinte: per ogni strada un intero da -2 a 5, quanto la giornata lo avvicina a quella strada. Di solito una o due strade positive e le altre a 0. Seguono il carattere e le scelte, con qualche sorpresa ogni tanto.
 - tratti_rafforzati: da 0 a 2 tratti che la giornata ha rafforzato.
@@ -379,4 +390,42 @@ export function applicaEsiti(
 
 export function etichettaAzione(id: string) {
   return azione(id).etichetta;
+}
+
+/**
+ * Applica allo stato quello che il contagio ha deciso per lui oggi
+ * (contagio.ts, giornoDellaStanza): i punti alla strada del capo prima della
+ * rivelazione, e il cambio di strada (raro, annunciato) dopo.
+ */
+export function applicaStanza(
+  stato: StatoAlbero,
+  giorno: number,
+  spinte: PunteggiStrade | undefined,
+  cambio: Strada | undefined,
+): { stato: StatoAlbero; rivelata: Strada | null; cambiata: Strada | null } {
+  const nuovo: StatoAlbero = { ...stato, punteggi: { ...stato.punteggi }, biografia: [...stato.biografia] };
+  let rivelata: Strada | null = null;
+  for (const [s, p] of Object.entries(spinte ?? {}) as [Strada, number][]) {
+    nuovo.punteggi[s] = (nuovo.punteggi[s] ?? 0) + p;
+  }
+  if (!nuovo.strada && spinte) {
+    const r = stradaRivelata(nuovo.punteggi);
+    if (r) {
+      nuovo.strada = r;
+      rivelata = r;
+      nuovo.biografia.push({ giorno, testo: `Ha capito chi è: ${INFO_STRADE[r].nome.toLowerCase()}.` });
+    }
+  }
+  if (cambio && nuovo.strada && cambio !== nuovo.strada) {
+    nuovo.biografia.push({
+      giorno,
+      testo: `Ha cambiato strada: da ${INFO_STRADE[nuovo.strada].nome.toLowerCase()} a ${INFO_STRADE[cambio].nome.toLowerCase()}.`,
+    });
+    nuovo.strada = cambio;
+    // La strada nuova resta in testa: i punti la seguono.
+    const max = Math.max(...Object.values(nuovo.punteggi).map((v) => v ?? 0));
+    nuovo.punteggi[cambio] = max + 6;
+  }
+  nuovo.biografia = nuovo.biografia.slice(-40);
+  return { stato: nuovo, rivelata, cambiata: cambio && stato.strada && stato.strada !== cambio ? cambio : null };
 }
