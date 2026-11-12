@@ -10,9 +10,17 @@ import { texAlone, texFoglia, texNuvole } from "./texture.js";
 
 const CARTELLA = "/giardino3d/modelli/";
 export const RAGGIO_RADURA = 7;
-/** Dove stanno cassetta e taccuino (x, z): ai lati dell'albero principale, sempre in quadro. */
-export const CASSETTA = [2.05, 0.95];
-export const TACCUINO = [-2.0, 1.1];
+/**
+ * Dove stanno cassetta e taccuino (x, z), secondo quanti alberi ci sono: con un
+ * albero ai suoi lati; con la famiglia e la foresta più ai lati e in avanti,
+ * così non coprono mai i compagni.
+ * @param {number} n
+ */
+export function postiArredi(n) {
+  if (n <= 1) return { cassetta: [2.05, 0.95], taccuino: [-2.0, 1.1] };
+  if (n <= 3) return { cassetta: [3.15, 2.3], taccuino: [-3.05, 2.4] };
+  return { cassetta: [5.0, 3.2], taccuino: [-4.9, 3.3] };
+}
 
 /** Altezza del terreno: lievi ondulazioni e il bosco che sale ai bordi. @param {number} x @param {number} z */
 export function quota(x, z) {
@@ -383,6 +391,7 @@ export function creaAmbiente(scena, renderer, op) {
   const ricolorabili = [];
   const occupati = op.alberi.map((a) => [a.x, a.z, 2.2]);
   // anche cassetta e taccuino occupano il loro posto
+  const { cassetta: CASSETTA, taccuino: TACCUINO } = postiArredi(op.alberi.length);
   occupati.push([CASSETTA[0], CASSETTA[1], 1.2], [TACCUINO[0], TACCUINO[1], 1.2]);
   const libero = (/** @type {number} */ x, /** @type {number} */ z, /** @type {number} */ d) => occupati.every(([ox, oz, od]) => Math.hypot(x - ox, z - oz) > Math.max(d, od));
   /** @param {number} n @param {number} rMin @param {number} rMax @param {number} d @param {(x: number, z: number) => boolean} [filtro] */
@@ -400,6 +409,8 @@ export function creaAmbiente(scena, renderer, op) {
   };
   const nonDavanti = (/** @type {number} */ x, /** @type {number} */ z) => !(z > 3 && Math.abs(x) < 10 + (z - 3) * 0.4);
   const basso = (/** @type {number} */ x, /** @type {number} */ z) => z < 4.5 || Math.abs(x) > 10;
+  // le rocce grandi mai davanti alla camera (con la foresta la camera è più lontana)
+  const lontaneDalDavanti = (/** @type {number} */ x, /** @type {number} */ z) => z < 2.5 || Math.abs(x) > 12;
 
   /** @param {string} nome @param {{ x: number, z: number, rot: number, h: number }[]} posti @param {boolean} [ombra] */
   async function istanze(nome, posti, ombra = true) {
@@ -446,8 +457,8 @@ export function creaAmbiente(scena, renderer, op) {
       istanze("stump_oldTall", fisso([{ x: -5.6, z: -3.2, h: 1.0, rot: 0.6 }, { x: 6.2, z: -4.4, h: 0.85, rot: 2.1 }])),
       istanze("stump_roundDetailed", fisso([{ x: -7.4, z: 4.2, h: 0.5, rot: 0.3 }])),
       istanze("log_large", fisso([{ x: -3.2, z: -6.0, h: 0.65, rot: 0.35 }])),
-      istanze("rock_largeA", [...fisso([{ x: 7.6, z: 0.8, h: 1.3, rot: 0.4 }]), ...sparpaglia(5, 10, 22, 2).map((p) => ({ ...p, h: tra(1.1, 1.8) }))]),
-      istanze("rock_largeC", sparpaglia(5, 9, 22, 2).map((p) => ({ ...p, h: tra(0.9, 1.6) }))),
+      istanze("rock_largeA", [...fisso([{ x: 7.6, z: 0.8, h: 1.3, rot: 0.4 }]), ...sparpaglia(5, 10, 22, 2, lontaneDalDavanti).map((p) => ({ ...p, h: tra(1.1, 1.8) }))]),
+      istanze("rock_largeC", sparpaglia(5, 9, 22, 2, lontaneDalDavanti).map((p) => ({ ...p, h: tra(0.9, 1.6) }))),
       istanze("rock_smallC", sparpaglia(18, 3, 18, 0.6).map((p) => ({ ...p, h: tra(0.25, 0.5) }))),
       istanze("plant_bushLarge", sparpaglia(28, RAGGIO_RADURA, 22, 1.4, (x, z) => z < 6 || Math.abs(x) > 10).map((p) => ({ ...p, h: tra(1.1, 1.8) }))),
       istanze("plant_bushDetailed", sparpaglia(30, RAGGIO_RADURA - 0.5, 20, 1.1, basso).map((p) => ({ ...p, h: tra(0.8, 1.3) }))),
@@ -648,6 +659,8 @@ export function creaAmbiente(scena, renderer, op) {
     taccuino,
     stato,
     valori,
+    /** Dove stanno cassetta e taccuino. */
+    arredi: { cassetta: CASSETTA, taccuino: TACCUINO },
     /** Ricalcola le ombre (per esempio dopo aver spostato gli alberi). */
     rifaiOmbre() { ombreDaRifare = Math.max(ombreDaRifare, 0.05); },
     /** @param {(forza: number) => void} cb */

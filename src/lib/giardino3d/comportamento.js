@@ -252,6 +252,18 @@ const REAZIONI = {
       p.bracci[0].avanti = p.bracci[1].avanti = 0.5 * k;
     },
   },
+  // con un compagno: si gira verso di lui, saluta e ride
+  insieme: {
+    durata: 3,
+    inizia: (c) => { c.viso.breve("ride", 2.4); c.emetti(Math.random() < 0.5 ? "nota" : "cuore", 1); },
+    posa: (p, t, c) => {
+      const k = busta(t, 3, 0.35, 0.5);
+      p.giro = c.dati.versoAmico * k;
+      p.bracci[1].alza = (0.25 + 0.3 * Math.sin(t * 12)) * k;
+      p.bracci[1].avanti = 0.9 * k;
+      p.piega = Math.sin(t * 20) * 0.04 * k;
+    },
+  },
   posato: {
     durata: 2.4,
     inizia: (c) => { c.viso.breve("ride", 2); c.emetti("stella", 2); },
@@ -307,7 +319,6 @@ export function creaComportamento(albero, op) {
   let primaNotte = op.mondo.ora === "notte";
   let prossimaMicro = 3 + Math.random() * 3;
   let sveglia = false;
-  let contaAttivita = 0;
   let ultima = "";
   let giro = 0;
   /** @type {THREE.Vector2 | null} */
@@ -380,7 +391,6 @@ export function creaComportamento(albero, op) {
   /** Sceglie la prossima attività. */
   function prossima() {
     const m = op.mondo;
-    contaAttivita++;
     if (m.ora === "notte") return avvia("dormi");
     if (sveglia) { sveglia = false; return avvia(Math.random() < 0.5 ? "stiracchia" : "sbadiglia"); }
     const piove = m.cielo === "pioggia" || m.cielo === "temporale";
@@ -419,10 +429,22 @@ export function creaComportamento(albero, op) {
     reaz = { nome, r, t: 0, ctx };
     r.inizia(ctx);
     if (nome === "saluta" || nome === "carezza") albero.viso.guarda(0, 0.15); // ci guarda negli occhi
+    return ctx;
   }
 
   return {
     reagisci,
+    /**
+     * Un momento insieme a un compagno: si gira verso di lui (senza darci la schiena),
+     * saluta e ride. @param {{ x: number, z: number }} amico
+     */
+    insieme(amico) {
+      if (preso || caduta || DORME.has(att?.nome ?? "")) return;
+      const ang = Math.atan2(amico.x - pos.x, amico.z - pos.y) - versoCamera();
+      const ctx = contesto({ versoAmico: THREE.MathUtils.clamp(Math.atan2(Math.sin(ang), Math.cos(ang)), -0.85, 0.85) });
+      reaz = { nome: "insieme", r: REAZIONI.insieme, t: 0, ctx };
+      REAZIONI.insieme.inizia(ctx);
+    },
     /** Solo per le prove: avvia subito un'attività. @param {string} nome */
     avvia(nome) { reaz = null; avvia(nome); },
     /** @param {string} u */

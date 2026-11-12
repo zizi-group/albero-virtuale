@@ -8,7 +8,8 @@
 import * as THREE from "three";
 import { creaAlbero, UNIFORMI } from "./albero.js";
 import { verso } from "./casuale.js";
-import { CASSETTA, creaAmbiente, quota, TACCUINO } from "./ambiente.js";
+import { creaAmbiente, quota } from "./ambiente.js";
+import { generatore, hash } from "./casuale.js";
 import { creaComportamento } from "./comportamento.js";
 import { MODELLI, MODELLI_PER_ID, modelloDalSeme } from "./modelli.js";
 import { texAlone } from "./texture.js";
@@ -39,10 +40,22 @@ export { SPECIE } from "./modelli.js";
  * @property {{ sopra: number, sotto: number }} [margini] parti dello schermo coperte dai riquadri (frazioni dell'altezza): l'albero si centra nella fascia libera. Se mancano: sul telefono in verticale 0.30 sopra e 0.22 sotto, altrove 0
  */
 
+/** Le attività preferite di ogni strada (per i compagni). @type {Record<string, string[]>} */
+const AZIONI_DELLA_STRADA = {
+  artista: ["dipingere", "scrivere-poesia", "ballare"],
+  sportivo: ["corsa", "allenarsi", "ballare"],
+  filosofo: ["pensare", "leggere", "meditare"],
+  viaggiatore: ["studiare-mappa", "fare-valigia", "passeggiata"],
+  poeta: ["scrivere-poesia", "sonnellino", "guardare-cielo"],
+  furfante: ["vendere-ombra", "contare-ghiande", "chiacchierare-scoiattolo"],
+  imprenditore: ["telefonata", "giornale-ombrello", "vendere-ombra"],
+  "": ["leggere", "bere-tisana", "guardare-cielo", "annaffiarsi"],
+};
+
 /** Dove stanno gli alberi: il principale al centro, gli altri a ventaglio dietro. @param {number} n */
 function posti(n) {
   const out = [{ x: 0, z: 0.3 }];
-  const giro = [[-2.3, -0.6], [2.3, -0.6], [-4.3, -1.8], [4.3, -1.8], [-1.2, -2.8], [1.4, -3.0]];
+  const giro = [[-2.3, -0.5], [2.3, -0.5], [-4.1, -1.5], [4.1, -1.5], [-1.3, -2.5], [1.4, -2.6]];
   for (let i = 1; i < n; i++) out.push({ x: giro[i - 1][0], z: giro[i - 1][1] });
   return out;
 }
@@ -117,14 +130,49 @@ export function creaGiardino(canvas, opzioni) {
     for (const a of alberi) {
       if (cambiaStagione) a.albero.stagione(mondo.stagione);
       if (p.umore) a.comp.umore(p.umore);
-      if (p.azione !== undefined && a.dati.principale !== false) a.comp.azione(p.azione);
+      if (p.azione !== undefined && a === alberi[0]) a.comp.azione(p.azione); // i compagni hanno la loro
       a.comp.mondoCambiato();
     }
   }
   imposta({ ...opzioni, stagione: undefined, margini: undefined }); // i margini li usa la camera, più sotto
   for (const a of alberi) {
     a.comp.umore(opzioni.umore ?? "curioso");
-    a.comp.azione(opzioni.azione ?? "");
+    a.comp.azione(a === alberi[0] ? opzioni.azione ?? "" : azioneDelCompagno(a, 0));
+  }
+
+  // ---------------------------------------------------------------- Compagni
+  // Ogni compagno ha un'attività sua, scelta dalla sua strada e cambiata ogni tanto;
+  // ogni tanto due alberi (o tutti) fanno qualcosa insieme.
+  function azioneDelCompagno(/** @type {(typeof alberi)[number]} */ a, /** @type {number} */ volta) {
+    const lista = AZIONI_DELLA_STRADA[a.dati.strada ?? ""] ?? AZIONI_DELLA_STRADA[""];
+    const r = generatore(hash(`compagno:${a.dati.seme}:${volta}`));
+    return lista[Math.floor(r() * lista.length)];
+  }
+  const compagni = alberi.slice(1).map((a, i) => ({ a, volta: 0, cambio: 35 + i * 7 }));
+  let prossimoInsieme = 12;
+  /** @param {number} dt */
+  function vitaDiGruppo(dt) {
+    if (!compagni.length) return;
+    for (const c of compagni) {
+      c.cambio -= dt;
+      if (c.cambio <= 0) { c.volta++; c.cambio = 40 + Math.random() * 30; c.a.comp.azione(azioneDelCompagno(c.a, c.volta)); }
+    }
+    prossimoInsieme -= dt;
+    if (prossimoInsieme <= 0 && mondo.ora !== "notte") {
+      prossimoInsieme = 18 + Math.random() * 14;
+      const pos = (/** @type {(typeof alberi)[number]} */ a) => ({ x: a.albero.radice.position.x, z: a.albero.radice.position.z });
+      if (Math.random() < 0.3) {
+        // tutti insieme, verso il principale
+        const centro = pos(alberi[0]);
+        for (const a of alberi) a.comp.insieme(a === alberi[0] ? pos(alberi[1]) : centro);
+      } else {
+        // due vicini si salutano
+        const i = Math.floor(Math.random() * alberi.length);
+        const j = (i + 1 + Math.floor(Math.random() * (alberi.length - 1))) % alberi.length;
+        alberi[i].comp.insieme(pos(alberi[j]));
+        alberi[j].comp.insieme(pos(alberi[i]));
+      }
+    }
   }
 
   // ---------------------------------------------------------------- Camera
@@ -145,11 +193,17 @@ export function creaGiardino(canvas, opzioni) {
     const s = alberi[0].albero.scala.scale.x;
     const alto = alberi[0].albero.altezza * s;
     const verticale = camera.aspect < 0.8;
-    const quota0 = verticale ? 0.35 : 0.43;
+    // un albero: 43% (telefono 35%); famiglia di 3: 35% (30%); foresta: 28% (24%)
+    const n = lista.length;
+    const quota0 = n === 1 ? (verticale ? 0.35 : 0.43) : n <= 3 ? (verticale ? 0.3 : 0.35) : verticale ? 0.24 : 0.28;
     let dist = alto / quota0 / (2 * tg);
-    if (lista.length > 1) dist = Math.max(dist, 5.4 / (tg * camera.aspect), 12);
+    // che ci stiano anche i compagni ai lati (sul telefono i più lontani possono uscire un poco)
+    if (n > 1) {
+      const meta = (n <= 3 ? 3.4 : 5.2) * (verticale ? 0.7 : 1);
+      dist = Math.max(dist, meta / (tg * camera.aspect));
+    }
     // poco sopra l'altezza degli occhi dell'albero, guardando appena in giù
-    BERSAGLIO.set(0, alto * 0.46, 0.3);
+    BERSAGLIO.set(0, alto * 0.46, n === 1 ? 0.3 : n <= 3 ? 0 : -0.6);
     POSIZIONE.set(0, 1.0 * s + 0.75 + dist * 0.07, BERSAGLIO.z + dist);
     camera.position.copy(POSIZIONE);
     camera.lookAt(BERSAGLIO);
@@ -255,8 +309,10 @@ export function creaGiardino(canvas, opzioni) {
       const alto = Math.max(0, r.y - quota(r.x, r.z));
       a.ombra.scale.set(1.15 * s * (1 - alto * 0.25), 0.85 * s * (1 - alto * 0.25), 1);
     }
+    vitaDiGruppo(dt);
     // gli alberi non si sovrappongono fra loro né alla cassetta e al taccuino
-    const ostacoli = [[CASSETTA[0], CASSETTA[1], 1.0], [TACCUINO[0], TACCUINO[1], 1.0]];
+    const { cassetta: cs, taccuino: tc } = ambiente.arredi;
+    const ostacoli = [[cs[0], cs[1], 1.0], [tc[0], tc[1], 1.0]];
     for (let i = 0; i < alberi.length; i++) {
       const pi = alberi[i].comp.posizione;
       for (let j = i + 1; j < alberi.length; j++) {
