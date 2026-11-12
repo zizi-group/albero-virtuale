@@ -307,7 +307,6 @@ export function creaComportamento(albero, op) {
   let primaNotte = op.mondo.ora === "notte";
   let prossimaMicro = 3 + Math.random() * 3;
   let sveglia = false;
-  let contaAttivita = 0;
   let ultima = "";
   let giro = 0;
   /** @type {THREE.Vector2 | null} */
@@ -380,7 +379,6 @@ export function creaComportamento(albero, op) {
   /** Sceglie la prossima attività. */
   function prossima() {
     const m = op.mondo;
-    contaAttivita++;
     if (m.ora === "notte") return avvia("dormi");
     if (sveglia) { sveglia = false; return avvia(Math.random() < 0.5 ? "stiracchia" : "sbadiglia"); }
     const piove = m.cielo === "pioggia" || m.cielo === "temporale";
